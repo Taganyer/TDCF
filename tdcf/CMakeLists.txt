@@ -11,8 +11,7 @@ find_package(tinyBackend REQUIRED)
 add_library(${PROJECT_NAME} SHARED ${SRC_LIST} ${HEAD_LIST})
 
 target_link_libraries(${PROJECT_NAME}
-        PUBLIC tinyBackend::Base
-        PUBLIC tinyBackend::Net)
+        PUBLIC tinyBackend::Base)
 
 target_include_directories(${PROJECT_NAME}
         PRIVATE

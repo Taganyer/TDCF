@@ -4,31 +4,28 @@
 #pragma once
 
 #include <memory>
+#include <tinyBackend/Base/Detail/NoCopy.hpp>
 
 namespace tdcf {
 
     using SerializableType = int;
 
-    class Serializable;
-
-    using SerializablePtr = std::shared_ptr<Serializable>;
-
-    class Serializable {
+    class Serializable : Base::NoCopy {
     public:
         Serializable() = default;
 
         virtual ~Serializable() = default;
 
-        virtual unsigned serialize_size() const;
+        [[nodiscard]] virtual unsigned serialize_size() const = 0;
 
-        virtual void serialize(void* buffer) const = 0;
+        virtual void serialize(void *buffer, unsigned buffer_size, unsigned skip_size) const = 0;
 
-        virtual SerializableType type() const = 0;
+        [[nodiscard]] virtual SerializableType base_type() const = 0;
 
-        static SerializablePtr deserialize(const void* data, unsigned size);
+        [[nodiscard]] virtual SerializableType derived_type() const = 0;
 
     };
 
-
+    using SerializablePtr = std::shared_ptr<Serializable>;
 
 }

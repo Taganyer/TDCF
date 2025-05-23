@@ -9,9 +9,9 @@ namespace tdcf {
 
     class MetaData : public Serializable {
     public:
-        MetaData() = default;
+        static constexpr SerializableType BaseType = 3;
 
-        ~MetaData() override = default;
+        [[nodiscard]] SerializableType base_type() const final { return BaseType; };
 
     };
 

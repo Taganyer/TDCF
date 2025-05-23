@@ -4,6 +4,7 @@
 #pragma once
 
 #include <vector>
+#include <tinyBackend/Base/Detail/NoCopy.hpp>
 
 #include "Data.hpp"
 #include "Serializable.hpp"
@@ -12,15 +13,17 @@ namespace tdcf {
 
     class ProcessingRules : public Serializable {
     public:
-        ProcessingRules() = default;
+        static constexpr SerializableType BaseType = 2;
 
-        ~ProcessingRules() override = default;
+        [[nodiscard]] SerializableType base_type() const final { return BaseType; };
+
+        virtual bool need_filtering() = 0;
 
     };
 
-    class ProcessorFlag {};
+    using ProcessingRulesPtr = std::shared_ptr<ProcessingRules>;
 
-    class Processor {
+    class Processor : Base::NoCopy {
     public:
         using DataSet = std::vector<DataPtr>;
 
@@ -28,17 +31,17 @@ namespace tdcf {
 
         virtual ~Processor() = default;
 
-        virtual ProcessorFlag acquire(const MetaData& data, Data& buffer) = 0;
+        virtual StatusFlag acquire(const MetaData& data, DataPtr& buffer_ptr) = 0;
 
-        virtual ProcessorFlag store(const Data& data) = 0;
+        virtual StatusFlag store(DataPtr data_ptr) = 0;
 
-        virtual ProcessorFlag filtering(const ProcessingRules& rule,
-                                        const Data& data, Data& buffer) = 0;
+        virtual StatusFlag filtering(const ProcessingRulesPtr& rule_ptr,
+                                        const DataPtr& data_ptr, DataPtr& buffer_ptr) = 0;
 
-        virtual ProcessorFlag reduce(const ProcessingRules& rule,
-                                     const DataSet& target, Data& buffer) = 0;
+        virtual StatusFlag reduce(const ProcessingRulesPtr& rule_ptr,
+                                     const DataSet& target, DataPtr& buffer_ptr) = 0;
 
-        virtual ProcessorFlag scatter(const ProcessingRules& rule,
+        virtual StatusFlag scatter(const ProcessingRulesPtr& rule_ptr,
                                       const DataSet& target, DataSet& buffer) = 0;
 
     };

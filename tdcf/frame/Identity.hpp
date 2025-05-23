@@ -7,8 +7,38 @@
 
 namespace tdcf {
 
-    class Identity : public Serializable {};
+    class Identity : public Serializable {
+    public:
+        static constexpr SerializableType BaseType = 1;
+
+        virtual bool operator==(const Identity& other) const = 0;
+
+        virtual bool operator<(const Identity& other) const = 0;
+
+        [[nodiscard]] SerializableType base_type() const final { return BaseType; };
+
+    };
 
     using IdentityPtr = std::shared_ptr<Identity>;
+
+    struct IdentityPtrEqual {
+        bool operator()(const IdentityPtr& lhs, const IdentityPtr& rhs) const {
+            return lhs == rhs;
+        };
+
+        bool operator()(const IdentityPtr& lhs, const Identity& rhs) const {
+            return *lhs == rhs;
+        };
+    };
+
+    struct IdentityPtrLess {
+        bool operator()(const IdentityPtr& lhs, const IdentityPtr& rhs) const {
+            return lhs < rhs;
+        };
+
+        bool operator()(const IdentityPtr& lhs, const Identity& rhs) const {
+            return *lhs < rhs;
+        };
+    };
 
 }

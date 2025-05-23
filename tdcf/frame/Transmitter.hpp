@@ -3,17 +3,17 @@
 //
 #pragma once
 
+#include <tinyBackend/Base/Detail/NoCopy.hpp>
+
 #include "Data.hpp"
 #include "Identity.hpp"
 
 namespace tdcf {
 
-    class TransmitterFlag {};
-
     // accept close send receive
     class TransmitterEvent {};
 
-    class Transmitter {
+    class Transmitter : Base::NoCopy {
     public:
         using EventQueue = std::vector<TransmitterEvent>;
 
@@ -21,21 +21,21 @@ namespace tdcf {
 
         virtual ~Transmitter() = default;
 
-        virtual TransmitterFlag connect(const Identity& id) = 0;
+        virtual StatusFlag connect_server(const IdentityPtr& id_ptr) = 0;
 
-        virtual TransmitterFlag accept(Identity& accepted_id) = 0;
+        virtual StatusFlag accept_client(IdentityPtr& accepted_id_ptr) = 0;
 
-        virtual TransmitterFlag disconnect(const Identity& id) = 0;
+        virtual StatusFlag disconnect(const IdentityPtr& id_ptr) = 0;
 
-        virtual TransmitterFlag unblock_send(const Identity& id, Data& data) = 0;
+        virtual StatusFlag unblock_send(const IdentityPtr& id_ptr, const DataPtr& data) = 0;
 
-        virtual TransmitterFlag unblock_receive(Identity& id, Data& buf) = 0;
+        virtual StatusFlag unblock_receive(const IdentityPtr &id_ptr, DataPtr& buffer_ptr) = 0;
 
-        virtual TransmitterFlag add_event(const TransmitterEvent& event) = 0;
+        virtual StatusFlag add_event(const TransmitterEvent& event) = 0;
 
-        virtual TransmitterFlag remove_event(const TransmitterEvent& event) = 0;
+        virtual StatusFlag remove_event(const TransmitterEvent& event) = 0;
 
-        virtual TransmitterFlag get_alive_event(EventQueue& queue) = 0;
+        virtual StatusFlag get_alive_event(EventQueue& queue) = 0;
 
     };
 

@@ -5,17 +5,17 @@
 
 #include <memory>
 #include <vector>
+#include <tinyBackend/Base/Detail/NoCopy.hpp>
 
 #include "Identity.hpp"
+#include "StatusFlag.hpp"
 
 namespace tdcf {
-
-    class CommanderFlag {};
 
     // accept close send receive
     class CommanderEvent {};
 
-    class Commander {
+    class Commander : Base::NoCopy {
     public:
         using EventQueue = std::vector<CommanderEvent>;
 
@@ -23,22 +23,23 @@ namespace tdcf {
 
         virtual ~Commander() = default;
 
-        virtual CommanderFlag connect(const Identity& id) = 0;
+        virtual StatusFlag connect_server(const IdentityPtr& id, SerializablePtr& server_ptr) = 0;
 
-        virtual CommanderFlag accept(Identity& accepted_id) = 0;
+        virtual StatusFlag accept_server(IdentityPtr& accepted_id) = 0;
 
-        virtual CommanderFlag disconnect(const Identity& id) = 0;
+        virtual StatusFlag connect_client(const IdentityPtr& id, SerializablePtr& server_data) = 0;
 
-        virtual CommanderFlag unblock_send(const Identity& id, const void *data, unsigned size) = 0;
+        virtual StatusFlag disconnect(const IdentityPtr& id) = 0;
 
-        virtual CommanderFlag unblock_receive(Identity& id, void *buf, unsigned buf_size,
-                                              unsigned& received_size) = 0;
+        virtual StatusFlag unblock_send(const IdentityPtr& id, const SerializablePtr& data_ptr) = 0;
 
-        virtual CommanderFlag add_event(const CommanderEvent& event) = 0;
+        virtual StatusFlag unblock_receive(IdentityPtr& id, SerializablePtr& buffer_ptr) = 0;
 
-        virtual CommanderFlag remove_event(const CommanderEvent& event) = 0;
+        virtual StatusFlag add_event(const CommanderEvent& event) = 0;
 
-        virtual CommanderFlag get_alive_event(EventQueue& queue) = 0;
+        virtual StatusFlag remove_event(const CommanderEvent& event) = 0;
+
+        virtual StatusFlag get_alive_event(EventQueue& queue) = 0;
 
     };
 
