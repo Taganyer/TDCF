@@ -5,37 +5,35 @@
 
 namespace tdcf {
 
+#define STATUS_FLAG_ITEM(MOD) \
+    MOD(Success), \
+    MOD(ErrorType), \
+    MOD(FurtherWaiting), \
+    MOD(FurtherWaitingAll), \
+    MOD(Conflict), \
+    MOD(TargetNotFound), \
+    MOD(Transition), \
+    MOD(ClusterOffline),
+
+#define ENUM_MOD(item) item
+
+#define NAME_MOD(item) #item
+
     enum class StatusFlag {
-        Success,
-        ErrorType,
-        FurtherWaiting,
-        Conflict,
-        TargetNotFound,
-        Transition,
-        ClusterOffline,
+        STATUS_FLAG_ITEM(ENUM_MOD)
     };
 
-    template <auto value>
-    constexpr auto enum_name() {
-        std::string_view name;
-#if __GNUC__ || __clang__
-        name = __PRETTY_FUNCTION__;
-        std::size_t start = name.find('=') + 2;
-        std::size_t end = name.size() - 1;
-        name = std::string_view { name.data() + start, end - start };
-        start = name.rfind("::");
-#elif _MSC_VER
-        name = __FUNCSIG__;
-        std::size_t start = name.find('<') + 1;
-        std::size_t end = name.rfind(">(");
-        name = std::string_view{ name.data() + start, end - start };
-        start = name.rfind("::");
-#endif
-        return start == std::string_view::npos ? name : std::string_view {
-                       name.data() + start + 2, name.size() - start - 2
-                   };
-    }
+    constexpr const char* status_flag_name(StatusFlag status) {
+        constexpr const char *item_names[] = {
+            STATUS_FLAG_ITEM(NAME_MOD)
+        };
+        return item_names[static_cast<int>(status)];
+    };
 
-    const char* status_flag_name(StatusFlag status);
+#undef STATUS_FLAG_ITEM
+
+#undef ENUM_MOD
+
+#undef NAME_MOD
 
 }

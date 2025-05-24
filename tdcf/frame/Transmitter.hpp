@@ -3,17 +3,15 @@
 //
 #pragma once
 
-#include <tinyBackend/Base/Detail/NoCopy.hpp>
-
-#include "Data.hpp"
-#include "Identity.hpp"
+#include <tdcf/frame/Data.hpp>
+#include <tdcf/frame/Identity.hpp>
 
 namespace tdcf {
 
     // accept close send receive
     class TransmitterEvent {};
 
-    class Transmitter : Base::NoCopy {
+    class Transmitter : NoCopy {
     public:
         using EventQueue = std::vector<TransmitterEvent>;
 

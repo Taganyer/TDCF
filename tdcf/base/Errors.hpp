@@ -6,19 +6,8 @@
 #include <cassert>
 #include <sstream>
 #include <stdexcept>
-#include <tinyBackend/Base/Detail/config.hpp>
-
-#include "../frame/StatusFlag.hpp"
-
-#if __GNUC__ || __clang__
-
-#define TDCF_FUN_NAME __PRETTY_FUNCTION__
-
-#elif _MSC_VER
-
-#define TDCF_FUN_NAME __FUNCSIG__
-
-#endif
+#include <tdcf/base/Marcos.hpp>
+#include <tdcf/frame/StatusFlag.hpp>
 
 #define TDCF_CHECK_EXPR(expr) \
 if (unlikely(!(expr))) { \

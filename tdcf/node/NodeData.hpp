@@ -4,18 +4,15 @@
 #pragma once
 
 #include <memory>
-
-#include "../frame/Commander.hpp"
-#include "../frame/Identity.hpp"
-#include "../frame/Processor.hpp"
-#include "../frame/Transmitter.hpp"
+#include <tdcf/frame/Commander.hpp>
+#include <tdcf/frame/Identity.hpp>
+#include <tdcf/frame/Processor.hpp>
+#include <tdcf/frame/Transmitter.hpp>
 
 namespace tdcf {
 
     class NodeData : public Serializable {
     public:
-        static constexpr SerializableType BaseType = 4;
-
         NodeData() = default;
 
         NodeData(Identity* ip, Transmitter* tp, Commander* cp, Processor* pp) :
@@ -23,7 +20,9 @@ namespace tdcf {
 
         ~NodeData() override = default;
 
-        [[nodiscard]] SerializableType base_type() const final { return BaseType; };
+        [[nodiscard]] SerializableType base_type() const final {
+            return static_cast<SerializableType>(SerializableBaseTypes::NodeData);
+        };
 
         virtual StatusFlag handle_a_loop() = 0;
 
@@ -41,5 +40,9 @@ namespace tdcf {
     };
 
     using NodeDataPtr = std::shared_ptr<NodeData>;
+
+    enum class NodeDataTypes {
+        StarNode,
+    };
 
 }

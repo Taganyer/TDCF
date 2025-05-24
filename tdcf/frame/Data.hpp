@@ -3,15 +3,15 @@
 //
 #pragma once
 
-#include "Serializable.hpp"
+#include <tdcf/base/Serializable.hpp>
 
 namespace tdcf {
 
     class MetaData : public Serializable {
     public:
-        static constexpr SerializableType BaseType = 3;
-
-        [[nodiscard]] SerializableType base_type() const final { return BaseType; };
+        [[nodiscard]] SerializableType base_type() const final {
+            return static_cast<SerializableType>(SerializableBaseTypes::MetaData);
+        };
 
     };
 

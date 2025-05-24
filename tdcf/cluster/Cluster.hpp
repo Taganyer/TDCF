@@ -3,61 +3,32 @@
 //
 #pragma once
 
-#include <cassert>
 #include <queue>
-#include <tinyBackend/Base/Detail/NoCopy.hpp>
-
-#include "../frame/Commander.hpp"
-#include "../frame/Data.hpp"
-#include "../frame/Identity.hpp"
-#include "../frame/Processor.hpp"
+#include <utility>
+#include <tdcf/node/Node.hpp>
 
 namespace tdcf {
 
-    class Cluster : Base::NoCopy {
+    class Cluster : public Node {
     public:
-        Cluster(IdentityPtr ip, CommanderPtr cp, ProcessorPtr pp) :
-            _id(std::move(ip)),
-            _commander(std::move(cp)),
-            _processor(std::move(pp)) {
-            assert(_id);
-            assert(cp);
-            assert(pp);
-        };
+        Cluster(IdentityPtr ip, TransmitterPtr tp, CommanderPtr cp, ProcessorPtr pp) :
+            Node(std::move(ip), std::move(tp), std::move(cp), std::move(pp)) {};
 
-        virtual ~Cluster() = default;
+        virtual void broadcast(MetaDataPtr meta_data_ptr, ProcessingRulesPtr rule_ptr);
 
-        virtual void join_in_cluster(const IdentityPtr& cluster_id) = 0;
+        virtual void scatter(MetaDataPtr meta_data_ptr, ProcessingRulesPtr rule_ptr);
 
-        virtual StatusFlag set_root_node(const IdentityPtr& id) = 0;
+        virtual void reduce(MetaDataPtr meta_data_ptr, ProcessingRulesPtr rule_ptr);
 
-        virtual void broadcast(MetaDataPtr meta_data_ptr,  ProcessingRulesPtr rule_ptr) = 0;
+        virtual void all_gather(MetaDataPtr meta_data_ptr, ProcessingRulesPtr rule_ptr);
 
-        virtual void scatter(MetaDataPtr meta_data_ptr,  ProcessingRulesPtr rule_ptr) = 0;
+        virtual void all_reduce(MetaDataPtr meta_data_ptr, ProcessingRulesPtr rule_ptr);
 
-        virtual void reduce(MetaDataPtr meta_data_ptr,  ProcessingRulesPtr rule_ptr) = 0;
+        virtual void reduce_scatter(MetaDataPtr meta_data_ptr, ProcessingRulesPtr rule_ptr);
 
-        virtual void all_gather(MetaDataPtr meta_data_ptr,  ProcessingRulesPtr rule_ptr) = 0;
-
-        virtual void all_reduce(MetaDataPtr meta_data_ptr,  ProcessingRulesPtr rule_ptr) = 0;
-
-        virtual void reduce_scatter(MetaDataPtr meta_data_ptr,  ProcessingRulesPtr rule_ptr) = 0;
-
-        virtual void all_to_all(MetaDataPtr meta_data_ptr,  ProcessingRulesPtr rule_ptr) = 0;
-
-        virtual StatusFlag handle_a_loop() = 0;
+        virtual void all_to_all(MetaDataPtr meta_data_ptr, ProcessingRulesPtr rule_ptr);
 
     protected:
-        IdentityPtr _id, _parent;
-
-        CommanderPtr _commander;
-
-        ProcessorPtr _processor;
-
-    };
-
-    namespace detail {
-
         using ClusterCommandType = int;
 
         struct ClusterCommand {
@@ -72,6 +43,32 @@ namespace tdcf {
 
         using ClusterCommandQueue = std::queue<ClusterCommandPtr>;
 
-    }
+        ClusterCommandQueue _command_queue;
+
+        struct Broadcast;
+
+        struct Scatter;
+
+        struct Reduce;
+
+        struct AllGather;
+
+        struct AllReduce;
+
+        struct ReduceScatter;
+
+        struct AllToAll;
+
+        enum {
+            _Broadcast,
+            _Scatter,
+            _Reduce,
+            _AllGather,
+            _AllReduce,
+            _ReduceScatter,
+            _AllToAll,
+        };
+
+    };
 
 }

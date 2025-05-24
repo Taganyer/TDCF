@@ -4,17 +4,11 @@
 #pragma once
 
 #include <cassert>
-#include <tinyBackend/Base/Detail/NoCopy.hpp>
-
-#include "NodeData.hpp"
-#include "../frame/Commander.hpp"
-#include "../frame/Identity.hpp"
-#include "../frame/Processor.hpp"
-#include "../frame/Transmitter.hpp"
+#include <tdcf/node/NodeData.hpp>
 
 namespace tdcf {
 
-    class Node : Base::NoCopy {
+    class Node : NoCopy {
     public:
         Node(IdentityPtr ip, TransmitterPtr tp, CommanderPtr cp, ProcessorPtr pp) :
             _id(std::move(ip)),
@@ -27,13 +21,13 @@ namespace tdcf {
             assert(_processor);
         };
 
-        ~Node() = default;
+        virtual ~Node() = default;
 
-        [[nodiscard]] StatusFlag join_in_cluster(const IdentityPtr& cluster_id);
+        [[nodiscard]] virtual StatusFlag join_in_cluster(const IdentityPtr& cluster_id);
 
-        [[nodiscard]] StatusFlag handle_a_loop();
+        [[nodiscard]] virtual StatusFlag handle_a_loop();
 
-    private:
+    protected:
         IdentityPtr _id, _cluster_id;
 
         TransmitterPtr _transmitter;

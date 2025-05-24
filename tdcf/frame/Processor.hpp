@@ -4,18 +4,18 @@
 #pragma once
 
 #include <vector>
-#include <tinyBackend/Base/Detail/NoCopy.hpp>
 
-#include "Data.hpp"
-#include "Serializable.hpp"
+#include <tdcf/base/NoCopy.hpp>
+#include <tdcf/base/Serializable.hpp>
+#include <tdcf/frame/Data.hpp>
 
 namespace tdcf {
 
     class ProcessingRules : public Serializable {
     public:
-        static constexpr SerializableType BaseType = 2;
-
-        [[nodiscard]] SerializableType base_type() const final { return BaseType; };
+        [[nodiscard]] SerializableType base_type() const final {
+            return static_cast<SerializableType>(SerializableBaseTypes::ProcessingRules);
+        };
 
         virtual bool need_filtering() = 0;
 
@@ -23,7 +23,7 @@ namespace tdcf {
 
     using ProcessingRulesPtr = std::shared_ptr<ProcessingRules>;
 
-    class Processor : Base::NoCopy {
+    class Processor : NoCopy {
     public:
         using DataSet = std::vector<DataPtr>;
 

@@ -3,7 +3,7 @@
 //
 #pragma once
 
-#include "Serializable.hpp"
+#include <tdcf/base/Serializable.hpp>
 
 namespace tdcf {
 
@@ -15,7 +15,9 @@ namespace tdcf {
 
         virtual bool operator<(const Identity& other) const = 0;
 
-        [[nodiscard]] SerializableType base_type() const final { return BaseType; };
+        [[nodiscard]] SerializableType base_type() const final {
+            return static_cast<SerializableType>(SerializableBaseTypes::Identity);
+        };
 
     };
 

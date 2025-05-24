@@ -5,17 +5,16 @@
 
 #include <memory>
 #include <vector>
-#include <tinyBackend/Base/Detail/NoCopy.hpp>
-
-#include "Identity.hpp"
-#include "StatusFlag.hpp"
+#include <tdcf/base/NoCopy.hpp>
+#include <tdcf/frame/Identity.hpp>
+#include <tdcf/frame/StatusFlag.hpp>
 
 namespace tdcf {
 
     // accept close send receive
     class CommanderEvent {};
 
-    class Commander : Base::NoCopy {
+    class Commander : NoCopy {
     public:
         using EventQueue = std::vector<CommanderEvent>;
 
@@ -23,7 +22,7 @@ namespace tdcf {
 
         virtual ~Commander() = default;
 
-        virtual StatusFlag connect_server(const IdentityPtr& id, SerializablePtr& server_ptr) = 0;
+        virtual StatusFlag connect_server(const IdentityPtr& id, SerializablePtr& server_data) = 0;
 
         virtual StatusFlag accept_server(IdentityPtr& accepted_id) = 0;
 

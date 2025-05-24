@@ -4,13 +4,20 @@
 #pragma once
 
 #include <memory>
-#include <tinyBackend/Base/Detail/NoCopy.hpp>
 
 namespace tdcf {
 
     using SerializableType = int;
 
-    class Serializable : Base::NoCopy {
+    enum class SerializableBaseTypes {
+        NodeData,
+        MetaData,
+        ProcessingRules,
+        Identity,
+        Command,
+    };
+
+    class Serializable {
     public:
         Serializable() = default;
 
@@ -18,7 +25,7 @@ namespace tdcf {
 
         [[nodiscard]] virtual unsigned serialize_size() const = 0;
 
-        virtual void serialize(void *buffer, unsigned buffer_size, unsigned skip_size) const = 0;
+        virtual void serialize(void *buffer) const = 0;
 
         [[nodiscard]] virtual SerializableType base_type() const = 0;
 

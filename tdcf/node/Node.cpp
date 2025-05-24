@@ -2,9 +2,8 @@
 // Created by taganyer on 25-5-23.
 //
 
-#include "Node.hpp"
-
-#include "../error/error.hpp"
+#include <tdcf/base/Errors.hpp>
+#include <tdcf/node/Node.hpp>
 
 using namespace tdcf;
 
@@ -15,7 +14,7 @@ StatusFlag Node::join_in_cluster(const IdentityPtr& cluster_id) {
     if (status_flag != StatusFlag::Success) return status_flag;
     IdentityPtr identity_ptr;
     status_flag = _transmitter->connect_server(cluster_id);
-    if ((status_flag != StatusFlag::Success)) {
+    if (status_flag != StatusFlag::Success) {
         TDCF_CHECK_SUCCESS(_commander->disconnect(cluster_id))
         return status_flag;
     }
