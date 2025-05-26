@@ -22,8 +22,16 @@ if (StatusFlag status = (expr); unlikely(status == expect_type)) { \
     ss << "tdcf error in " << TDCF_FUN_NAME ; \
     ss << " { " << #expr << " }\n"; \
     ss << "\texpect type is " << status_flag_name(expect_type); \
-    ss << " real is " << status_flag_name(status); \
+    ss << " real is " << status_flag_name(status) << "\n"; \
     throw std::runtime_error(ss.str()); \
 }
 
 #define TDCF_CHECK_SUCCESS(expr) TDCF_CHECK_TYPE(expr, StatusFlag::Success)
+
+#define TDCF_RAISE_ERROR(reason) \
+do { \
+    std::stringstream ss; \
+    ss << "tdcf error in " << TDCF_FUN_NAME ; \
+    ss << " reason is { " << #reason << " }\n"; \
+    throw std::runtime_error(ss.str()); \
+} while(0);

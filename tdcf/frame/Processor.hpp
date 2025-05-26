@@ -17,8 +17,6 @@ namespace tdcf {
             return static_cast<SerializableType>(SerializableBaseTypes::ProcessingRules);
         };
 
-        virtual bool need_filtering() = 0;
-
     };
 
     using ProcessingRulesPtr = std::shared_ptr<ProcessingRules>;
@@ -31,18 +29,17 @@ namespace tdcf {
 
         virtual ~Processor() = default;
 
-        virtual StatusFlag acquire(const MetaData& data, DataPtr& buffer_ptr) = 0;
+        virtual StatusFlag acquire(const ProcessingRulesPtr& rule_ptr,
+                                   DataPtr& buffer_ptr) = 0;
 
-        virtual StatusFlag store(DataPtr data_ptr) = 0;
-
-        virtual StatusFlag filtering(const ProcessingRulesPtr& rule_ptr,
-                                        const DataPtr& data_ptr, DataPtr& buffer_ptr) = 0;
+        virtual StatusFlag store(const ProcessingRulesPtr& rule_ptr,
+                                 const DataPtr& data_ptr) = 0;
 
         virtual StatusFlag reduce(const ProcessingRulesPtr& rule_ptr,
-                                     const DataSet& target, DataPtr& buffer_ptr) = 0;
+                                  const DataSet& target, DataPtr& buffer_ptr) = 0;
 
-        virtual StatusFlag scatter(const ProcessingRulesPtr& rule_ptr,
-                                      const DataSet& target, DataSet& buffer) = 0;
+        virtual StatusFlag scatter(const ProcessingRulesPtr& rule_ptr, unsigned scatter_size,
+                                   const DataPtr& data_ptr, DataSet& buffer) = 0;
 
     };
 

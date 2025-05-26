@@ -3,26 +3,39 @@
 //
 #pragma once
 
-#include <set>
+#include <list>
+#include <map>
 #include <tdcf/cluster/Cluster.hpp>
+#include <tdcf/detail/CommandMark.hpp>
 
 namespace tdcf {
 
     class StarCluster : public Cluster {
     public:
-        StarCluster(IdentityPtr ip, TransmitterPtr tp, CommanderPtr cp, ProcessorPtr pp) :
-            Cluster(std::move(ip), std::move(tp), std::move(cp), std::move(pp)) {};
+        StarCluster(IdentityPtr idp, TransmitterPtr tp, CommanderPtr cp, ProcessorPtr pp,
+                    InterpreterPtr inp, unsigned cluster_size);
 
         ~StarCluster() override;
 
         StatusFlag handle_a_loop() override;
 
     private:
-        std::set<IdentityPtr, IdentityPtrLess> _nodes;
+        struct DataStore {
+            unsigned task_ref = 0;
+            bool connected_client = false, connected_transmitter = false;
+            CommanderEventMark commander_event_mark;
+            TransmitterEventMark transmitter_event_mark;
+        };
 
-        using Iterator = std::set<IdentityPtr, IdentityPtrLess>::iterator;
+        using NodeMap = std::map<IdentityPtr, DataStore, IdentityPtrLess>;
 
-        Iterator _root;
+        using RunningCommandList = std::list<ClusterEvent>;
+
+        struct TaskData {};
+
+        using RunningMarkList = std::map<CommandMark, TaskData>;
+
+        SerializablePtr create_node_data();
 
     };
 

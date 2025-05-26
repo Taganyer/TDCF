@@ -12,7 +12,59 @@
 namespace tdcf {
 
     // accept close send receive
-    class CommanderEvent {};
+    class CommanderEventMark {
+    public:
+        void set_none() {
+            type = 0;
+        };
+
+        void set_send(bool on) {
+            if (on) type |= 1;
+            else type &= ~1;
+        };
+
+        void set_receive(bool on) {
+            if (on) type |= (1 << 1);
+            else type &= ~(1 << 1);
+        };
+
+        void set_connect() {
+            type |= (1 << 2);
+        };
+
+        void set_disconnect() {
+            type |= (1 << 3);
+        };
+
+        [[nodiscard]] bool is_none() const {
+            return type == 0;
+        };
+
+        [[nodiscard]] bool can_send() const {
+            return type & 1;
+        };
+
+        [[nodiscard]] bool can_receive() const {
+            return type & (1 << 1);
+        };
+
+        [[nodiscard]] bool need_connect() const {
+            return type & (1 << 2);
+        }
+
+        [[nodiscard]] bool need_disconnect() const {
+            return type & (1 << 3);
+        };
+
+    private:
+        int type = 0;
+    };
+
+    struct CommanderEvent {
+        IdentityPtr id;
+
+        CommanderEventMark mark;
+    };
 
     class Commander : NoCopy {
     public:
@@ -24,7 +76,7 @@ namespace tdcf {
 
         virtual StatusFlag connect_server(const IdentityPtr& id, SerializablePtr& server_data) = 0;
 
-        virtual StatusFlag accept_server(IdentityPtr& accepted_id) = 0;
+        virtual StatusFlag accept_client(IdentityPtr& accepted_id) = 0;
 
         virtual StatusFlag connect_client(const IdentityPtr& id, SerializablePtr& server_data) = 0;
 

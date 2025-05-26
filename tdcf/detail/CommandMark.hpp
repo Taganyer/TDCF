@@ -11,11 +11,12 @@
 #endif
 
 #include <tdcf/base/Marcos.hpp>
-#include <tdcf/command/Command.hpp>
+#include <tdcf/detail/Command.hpp>
 
 namespace tdcf {
 
     enum class CommandMarkTypes : unsigned {
+        Null,
         Broadcast,
         Scatter,
         Reduce,
@@ -28,10 +29,12 @@ namespace tdcf {
 
     class CommandMark : public Command {
     public:
-        static StatusFlag create(const void* data, unsigned data_size, SerializablePtr& buf) {
+        static StatusFlag create(const void *data, unsigned data_size, SerializablePtr& buf) {
             if (data_size < 4) return StatusFlag::FurtherWaiting;
-            auto ptr = static_cast<const unsigned*>(data);
-            buf = std::make_shared<CommandMark>(ntohl(ntohl(ptr[0])), ntohl(ntohl(ptr[1])));
+            auto ptr = static_cast<const unsigned *>(data);
+            buf = std::make_shared<CommandMark>(ntohl(ptr[0]),
+                                                static_cast<CommandMarkTypes>(ntohl(ptr[1])),
+                                                ntohl(ptr[2]), ntohl(ptr[3]));
             return StatusFlag::Success;
         }
 
@@ -39,20 +42,24 @@ namespace tdcf {
 
         CommandMark(const CommandMark&) = default;
 
-        explicit CommandMark(unsigned version, unsigned count) : _version(version), followed_commands(count) {};
+        explicit CommandMark(unsigned version) : _version(version) {};
+
+        explicit CommandMark(unsigned version, CommandMarkTypes type,
+                             unsigned command_count, unsigned data_count) :
+            _version(version), type(type), followed_commands(command_count), followed_datas(data_count) {};
 
         CommandMark& operator=(const CommandMark&) = default;
 
         [[nodiscard]] unsigned serialize_size() const override {
-            return sizeof(unsigned) * 2;
+            return sizeof(unsigned) * 4;
         };
 
         void serialize(void *buffer) const override {
-            auto ptr = static_cast<unsigned*>(buffer);
-            unsigned target = htonl(_version);
-            ptr[0] = target;
-            target = htonl(followed_commands);
-            ptr[1] = target;
+            auto ptr = static_cast<unsigned *>(buffer);
+            ptr[0] = htonl(_version);
+            ptr[1] = htonl(static_cast<unsigned>(type));
+            ptr[2] = htonl(followed_commands);
+            ptr[3] = htonl(followed_datas);
         };
 
         [[nodiscard]] SerializableType derived_type() const override {
@@ -79,12 +86,6 @@ namespace tdcf {
             if (likely(_step < res)) _version += _step;
             else _version = _step - res - 1;
             return *this;
-        };
-
-        friend CommandMark operator+(const CommandMark& version, unsigned _step) {
-            unsigned res = UINT32_MAX - version._version;
-            if (likely(_step < res)) return CommandMark { version._version + _step };
-            return CommandMark { _step - res - 1 };
         };
 
         friend bool operator==(const CommandMark& left, const CommandMark& right) {
@@ -119,6 +120,8 @@ namespace tdcf {
         unsigned _version = 0;
 
     public:
+        CommandMarkTypes type = CommandMarkTypes::Null;
+
         unsigned followed_commands = 0;
 
         unsigned followed_datas = 0;

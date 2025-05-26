@@ -3,71 +3,58 @@
 //
 #pragma once
 
-#include <queue>
-#include <utility>
 #include <tdcf/node/Node.hpp>
 
 namespace tdcf {
 
     class Cluster : public Node {
     public:
-        Cluster(IdentityPtr ip, TransmitterPtr tp, CommanderPtr cp, ProcessorPtr pp) :
-            Node(std::move(ip), std::move(tp), std::move(cp), std::move(pp)) {};
+        Cluster(IdentityPtr idp, TransmitterPtr tp, CommanderPtr cp, ProcessorPtr pp, InterpreterPtr inp) :
+            Node(std::move(idp), std::move(tp), std::move(cp), std::move(pp), std::move(inp)) {};
 
-        virtual void broadcast(MetaDataPtr meta_data_ptr, ProcessingRulesPtr rule_ptr);
+        virtual void broadcast(ProcessingRulesPtr rule_ptr);
 
-        virtual void scatter(MetaDataPtr meta_data_ptr, ProcessingRulesPtr rule_ptr);
+        virtual void scatter(ProcessingRulesPtr rule_ptr);
 
-        virtual void reduce(MetaDataPtr meta_data_ptr, ProcessingRulesPtr rule_ptr);
+        virtual void reduce(ProcessingRulesPtr rule_ptr);
 
-        virtual void all_gather(MetaDataPtr meta_data_ptr, ProcessingRulesPtr rule_ptr);
+        virtual void all_gather(ProcessingRulesPtr rule_ptr);
 
-        virtual void all_reduce(MetaDataPtr meta_data_ptr, ProcessingRulesPtr rule_ptr);
+        virtual void all_reduce(ProcessingRulesPtr rule_ptr);
 
-        virtual void reduce_scatter(MetaDataPtr meta_data_ptr, ProcessingRulesPtr rule_ptr);
+        virtual void reduce_scatter(ProcessingRulesPtr rule_ptr);
 
-        virtual void all_to_all(MetaDataPtr meta_data_ptr, ProcessingRulesPtr rule_ptr);
+        virtual void all_to_all(ProcessingRulesPtr rule_ptr);
 
     protected:
-        using ClusterCommandType = int;
+        struct ClusterEvent : InternalEvent {
+            ProcessingRulesPtr rule;
 
-        struct ClusterCommand {
-            ClusterCommandType type;
-
-            explicit ClusterCommand(ClusterCommandType t) : type(t) {};
-
-            virtual ~ClusterCommand() = default;
+            explicit ClusterEvent(EventType t, ProcessingRulesPtr rp) :
+                InternalEvent(t), rule(std::move(rp)) {};
         };
 
-        using ClusterCommandPtr = std::unique_ptr<ClusterCommand>;
+        struct ClusterBroadcast;
 
-        using ClusterCommandQueue = std::queue<ClusterCommandPtr>;
+        struct ClusterScatter;
 
-        ClusterCommandQueue _command_queue;
+        struct ClusterReduce;
 
-        struct Broadcast;
+        struct ClusterAllGather;
 
-        struct Scatter;
+        struct ClusterAllReduce;
 
-        struct Reduce;
+        struct ClusterReduceScatter;
 
-        struct AllGather;
+        struct ClusterAllToAll;
 
-        struct AllReduce;
+        using ClusterEventPtr = std::unique_ptr<ClusterEvent>;
 
-        struct ReduceScatter;
+        using ClusterEventQueue = std::queue<ClusterEventPtr>;
 
-        struct AllToAll;
+        ClusterEventQueue _self_queue;
 
-        enum {
-            _Broadcast,
-            _Scatter,
-            _Reduce,
-            _AllGather,
-            _AllReduce,
-            _ReduceScatter,
-            _AllToAll,
-        };
+        friend class NodeAgent;
 
     };
 

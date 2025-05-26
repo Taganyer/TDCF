@@ -3,23 +3,13 @@
 //
 #pragma once
 
-#include <cassert>
-#include <tdcf/node/NodeData.hpp>
+#include <tdcf/detail/NodeAgent.hpp>
 
 namespace tdcf {
 
     class Node : NoCopy {
     public:
-        Node(IdentityPtr ip, TransmitterPtr tp, CommanderPtr cp, ProcessorPtr pp) :
-            _id(std::move(ip)),
-            _transmitter(std::move(tp)),
-            _commander(std::move(cp)),
-            _processor(std::move(pp)) {
-            assert(_id);
-            assert(_transmitter);
-            assert(_commander);
-            assert(_processor);
-        };
+        Node(IdentityPtr idp, TransmitterPtr tp, CommanderPtr cp, ProcessorPtr pp, InterpreterPtr inp);
 
         virtual ~Node() = default;
 
@@ -28,16 +18,9 @@ namespace tdcf {
         [[nodiscard]] virtual StatusFlag handle_a_loop();
 
     protected:
-        IdentityPtr _id, _cluster_id;
+        NodeInformation _info;
 
-        TransmitterPtr _transmitter;
-
-        CommanderPtr _commander;
-
-        ProcessorPtr _processor;
-
-        NodeDataPtr _node_data;
-
+        NodeAgentPtr _node_data;
     };
 
 }

@@ -3,19 +3,7 @@
 //
 #pragma once
 
-#include <tdcf/base/Serializable.hpp>
-
 namespace tdcf {
-
-    class MetaData : public Serializable {
-    public:
-        [[nodiscard]] SerializableType base_type() const final {
-            return static_cast<SerializableType>(SerializableBaseTypes::MetaData);
-        };
-
-    };
-
-    using MetaDataPtr = std::shared_ptr<MetaData>;
 
     class Data {
     public:

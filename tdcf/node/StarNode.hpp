@@ -3,11 +3,11 @@
 //
 #pragma once
 
-#include <tdcf/node/NodeData.hpp>
+#include <tdcf/node/Node.hpp>
 
 namespace tdcf {
 
-    class StarNode : public NodeData {
+    class StarNode : public Node {
     public:
         StatusFlag handle_broadcast();
 
