@@ -11,81 +11,16 @@ void Cluster::fun_t(ProcessingRulesPtr rule_ptr) { \
     _self_queue.emplace(std::make_unique<struct_t>(std::move(rule_ptr))); \
 };
 
-struct Cluster::ClusterBroadcast : ClusterEvent {
-    explicit ClusterBroadcast(ProcessingRulesPtr rp) :
-        ClusterEvent(EventType::HTCBroadcast, std::move(rp)) {};
+OperationFun(HTCBroadcast, broadcast)
 
-    DataPtr data_ptr;
-    bool got_data = false;
-    unsigned data_send = 0;
-};
+OperationFun(HTCScatter, scatter)
 
-struct Cluster::ClusterScatter : ClusterEvent {
-    explicit ClusterScatter(ProcessingRulesPtr rp) :
-        ClusterEvent(EventType::HTCScatter, std::move(rp)) {};
+OperationFun(HTCReduce, reduce)
 
-    DataPtr data_ptr;
-    Processor::DataSet data_set;
-    bool got_data = false, got_dataset = false;
-    unsigned data_send = 0;
-};
+OperationFun(HTCAllGather, all_gather)
 
-struct Cluster::ClusterReduce : ClusterEvent {
-    explicit ClusterReduce(ProcessingRulesPtr rp) :
-        ClusterEvent(EventType::HTCReduce, std::move(rp)) {};
+OperationFun(HTCAllReduce, all_reduce)
 
-    Processor::DataSet data_set;
-    DataPtr data_ptr;
-    unsigned data_sent = 0, data_received = 0;
-};
+OperationFun(HTCReduceScatter, reduce_scatter)
 
-struct Cluster::ClusterAllGather : ClusterEvent {
-    explicit ClusterAllGather(ProcessingRulesPtr rp) :
-        ClusterEvent(EventType::HTCAllGather, std::move(rp)) {};
-
-    Processor::DataSet data_set;
-    unsigned data_sent1 = 0, data_received = 0, data_sent2 = 0;
-};
-
-struct Cluster::ClusterAllReduce : ClusterEvent {
-    explicit ClusterAllReduce(ProcessingRulesPtr rp) :
-        ClusterEvent(EventType::HTCAllReduce, std::move(rp)) {};
-
-    Processor::DataSet data_set;
-    DataPtr data_ptr;
-    unsigned data_sent1 = 0, data_received = 0, data_sent2 = 0;
-};
-
-struct Cluster::ClusterReduceScatter : ClusterEvent {
-    explicit ClusterReduceScatter(ProcessingRulesPtr rp) :
-        ClusterEvent(EventType::HTCReduceScatter, std::move(rp)) {};
-
-    Processor::DataSet data_set1;
-    DataPtr data_ptr;
-    Processor::DataSet data_set2;
-    unsigned data_sent1 = 0, data_received = 0;
-    bool scatter = false;
-    unsigned data_sent2 = 0;
-};
-
-struct Cluster::ClusterAllToAll : ClusterEvent {
-    explicit ClusterAllToAll(ProcessingRulesPtr rp) :
-        ClusterEvent(EventType::HTCAllToAll, std::move(rp)) {};
-
-    std::vector<Processor::DataSet> data_sets;
-    unsigned got_data = 0, data_sent1 = 0, data_received_all = 0, data_sent2_all = 0;
-};
-
-OperationFun(ClusterBroadcast, broadcast)
-
-OperationFun(ClusterScatter, scatter)
-
-OperationFun(ClusterReduce, reduce)
-
-OperationFun(ClusterAllGather, all_gather)
-
-OperationFun(ClusterAllReduce, all_reduce)
-
-OperationFun(ClusterReduceScatter, reduce_scatter)
-
-OperationFun(ClusterAllToAll, all_to_all)
+OperationFun(HTCAllToAll, all_to_all)

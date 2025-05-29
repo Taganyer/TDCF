@@ -6,7 +6,6 @@
 #include <string>
 #include <tdcf/base/Errors.hpp>
 #include <tdcf/base/Serializable.hpp>
-#include <tdcf/frame/StatusFlag.hpp>
 
 namespace tdcf {
 

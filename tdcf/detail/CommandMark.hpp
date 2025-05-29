@@ -11,6 +11,7 @@
 #endif
 
 #include <tdcf/base/Marcos.hpp>
+#include <tdcf/base/StatusFlag.hpp>
 #include <tdcf/detail/Command.hpp>
 
 namespace tdcf {

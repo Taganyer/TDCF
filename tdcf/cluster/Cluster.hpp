@@ -9,8 +9,8 @@ namespace tdcf {
 
     class Cluster : public Node {
     public:
-        Cluster(IdentityPtr idp, TransmitterPtr tp, CommanderPtr cp, ProcessorPtr pp, InterpreterPtr inp) :
-            Node(std::move(idp), std::move(tp), std::move(cp), std::move(pp), std::move(inp)) {};
+        Cluster(IdentityPtr idp, CommunicatorPtr cp, ProcessorPtr pp, InterpreterPtr inp) :
+            Node(std::move(idp), std::move(cp), std::move(pp), std::move(inp)) {};
 
         virtual void broadcast(ProcessingRulesPtr rule_ptr);
 
@@ -34,25 +34,9 @@ namespace tdcf {
                 InternalEvent(t), rule(std::move(rp)) {};
         };
 
-        struct ClusterBroadcast;
+        using HTCEventQueue = std::queue<HTCEventPtr>;
 
-        struct ClusterScatter;
-
-        struct ClusterReduce;
-
-        struct ClusterAllGather;
-
-        struct ClusterAllReduce;
-
-        struct ClusterReduceScatter;
-
-        struct ClusterAllToAll;
-
-        using ClusterEventPtr = std::unique_ptr<ClusterEvent>;
-
-        using ClusterEventQueue = std::queue<ClusterEventPtr>;
-
-        ClusterEventQueue _self_queue;
+        HTCEventQueue _self_queue;
 
         friend class NodeAgent;
 

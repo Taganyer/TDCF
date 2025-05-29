@@ -7,7 +7,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <tdcf/base/Marcos.hpp>
-#include <tdcf/frame/StatusFlag.hpp>
+#include <tdcf/base/StatusFlag.hpp>
 
 #define TDCF_CHECK_EXPR(expr) \
 if (unlikely(!(expr))) { \

@@ -7,7 +7,7 @@ namespace tdcf {
 
 #define STATUS_FLAG_ITEM(MOD) \
     MOD(Success), \
-    MOD(ErrorType), \
+    MOD(Timeout), \
     MOD(FurtherWaiting), \
     MOD(FurtherWaitingAll), \
     MOD(Conflict), \

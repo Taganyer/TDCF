@@ -12,19 +12,16 @@ namespace tdcf {
 
     class StarCluster : public Cluster {
     public:
-        StarCluster(IdentityPtr idp, TransmitterPtr tp, CommanderPtr cp, ProcessorPtr pp,
+        StarCluster(IdentityPtr idp, CommunicatorPtr cp, ProcessorPtr pp,
                     InterpreterPtr inp, unsigned cluster_size);
 
         ~StarCluster() override;
-
-        StatusFlag handle_a_loop() override;
 
     private:
         struct DataStore {
             unsigned task_ref = 0;
             bool connected_client = false, connected_transmitter = false;
-            CommanderEventMark commander_event_mark;
-            TransmitterEventMark transmitter_event_mark;
+            CommunicatorEventMark commander_event_mark;
         };
 
         using NodeMap = std::map<IdentityPtr, DataStore, IdentityPtrLess>;

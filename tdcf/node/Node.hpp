@@ -9,7 +9,7 @@ namespace tdcf {
 
     class Node : NoCopy {
     public:
-        Node(IdentityPtr idp, TransmitterPtr tp, CommanderPtr cp, ProcessorPtr pp, InterpreterPtr inp);
+        Node(IdentityPtr idp, CommunicatorPtr cp, ProcessorPtr pp, InterpreterPtr inp);
 
         virtual ~Node() = default;
 
@@ -21,6 +21,10 @@ namespace tdcf {
         NodeInformation _info;
 
         NodeAgentPtr _node_data;
+
+    private:
+        Communicator::EventQueue _events;
+
     };
 
 }

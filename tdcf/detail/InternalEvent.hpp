@@ -41,7 +41,16 @@ namespace tdcf {
         virtual ~InternalEvent() = default;
 
         EventType type;
+
+        [[nodiscard]] bool is_HTC() const;
+
+        [[nodiscard]] bool is_CTN() const;
+
+        [[nodiscard]] bool is_CTC() const;
+
     };
+
+    using InternalEventPtr = std::unique_ptr<InternalEvent>;
 
     struct HTCEvent : InternalEvent {
         ProcessingRulesPtr rule;
@@ -50,6 +59,8 @@ namespace tdcf {
             InternalEvent(t), rule(std::move(rp)) {};
     };
 
+    using HTCEventPtr = std::unique_ptr<HTCEvent>;
+
     struct CTNEvent : InternalEvent {
         ProcessingRulesPtr rule;
 
@@ -57,15 +68,16 @@ namespace tdcf {
             InternalEvent(t), rule(std::move(rp)) {};
     };
 
-    struct CTCEvent : InternalEvent {
-        ProcessingRulesPtr rule;
+    using CTNEventPtr = std::unique_ptr<CTNEvent>;
+
+    struct CTCEvent : CTNEvent {
         CommandMark old;
 
         explicit CTCEvent(EventType t, ProcessingRulesPtr rp, const CommandMark& cm) :
-            InternalEvent(t), rule(std::move(rp)), old(cm) {};
+            CTNEvent(t, std::move(rp)), old(cm) {};
     };
 
-    using InternalEventPtr = std::unique_ptr<InternalEvent>;
+    using CTCEventPtr = std::unique_ptr<CTCEvent>;
 
 
     struct HTCBroadcast : HTCEvent {

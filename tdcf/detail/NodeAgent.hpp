@@ -5,19 +5,16 @@
 
 #include <queue>
 #include <tdcf/detail/InternalEvent.hpp>
-#include <tdcf/frame/Commander.hpp>
+#include <tdcf/frame/Communicator.hpp>
 #include <tdcf/frame/Identity.hpp>
 #include <tdcf/frame/Interpreter.hpp>
-#include <tdcf/frame/Transmitter.hpp>
 
 namespace tdcf {
 
     struct NodeInformation {
         IdentityPtr id;
 
-        TransmitterPtr transmitter;
-
-        CommanderPtr commander;
+        CommunicatorPtr commander;
 
         ProcessorPtr processor;
 
@@ -25,16 +22,15 @@ namespace tdcf {
 
         NodeInformation() = default;
 
-        NodeInformation(IdentityPtr idp, TransmitterPtr tp, CommanderPtr cp,
+        NodeInformation(IdentityPtr idp, CommunicatorPtr cp,
                         ProcessorPtr pp, InterpreterPtr inp) :
             id(std::move(idp)),
-            transmitter(std::move(tp)),
             commander(std::move(cp)),
             processor(std::move(pp)),
             interpreter(std::move(inp)) {};
 
         [[nodiscard]] bool check() const {
-            return id && transmitter && commander && processor && interpreter;
+            return id && commander && processor && interpreter;
         };
 
     };
@@ -52,16 +48,11 @@ namespace tdcf {
             return static_cast<SerializableType>(SerializableBaseTypes::NodeAgent);
         };
 
-        virtual StatusFlag handle_node_loop(NodeInformation& info) = 0;
+        virtual StatusFlag handle_node_event(NodeInformation& info, CommunicatorEvent& event) = 0;
 
-        virtual StatusFlag handle_cluster_loop(NodeInformation& info, Cluster& self) = 0;
+        virtual StatusFlag handle_cluster_event(NodeInformation& info, CommunicatorEvent& event) = 0;
 
         IdentityPtr cluster_id;
-
-    protected:
-        using EventQueue = std::queue<InternalEventPtr>;
-
-        EventQueue _event_queue;
 
     };
 

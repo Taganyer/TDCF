@@ -23,8 +23,6 @@ namespace tdcf {
 
         StatusFlag handle_all_to_all();
 
-        StatusFlag handle_a_loop() override;
-
     };
 
 }
