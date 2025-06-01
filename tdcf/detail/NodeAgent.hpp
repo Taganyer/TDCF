@@ -3,56 +3,39 @@
 //
 #pragma once
 
-#include <queue>
-#include <tdcf/detail/InternalEvent.hpp>
-#include <tdcf/frame/Communicator.hpp>
 #include <tdcf/frame/Identity.hpp>
-#include <tdcf/frame/Interpreter.hpp>
 
 namespace tdcf {
+    struct CommunicatorEvent;
 
-    struct NodeInformation {
-        IdentityPtr id;
+    struct NodeInformation;
 
-        CommunicatorPtr commander;
-
-        ProcessorPtr processor;
-
-        InterpreterPtr interpreter;
-
-        NodeInformation() = default;
-
-        NodeInformation(IdentityPtr idp, CommunicatorPtr cp,
-                        ProcessorPtr pp, InterpreterPtr inp) :
-            id(std::move(idp)),
-            commander(std::move(cp)),
-            processor(std::move(pp)),
-            interpreter(std::move(inp)) {};
-
-        [[nodiscard]] bool check() const {
-            return id && commander && processor && interpreter;
-        };
-
-    };
-
-
-    class Cluster;
+    struct NodeEventData;
 
     class NodeAgent : public Serializable {
     public:
-        NodeAgent() = default;
-
-        ~NodeAgent() override = default;
+        /// 通过此函数反序列化 NodeAgent。
+        static StatusFlag deserialize_NodeAgent(const void *buffer, unsigned buffer_size,
+                                                SerializableType derived_type, SerializablePtr& buffer_ptr);
 
         [[nodiscard]] SerializableType base_type() const final {
             return static_cast<SerializableType>(SerializableBaseTypes::NodeAgent);
         };
 
-        virtual StatusFlag handle_node_event(NodeInformation& info, CommunicatorEvent& event) = 0;
+        virtual StatusFlag init(NodeInformation& info, NodeEventData& data) = 0;
 
-        virtual StatusFlag handle_cluster_event(NodeInformation& info, CommunicatorEvent& event) = 0;
+        virtual StatusFlag analysis_message(NodeEventData& data, CommunicatorEvent& event) = 0;
 
-        IdentityPtr cluster_id;
+        virtual StatusFlag handle_received_message(NodeInformation& info, NodeEventData& data,
+                                                   IdentityPtr& id, SerializablePtr& message) = 0;
+
+        virtual StatusFlag handle_connect_request(NodeInformation& info, NodeEventData& data,
+                                                  IdentityPtr& id) = 0;
+
+        virtual StatusFlag handle_disconnect_request(NodeInformation& info, NodeEventData& data,
+                                                     IdentityPtr& id) = 0;
+
+        virtual StatusFlag handle_event(NodeInformation& info, NodeEventData& data) = 0;
 
     };
 

@@ -6,12 +6,7 @@ FILE(GLOB_RECURSE SRC_LIST "*.cpp")
 
 FILE(GLOB_RECURSE HEAD_LIST "*.hpp")
 
-find_package(tinyBackend REQUIRED)
-
 add_library(${PROJECT_NAME} SHARED ${SRC_LIST} ${HEAD_LIST})
-
-target_link_libraries(${PROJECT_NAME}
-        PUBLIC tinyBackend::Base)
 
 target_include_directories(${PROJECT_NAME}
         PRIVATE

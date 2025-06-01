@@ -4,7 +4,7 @@
 #pragma once
 
 #include <memory>
-#include <tdcf/detail/CommandMark.hpp>
+#include <tdcf/base/MetaData.hpp>
 #include <tdcf/frame/Processor.hpp>
 
 namespace tdcf {
@@ -71,9 +71,9 @@ namespace tdcf {
     using CTNEventPtr = std::unique_ptr<CTNEvent>;
 
     struct CTCEvent : CTNEvent {
-        CommandMark old;
+        MetaData old;
 
-        explicit CTCEvent(EventType t, ProcessingRulesPtr rp, const CommandMark& cm) :
+        explicit CTCEvent(EventType t, ProcessingRulesPtr rp, const MetaData& cm) :
             CTNEvent(t, std::move(rp)), old(cm) {};
     };
 
@@ -210,7 +210,7 @@ namespace tdcf {
     };
 
     struct CTCBroadcast : CTCEvent {
-        explicit CTCBroadcast(ProcessingRulesPtr rp, const CommandMark& cm) :
+        explicit CTCBroadcast(ProcessingRulesPtr rp, const MetaData& cm) :
             CTCEvent(EventType::CTCBroadcast, std::move(rp), cm) {};
 
         DataPtr data_ptr;
@@ -219,7 +219,7 @@ namespace tdcf {
     };
 
     struct CTCScatter : CTCEvent {
-        explicit CTCScatter(ProcessingRulesPtr rp, const CommandMark& cm) :
+        explicit CTCScatter(ProcessingRulesPtr rp, const MetaData& cm) :
             CTCEvent(EventType::CTCScatter, std::move(rp), cm) {};
 
         DataPtr data_ptr;
@@ -228,7 +228,7 @@ namespace tdcf {
     };
 
     struct CTCReduce : CTCEvent {
-        explicit CTCReduce(ProcessingRulesPtr rp, const CommandMark& cm) :
+        explicit CTCReduce(ProcessingRulesPtr rp, const MetaData& cm) :
             CTCEvent(EventType::CTCReduce, std::move(rp), cm) {};
 
         Processor::DataSet data_set;
@@ -238,7 +238,7 @@ namespace tdcf {
     };
 
     struct CTCAllGather : CTCEvent {
-        explicit CTCAllGather(ProcessingRulesPtr rp, const CommandMark& cm) :
+        explicit CTCAllGather(ProcessingRulesPtr rp, const MetaData& cm) :
             CTCEvent(EventType::CTCAllGather, std::move(rp), cm) {};
 
         Processor::DataSet data_set1;
@@ -248,7 +248,7 @@ namespace tdcf {
     };
 
     struct CTCAllReduce : CTCEvent {
-        explicit CTCAllReduce(ProcessingRulesPtr rp, const CommandMark& cm) :
+        explicit CTCAllReduce(ProcessingRulesPtr rp, const MetaData& cm) :
             CTCEvent(EventType::CTCAllReduce, std::move(rp), cm) {};
 
         Processor::DataSet data_set;
@@ -259,7 +259,7 @@ namespace tdcf {
     };
 
     struct CTCReduceScatter : CTCEvent {
-        explicit CTCReduceScatter(ProcessingRulesPtr rp, const CommandMark& cm) :
+        explicit CTCReduceScatter(ProcessingRulesPtr rp, const MetaData& cm) :
             CTCEvent(EventType::CTCReduceScatter, std::move(rp), cm) {};
 
         Processor::DataSet data_set1, data_set2;
@@ -270,7 +270,7 @@ namespace tdcf {
     };
 
     struct CTCAllToAll : CTCEvent {
-        explicit CTCAllToAll(ProcessingRulesPtr rp, const CommandMark& cm) :
+        explicit CTCAllToAll(ProcessingRulesPtr rp, const MetaData& cm) :
             CTCEvent(EventType::CTCAllToAll, std::move(rp), cm) {};
 
         Processor::DataSet data_set1, data_set2;

@@ -4,15 +4,15 @@
 #pragma once
 
 #include <vector>
-
 #include <tdcf/base/NoCopy.hpp>
-#include <tdcf/base/Serializable.hpp>
 #include <tdcf/frame/Data.hpp>
 
 namespace tdcf {
 
-    class ProcessingRules : public Serializable {
+    class ProcessingRules : public Message {
     public:
+        ProcessingRules() = default;
+
         [[nodiscard]] SerializableType base_type() const final {
             return static_cast<SerializableType>(SerializableBaseTypes::ProcessingRules);
         };

@@ -3,13 +3,17 @@
 //
 #pragma once
 
+#include <tdcf/detail/Message.hpp>
+
 namespace tdcf {
 
-    class Data {
+    class Data : public Message {
     public:
         Data() = default;
 
-        virtual ~Data() = default;
+        [[nodiscard]] SerializableType base_type() const final {
+            return static_cast<SerializableType>(SerializableBaseTypes::Data);
+        };
 
     };
 

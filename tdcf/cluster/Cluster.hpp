@@ -4,13 +4,14 @@
 #pragma once
 
 #include <tdcf/node/Node.hpp>
+#include <utility>
 
 namespace tdcf {
 
     class Cluster : public Node {
     public:
-        Cluster(IdentityPtr idp, CommunicatorPtr cp, ProcessorPtr pp, InterpreterPtr inp) :
-            Node(std::move(idp), std::move(cp), std::move(pp), std::move(inp)) {};
+        Cluster(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp, IdentityPtr root_id) :
+            Node(std::move(ip), std::move(cp), std::move(pp), std::move(root_id)) {};
 
         virtual void broadcast(ProcessingRulesPtr rule_ptr);
 
@@ -27,18 +28,17 @@ namespace tdcf {
         virtual void all_to_all(ProcessingRulesPtr rule_ptr);
 
     protected:
-        struct ClusterEvent : InternalEvent {
-            ProcessingRulesPtr rule;
+        StatusFlag active_events() override;
 
-            explicit ClusterEvent(EventType t, ProcessingRulesPtr rp) :
-                InternalEvent(t), rule(std::move(rp)) {};
-        };
+        StatusFlag analysis_messages() override;
 
-        using HTCEventQueue = std::queue<HTCEventPtr>;
+        StatusFlag handle_messages() override;
 
-        HTCEventQueue _self_queue;
+        virtual StatusFlag handle_HTCEvents() = 0;
 
-        friend class NodeAgent;
+        // virtual StatusFlag handle_CTCEvents() = 0;
+
+        MetaData _meta;
 
     };
 

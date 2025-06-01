@@ -3,7 +3,7 @@
 //
 #pragma once
 
-#include <tdcf/base/Serializable.hpp>
+#include <tdcf/detail/Serializable.hpp>
 
 namespace tdcf {
 
@@ -35,7 +35,7 @@ namespace tdcf {
 
     struct IdentityPtrLess {
         bool operator()(const IdentityPtr& lhs, const IdentityPtr& rhs) const {
-            return lhs < rhs;
+            return *lhs < *rhs;
         };
 
         bool operator()(const IdentityPtr& lhs, const Identity& rhs) const {

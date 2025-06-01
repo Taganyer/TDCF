@@ -3,11 +3,11 @@
 //
 
 #include <tdcf/detail/NodeAgent.hpp>
-#include <tdcf/frame/Interpreter.hpp>
 
 using namespace tdcf;
 
-StatusFlag Interpreter::decode_NodeAgent(SerializableType derived_type,
-                                        String data, SerializablePtr& buffer_ptr) {
 
+StatusFlag NodeAgent::deserialize_NodeAgent(const void *buffer, unsigned buffer_size,
+                                            SerializableType derived_type, SerializablePtr& buffer_ptr) {
+    return StatusFlag::Success;
 }

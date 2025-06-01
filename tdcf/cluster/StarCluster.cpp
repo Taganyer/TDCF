@@ -8,9 +8,10 @@
 using namespace tdcf;
 
 
-StarCluster::StarCluster(IdentityPtr idp, CommunicatorPtr cp, ProcessorPtr pp,
-                         InterpreterPtr inp, unsigned cluster_size) :
-    Cluster(std::move(idp),std::move(cp), std::move(pp), std::move(inp)) {
+StarCluster::StarCluster(IdentityPtr ip, CommunicatorPtr cp,
+                         ProcessorPtr pp, IdentityPtr root_id,
+                         unsigned cluster_size) :
+    Cluster(std::move(ip), std::move(cp), std::move(pp), std::move(root_id)) {
 
 }
 

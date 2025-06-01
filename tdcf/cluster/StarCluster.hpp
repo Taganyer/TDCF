@@ -6,32 +6,18 @@
 #include <list>
 #include <map>
 #include <tdcf/cluster/Cluster.hpp>
-#include <tdcf/detail/CommandMark.hpp>
+#include <tdcf/base/MetaData.hpp>
 
 namespace tdcf {
 
     class StarCluster : public Cluster {
     public:
-        StarCluster(IdentityPtr idp, CommunicatorPtr cp, ProcessorPtr pp,
-                    InterpreterPtr inp, unsigned cluster_size);
+        StarCluster(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp,
+                    IdentityPtr root_id, unsigned cluster_size);
 
         ~StarCluster() override;
 
     private:
-        struct DataStore {
-            unsigned task_ref = 0;
-            bool connected_client = false, connected_transmitter = false;
-            CommunicatorEventMark commander_event_mark;
-        };
-
-        using NodeMap = std::map<IdentityPtr, DataStore, IdentityPtrLess>;
-
-        using RunningCommandList = std::list<ClusterEvent>;
-
-        struct TaskData {};
-
-        using RunningMarkList = std::map<CommandMark, TaskData>;
-
         SerializablePtr create_node_data();
 
     };
