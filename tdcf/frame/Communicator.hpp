@@ -11,22 +11,22 @@
 
 namespace tdcf {
 
-    enum class CommunicatorType {
-        Null,
-        SendMessage,
-
-        MessageSendable,
-        ReceivedMessage,
-        ConnectRequest,
-        DisconnectRequest,
-    };
-
     struct CommunicatorEvent {
-        CommunicatorType type = CommunicatorType::Null;
+        enum Type {
+            Null,
+            MessageSendable,
+            ReceivedMessage,
+            ConnectRequest,
+            DisconnectRequest,
+        };
+
+        Type type = Null;
 
         IdentityPtr target_id;
 
-        SerializablePtr message;
+        MetaData meta;
+
+        SerializablePtr data;
     };
 
     class Communicator : NoCopy {
@@ -43,9 +43,10 @@ namespace tdcf {
 
         virtual StatusFlag disconnect(const IdentityPtr& id) = 0;
 
-        virtual StatusFlag add_event(CommunicatorEvent event) = 0;
+        virtual StatusFlag send_message(const IdentityPtr& id, const Message& message,
+                                        const SerializablePtr& data) = 0;
 
-        virtual StatusFlag get_event(EventQueue& queue) = 0;
+        virtual StatusFlag get_events(EventQueue& queue) = 0;
 
     };
 

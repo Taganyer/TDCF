@@ -23,23 +23,19 @@ namespace tdcf {
 
     using IdentityPtr = std::shared_ptr<Identity>;
 
-    struct IdentityPtrEqual {
-        bool operator()(const IdentityPtr& lhs, const IdentityPtr& rhs) const {
-            return lhs == rhs;
-        };
+}
 
-        bool operator()(const IdentityPtr& lhs, const Identity& rhs) const {
-            return *lhs == rhs;
+namespace std {
+
+    struct less<tdcf::IdentityPtr> {
+        size_t operator()(const tdcf::IdentityPtr& lhs, const tdcf::IdentityPtr& rhs) const {
+            return *lhs < *rhs;
         };
     };
 
-    struct IdentityPtrLess {
-        bool operator()(const IdentityPtr& lhs, const IdentityPtr& rhs) const {
-            return *lhs < *rhs;
-        };
-
-        bool operator()(const IdentityPtr& lhs, const Identity& rhs) const {
-            return *lhs < rhs;
+    struct equal_to<tdcf::IdentityPtr> {
+        size_t operator()(const tdcf::IdentityPtr& lhs, const tdcf::IdentityPtr& rhs) const {
+            return *lhs == *rhs;
         };
     };
 

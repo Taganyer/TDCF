@@ -2,7 +2,7 @@
 // Created by taganyer on 25-5-25.
 //
 
-#include <tdcf/detail/NodeAgent.hpp>
+#include <tdcf/node/agents/NodeAgent.hpp>
 
 using namespace tdcf;
 

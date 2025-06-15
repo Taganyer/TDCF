@@ -7,7 +7,7 @@
 
 namespace tdcf {
 
-    class Data : public Message {
+    class Data : public Serializable {
     public:
         Data() = default;
 

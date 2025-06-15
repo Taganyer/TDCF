@@ -11,6 +11,7 @@ namespace tdcf {
     using SerializableType = int;
 
     enum class SerializableBaseTypes {
+        Message,
         Identity,
         NodeAgent,
         Data,

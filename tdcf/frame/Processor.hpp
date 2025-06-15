@@ -3,43 +3,57 @@
 //
 #pragma once
 
+#include <queue>
+#include <variant>
 #include <vector>
 #include <tdcf/base/NoCopy.hpp>
-#include <tdcf/frame/Data.hpp>
+#include <tdcf/frame/ProcessingRules.hpp>
 
 namespace tdcf {
 
-    class ProcessingRules : public Message {
-    public:
-        ProcessingRules() = default;
+    using DataSet = std::vector<DataPtr>;
 
-        [[nodiscard]] SerializableType base_type() const final {
-            return static_cast<SerializableType>(SerializableBaseTypes::ProcessingRules);
+    using DataVariant = std::variant<DataPtr, DataSet>;
+
+    struct ProcessorEvent {
+        enum Type {
+            Null,
+            Acquire,
+            Reduce,
+            Scatter,
+            Merge,
         };
 
+        Type type = Null;
+        Version version;
+
+        DataVariant result;
     };
 
-    using ProcessingRulesPtr = std::shared_ptr<ProcessingRules>;
 
     class Processor : NoCopy {
     public:
-        using DataSet = std::vector<DataPtr>;
+        using EventQueue = std::queue<ProcessorEvent>;
 
         Processor() = default;
 
         virtual ~Processor() = default;
 
-        virtual StatusFlag acquire(const ProcessingRulesPtr& rule_ptr,
-                                   DataPtr& buffer_ptr) = 0;
-
         virtual StatusFlag store(const ProcessingRulesPtr& rule_ptr,
                                  const DataPtr& data_ptr) = 0;
 
-        virtual StatusFlag reduce(const ProcessingRulesPtr& rule_ptr,
-                                  const DataSet& target, DataPtr& buffer_ptr) = 0;
+        virtual StatusFlag acquire(Version v, const ProcessingRulesPtr& rule_ptr) = 0;
 
-        virtual StatusFlag scatter(const ProcessingRulesPtr& rule_ptr, unsigned scatter_size,
-                                   const DataPtr& data_ptr, DataSet& buffer) = 0;
+        virtual StatusFlag reduce(Version v, const ProcessingRulesPtr& rule_ptr,
+                                  const DataSet& target) = 0;
+
+        virtual StatusFlag scatter(Version v, const ProcessingRulesPtr& rule_ptr,
+                                   unsigned scatter_size, const DataPtr& data_ptr) = 0;
+
+        virtual StatusFlag merge(Version v, const ProcessingRulesPtr& rule_ptr,
+                                 const DataSet& target) = 0;
+
+        virtual StatusFlag get_events(EventQueue& queue) = 0;
 
     };
 
