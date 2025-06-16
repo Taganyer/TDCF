@@ -25,18 +25,15 @@ namespace tdcf {
 
 }
 
-namespace std {
 
-    struct less<tdcf::IdentityPtr> {
-        size_t operator()(const tdcf::IdentityPtr& lhs, const tdcf::IdentityPtr& rhs) const {
-            return *lhs < *rhs;
-        };
+struct std::less<tdcf::IdentityPtr> {
+    size_t operator()(const tdcf::IdentityPtr& lhs, const tdcf::IdentityPtr& rhs) const {
+        return *lhs < *rhs;
     };
+};
 
-    struct equal_to<tdcf::IdentityPtr> {
-        size_t operator()(const tdcf::IdentityPtr& lhs, const tdcf::IdentityPtr& rhs) const {
-            return *lhs == *rhs;
-        };
+struct std::equal_to<tdcf::IdentityPtr> {
+    size_t operator()(const tdcf::IdentityPtr& lhs, const tdcf::IdentityPtr& rhs) const {
+        return *lhs == *rhs;
     };
-
-}
+};

@@ -4,7 +4,7 @@
 #pragma once
 
 #include <tdcf/detail/Serializable.hpp>
-#include <tdcf/base/MetaData.hpp>
+#include <tdcf/detail/MetaData.hpp>
 
 namespace tdcf {
 

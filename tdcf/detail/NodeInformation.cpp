@@ -7,7 +7,7 @@
 
 using namespace tdcf;
 
-StatusFlag NodeInformation::get_communicator_event() {
+StatusFlag NodeInformation::get_communicator_events() {
     return communicator->get_events(message_queue);
 }
 
@@ -31,7 +31,7 @@ StatusFlag NodeInformation::send_delay_message(const IdentityPtr& id) {
     return StatusFlag::Success;
 }
 
-StatusFlag NodeInformation::get_processor_data() {
+StatusFlag NodeInformation::get_progress_tasks() {
     StatusFlag flag = processor->get_events(data_queue);
     if (flag != StatusFlag::Success) return flag;
     while (!data_queue.empty()) {

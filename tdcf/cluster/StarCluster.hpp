@@ -19,24 +19,40 @@ namespace tdcf {
 
         using ProcessedData = NodeInformation::ProgressTask;
 
-        using Iter = NodeInformation::ProgressEventsMI;
-
         class Broadcast : public EventProgress {
         public:
             static StatusFlag create(ProcessingRulesPtr rp, NodeInformation& info);
 
-            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& node_info) override;
+            StatusFlag handle_event(const MetaData& meta, Variant *data, NodeInformation& node_info) override;
 
-        private:
+        protected:
+            explicit Broadcast(EventType type, ProcessingRulesPtr rp);
+
+            StatusFlag send(NodeInformation& node_info);
+
             DataPtr _data;
 
-            Iter _iter;
+            ProgressEventsMI _self;
 
             unsigned _sent = 0, _respond = 0;
 
-            explicit Broadcast(ProcessingRulesPtr rp);
+        };
 
-            StatusFlag send(NodeInformation& node_info);
+        class BroadcastAgent : public Broadcast, public EventProgressAgent {
+        public:
+            static StatusFlag create(ProcessingRulesPtr rp, ProgressEventsMI other,
+                                     NodeInformation& info, EventProgressAgent **agent_ptr);
+
+            StatusFlag handle_event(const MetaData& meta, Variant *data, NodeInformation& node_info) override;
+
+            StatusFlag store(const MetaData& meta, Variant *data, NodeInformation& node_info) override;
+
+        private:
+            StatusFlag close(NodeInformation& node_info) const;
+
+            BroadcastAgent(ProcessingRulesPtr rp, ProgressEventsMI iter);
+
+            ProgressEventsMI _other;
 
         };
 
@@ -44,7 +60,7 @@ namespace tdcf {
         public:
             explicit Scatter(ProcessingRulesPtr rp);
 
-            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& node_info) override;
+            StatusFlag handle_event(const MetaData& meta, Variant *data, NodeInformation& node_info) override;
 
         };
 
@@ -52,7 +68,7 @@ namespace tdcf {
         public:
             explicit Reduce(ProcessingRulesPtr rp);
 
-            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& node_info) override;
+            StatusFlag handle_event(const MetaData& meta, Variant *data, NodeInformation& node_info) override;
 
         };
 
@@ -60,7 +76,7 @@ namespace tdcf {
         public:
             explicit AllGather(ProcessingRulesPtr rp);
 
-            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& node_info) override;
+            StatusFlag handle_event(const MetaData& meta, Variant *data, NodeInformation& node_info) override;
 
         };
 
@@ -68,7 +84,7 @@ namespace tdcf {
         public:
             explicit AllReduce(ProcessingRulesPtr rp);
 
-            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& node_info) override;
+            StatusFlag handle_event(const MetaData& meta, Variant *data, NodeInformation& node_info) override;
 
         };
 
@@ -76,7 +92,7 @@ namespace tdcf {
         public:
             explicit ReduceScatter(ProcessingRulesPtr rp);
 
-            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& node_info) override;
+            StatusFlag handle_event(const MetaData& meta, Variant *data, NodeInformation& node_info) override;
 
         };
 
@@ -84,7 +100,7 @@ namespace tdcf {
         public:
             explicit AllToAll(ProcessingRulesPtr rp);
 
-            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& node_info) override;
+            StatusFlag handle_event(const MetaData& meta, Variant *data, NodeInformation& node_info) override;
 
         };
 

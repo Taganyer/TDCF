@@ -11,6 +11,8 @@ namespace tdcf {
 
     class Node : NoCopy {
     public:
+        Node(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp);
+
         Node(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp, IdentityPtr root_id);
 
         virtual ~Node() = default;
@@ -20,15 +22,17 @@ namespace tdcf {
     protected:
         void join_in_cluster();
 
-        StatusFlag agent_analysis_message(CommunicatorEvent& event);
+        virtual StatusFlag handle_message(CommunicatorEvent& event);
 
-        StatusFlag agent_handle_message(CommunicatorEvent& event);
+        virtual StatusFlag handle_progress_task(NodeInformation::ProgressTask& task);
 
-        virtual StatusFlag active_events();
+        StatusFlag active_communicator_events();
 
-        virtual StatusFlag analysis_messages();
+        StatusFlag handle_communicator_events();
 
-        virtual StatusFlag handle_messages();
+        StatusFlag active_processor_events();
+
+        StatusFlag handle_processor_events();
 
         NodeInformation _info;
 

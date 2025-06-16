@@ -3,7 +3,7 @@
 //
 #pragma once
 
-#include <tdcf/base/MetaData.hpp>
+#include <tdcf/detail/MetaData.hpp>
 #include <tdcf/frame/Identity.hpp>
 
 namespace tdcf {
@@ -24,16 +24,19 @@ namespace tdcf {
 
         virtual StatusFlag init(NodeInformation& info) = 0;
 
-        virtual StatusFlag analysis_message(NodeInformation& info, CommunicatorEvent& event) = 0;
-
-        virtual StatusFlag handle_received_message(NodeInformation& info, IdentityPtr& id,
-                                                   const MetaData& meta, SerializablePtr& data) = 0;
+        StatusFlag handle_received_message(NodeInformation& info, IdentityPtr& id,
+                                                   const MetaData& meta, SerializablePtr& data);
 
         virtual StatusFlag handle_connect_request(NodeInformation& info, IdentityPtr& id) = 0;
 
         virtual StatusFlag handle_disconnect_request(NodeInformation& info, IdentityPtr& id) = 0;
 
-        virtual StatusFlag handle_event(NodeInformation& info) = 0;
+    protected:
+        virtual StatusFlag handle_data(NodeInformation& info, IdentityPtr& id,
+                               const MetaData& meta, SerializablePtr& data) = 0;
+
+        virtual StatusFlag create_progress(NodeInformation& info, const MetaData& meta,
+                                   SerializablePtr& data) = 0;
 
     };
 

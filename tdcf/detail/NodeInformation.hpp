@@ -4,7 +4,6 @@
 #pragma once
 
 #include <map>
-#include <list>
 #include <unordered_map>
 
 #include <tdcf/detail/EventProgress.hpp>
@@ -39,9 +38,7 @@ namespace tdcf {
 
         using IdentityList = std::vector<IdentityPtr>;
 
-        using ProgressEventsM = std::unordered_map<MetaData, EventProgressPtr>;
 
-        using ProgressEventsMI = ProgressEventsM::iterator;
 
         struct ProgressTask {
             ProgressEventsMI iter;
@@ -64,7 +61,7 @@ namespace tdcf {
 
         IdentityList identity_list;
 
-        ProgressEventsM progress_events;
+        ProgressEventsMap progress_events;
 
     private:
         using SendDelayMQ = std::map<IdentityPtr, std::queue<std::pair<MetaData, SerializablePtr>>>;
@@ -76,7 +73,7 @@ namespace tdcf {
 
         MessageRQ message_queue;
 
-        StatusFlag get_communicator_event();
+        StatusFlag get_communicator_events();
 
         StatusFlag send_message(const IdentityPtr& id, const MetaData& meta, SerializablePtr message);
 
@@ -98,7 +95,7 @@ namespace tdcf {
 
         ProcessedQueue processed_queue;
 
-        StatusFlag get_processor_data();
+        StatusFlag get_progress_tasks();
 
         StatusFlag acquire_data(ProgressEventsMI iter, const MetaData& meta,
                                 const ProcessingRulesPtr& rule_ptr);

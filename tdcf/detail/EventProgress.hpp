@@ -47,7 +47,7 @@ namespace tdcf {
 
         virtual ~EventProgress() = default;
 
-        virtual StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& node_info) = 0;
+        virtual StatusFlag handle_event(const MetaData& meta, Variant* data, NodeInformation& node_info) = 0;
 
         EventType type;
 
@@ -57,14 +57,18 @@ namespace tdcf {
 
     using EventProgressPtr = std::unique_ptr<EventProgress>;
 
+    using ProgressEventsMap = std::unordered_map<MetaData, EventProgressPtr>;
+
+    using ProgressEventsMI = ProgressEventsMap::iterator;
+
     struct EventProgressAgent {
         EventProgressAgent() = default;
 
         virtual ~EventProgressAgent() = default;
 
-        virtual StatusFlag store(NodeInformation& node_info) = 0;
+        virtual StatusFlag store(const MetaData& meta, Variant* data, NodeInformation& node_info) = 0;
 
-        virtual StatusFlag access(NodeInformation& node_info) = 0;
+        EventProgress* event_progress = nullptr;
 
     };
 
@@ -73,25 +77,25 @@ namespace tdcf {
 
         virtual ~ProcessorAgentFactory() = default;
 
-        virtual StatusFlag broadcast(const ProcessingRulesPtr& rule, EventProgress *ptr,
+        virtual StatusFlag broadcast(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
                                      NodeInformation& node_info, EventProgressAgent **agent_ptr) = 0;
 
-        virtual StatusFlag scatter(const ProcessingRulesPtr& rule, EventProgress *ptr,
+        virtual StatusFlag scatter(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
                                    NodeInformation& node_info, EventProgressAgent **agent_ptr) = 0;
 
-        virtual StatusFlag reduce(const ProcessingRulesPtr& rule, EventProgress *ptr,
+        virtual StatusFlag reduce(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
                                   NodeInformation& node_info, EventProgressAgent **agent_ptr) = 0;
 
-        virtual StatusFlag all_gather(const ProcessingRulesPtr& rule, EventProgress *ptr,
+        virtual StatusFlag all_gather(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
                                       NodeInformation& node_info, EventProgressAgent **agent_ptr) = 0;
 
-        virtual StatusFlag all_reduce(const ProcessingRulesPtr& rule, EventProgress *ptr,
+        virtual StatusFlag all_reduce(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
                                       NodeInformation& node_info, EventProgressAgent **agent_ptr) = 0;
 
-        virtual StatusFlag reduce_scatter(const ProcessingRulesPtr& rule, EventProgress *ptr,
+        virtual StatusFlag reduce_scatter(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
                                           NodeInformation& node_info) = 0;
 
-        virtual StatusFlag all_to_all(const ProcessingRulesPtr& rule, EventProgress *ptr,
+        virtual StatusFlag all_to_all(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
                                       NodeInformation& node_info, EventProgressAgent **agent_ptr) = 0;
 
     };

@@ -7,6 +7,9 @@
 
 using namespace tdcf;
 
+Node::Node(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp) :
+    _info(std::move(ip), std::move(cp), std::move(pp)) {}
+
 Node::Node(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp,
            IdentityPtr root_id) :
     _info(std::move(ip), std::move(cp), std::move(pp), std::move(root_id)) {
@@ -30,11 +33,7 @@ void Node::join_in_cluster() {
     TDCF_CHECK_SUCCESS(flag)
 }
 
-StatusFlag Node::agent_analysis_message(CommunicatorEvent& event) {
-    return _agent->analysis_message(_info, event);
-}
-
-StatusFlag Node::agent_handle_message(CommunicatorEvent& event) {
+StatusFlag Node::handle_message(CommunicatorEvent& event) {
     auto& [type, id, meta, data] = event;
     StatusFlag flag = StatusFlag::Success;
     switch (type) {
@@ -56,24 +55,43 @@ StatusFlag Node::agent_handle_message(CommunicatorEvent& event) {
     return flag;
 }
 
-StatusFlag Node::active_events() {
-    StatusFlag flag = _info.get_communicator_event();
-    if (flag != StatusFlag::Success) return flag;
-    return _info.get_processor_data();
+StatusFlag Node::handle_progress_task(NodeInformation::ProgressTask& task) {
+    auto& [iter, meta, result] = task;
+    auto& [_, event_progress] = *iter;
+    StatusFlag flag = event_progress->handle_event(meta, &result, _info);
+    if (flag == StatusFlag::EventEnd) {
+        _info.progress_events.erase(iter);
+        flag = StatusFlag::Success;
+    }
+    return flag;
 }
 
-StatusFlag Node::analysis_messages() {
-    while (!_info.message_queue.empty()) {
-        StatusFlag flag = agent_analysis_message(_info.message_queue.front());
+StatusFlag Node::active_communicator_events() {
+    return _info.get_communicator_events();
+}
+
+StatusFlag Node::handle_communicator_events() {
+    auto size = _info.message_queue.size();
+    while (size) {
+        --size;
+        StatusFlag flag = handle_message(_info.message_queue.front());
+        /// TODO: 这里出错不丢弃事件
         if (flag != StatusFlag::Success) return flag;
         _info.message_queue.pop();
     }
     return StatusFlag::Success;
 }
 
-StatusFlag Node::handle_messages() {
-    while (!_info.message_queue.empty()) {
-        StatusFlag flag = agent_handle_message(_info.message_queue.front());
+StatusFlag Node::active_processor_events() {
+    return _info.get_progress_tasks();
+}
+
+StatusFlag Node::handle_processor_events() {
+    auto size = _info.processed_queue.size();
+    while (size) {
+        --size;
+        StatusFlag flag = handle_progress_task(_info.processed_queue.front());
+        /// TODO: 这里出错不丢弃事件
         if (flag != StatusFlag::Success) return flag;
         _info.message_queue.pop();
     }
@@ -81,9 +99,11 @@ StatusFlag Node::handle_messages() {
 }
 
 StatusFlag Node::handle_a_loop() {
-    StatusFlag flag = active_events();
+    StatusFlag flag = active_communicator_events();
     if (flag != StatusFlag::Success) return flag;
-    flag = analysis_messages();
+    flag = handle_communicator_events();
     if (flag != StatusFlag::Success) return flag;
-    return handle_messages();
+    flag = active_processor_events();
+    if (flag != StatusFlag::Success) return flag;
+    return handle_processor_events();
 }
