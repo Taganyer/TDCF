@@ -26,12 +26,14 @@ namespace tdcf {
 }
 
 
+template<>
 struct std::less<tdcf::IdentityPtr> {
     size_t operator()(const tdcf::IdentityPtr& lhs, const tdcf::IdentityPtr& rhs) const {
         return *lhs < *rhs;
     };
 };
 
+template<>
 struct std::equal_to<tdcf::IdentityPtr> {
     size_t operator()(const tdcf::IdentityPtr& lhs, const tdcf::IdentityPtr& rhs) const {
         return *lhs == *rhs;

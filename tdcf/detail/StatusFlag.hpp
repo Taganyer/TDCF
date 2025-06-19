@@ -10,10 +10,6 @@ namespace tdcf {
     MOD(Timeout), \
     MOD(EventEnd), \
     MOD(FurtherWaiting), \
-    MOD(FurtherWaitingAll), \
-    MOD(Conflict), \
-    MOD(TargetNotFound), \
-    MOD(Transition), \
     MOD(ClusterOffline),
 
 #define ENUM_MOD(item) item

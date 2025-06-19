@@ -24,3 +24,9 @@
 #define TDCF_FUN_NAME __FUNCSIG__
 
 #endif
+
+/// 该函数要求不抛出错误
+#define TDCF_NO_THROW
+
+/// 该函数可能会抛出错误
+#define TDCF_THROW

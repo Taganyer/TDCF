@@ -53,8 +53,9 @@ StatusFlag NodeInformation::acquire_data(ProgressEventsMI iter, const MetaData& 
     return flag;
 }
 
-StatusFlag NodeInformation::store_data(const ProcessingRulesPtr& rule_ptr, const DataPtr& data_ptr) {
-    return processor->store(rule_ptr, data_ptr);
+void NodeInformation::store_data(const ProcessingRulesPtr& rule_ptr, const DataPtr& data_ptr) {
+    StatusFlag flag = processor->store(rule_ptr, data_ptr);
+    TDCF_CHECK_SUCCESS(flag)
 }
 
 StatusFlag NodeInformation::reduce_data(ProgressEventsMI iter, const MetaData& meta,

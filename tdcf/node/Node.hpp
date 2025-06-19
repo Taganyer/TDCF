@@ -15,24 +15,32 @@ namespace tdcf {
 
         Node(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp, IdentityPtr root_id);
 
-        virtual ~Node() = default;
+        virtual ~Node() { assert(!_start); };
+
+        virtual void start(unsigned cluster_size);
 
         [[nodiscard]] StatusFlag handle_a_loop();
 
-    protected:
-        void join_in_cluster();
+        [[nodiscard]] bool parent_cluster_started() const { return _start; };
 
+    protected:
         virtual StatusFlag handle_message(CommunicatorEvent& event);
 
-        virtual StatusFlag handle_progress_task(NodeInformation::ProgressTask& task);
+        StatusFlag handle_progress_task(NodeInformation::ProgressTask& task);
 
         StatusFlag active_communicator_events();
 
-        StatusFlag handle_communicator_events();
-
         StatusFlag active_processor_events();
 
+        StatusFlag handle_communicator_events();
+
         StatusFlag handle_processor_events();
+
+        bool _start = false;
+
+        bool _cluster_start = false;
+
+        unsigned _cluster_events = 0;
 
         NodeInformation _info;
 

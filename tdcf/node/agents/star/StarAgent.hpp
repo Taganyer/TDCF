@@ -10,29 +10,34 @@ namespace tdcf {
 
     class StarAgent : public NodeAgent {
     public:
-        StatusFlag init(NodeInformation& info) override;
+        StatusFlag init(const MetaData& meta, NodeInformation& info) override;
 
-        StatusFlag handle_connect_request(NodeInformation& info, IdentityPtr& id) override;
+        StatusFlag handle_disconnect_request(IdentityPtr& id, NodeInformation& info) override;
 
-        StatusFlag handle_disconnect_request(NodeInformation& info, IdentityPtr& id) override;
+        StatusFlag serialize(void *buffer, unsigned buffer_size) const override;
+
+        StatusFlag deserialize(const void *buffer, unsigned buffer_size) override;
+
+        [[nodiscard]] SerializableType derived_type() const override;
+
+        [[nodiscard]] unsigned serialize_size() const override;
 
     private:
-        StatusFlag handle_data(NodeInformation& info, IdentityPtr& id,
-                               const MetaData& meta, SerializablePtr& data) override;
-
-        StatusFlag create_progress(NodeInformation& info, const MetaData& meta,
-                                   SerializablePtr& data) override;
+        StatusFlag create_progress(const MetaData& meta, ProcessingRulesPtr& rule,
+                                   NodeInformation& info) override;
 
         class Broadcast : public EventProgress {
         public:
-            static StatusFlag create(const MetaData& meta, ProcessingRulesPtr rp, NodeInformation& info);
-
-            StatusFlag handle_event(const MetaData& meta, Variant *data, NodeInformation& node_info) override;
-
-        private:
             explicit Broadcast(ProcessingRulesPtr rp, const MetaData& meta);
 
-            MetaData old_meta;
+            static StatusFlag create(const MetaData& meta, ProcessingRulesPtr rp, NodeInformation& info);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
+
+        private:
+            StatusFlag close(NodeInformation& info) const;
+
+            MetaData _root_meta;
 
             EventProgressAgent *_agent = nullptr;
 

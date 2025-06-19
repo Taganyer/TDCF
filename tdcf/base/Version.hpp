@@ -16,18 +16,6 @@
 
 namespace tdcf {
 
-    enum class MetaDataTypes : uint8_t {
-        Null,
-        Broadcast,
-        Scatter,
-        Reduce,
-        AllGather,
-        AllReduce,
-        ReduceScatter,
-        AllToAll,
-        Supplement,
-    };
-
     struct Version {
         constexpr Version() = default;
 
@@ -88,6 +76,7 @@ namespace tdcf {
 
 }
 
+template<>
 struct std::hash<tdcf::Version> {
     size_t operator()(tdcf::Version v) const noexcept {
         return v.version;

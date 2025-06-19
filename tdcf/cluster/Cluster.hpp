@@ -13,19 +13,42 @@ namespace tdcf {
         Cluster(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp, IdentityPtr root_id) :
             Node(std::move(ip), std::move(cp), std::move(pp), std::move(root_id)) {};
 
-        virtual void broadcast(ProcessingRulesPtr rule_ptr) = 0;
+        ~Cluster() override { if (_cluster_start) Cluster::end(); };
 
-        virtual void scatter(ProcessingRulesPtr rule_ptr) = 0;
+        void start(unsigned cluster_size) final;
 
-        virtual void reduce(ProcessingRulesPtr rule_ptr) = 0;
+        virtual StatusFlag end();
 
-        virtual void all_gather(ProcessingRulesPtr rule_ptr) = 0;
+        virtual StatusFlag broadcast(ProcessingRulesPtr rule_ptr) = 0;
 
-        virtual void all_reduce(ProcessingRulesPtr rule_ptr) = 0;
+        virtual StatusFlag scatter(ProcessingRulesPtr rule_ptr) = 0;
 
-        virtual void reduce_scatter(ProcessingRulesPtr rule_ptr) = 0;
+        virtual StatusFlag reduce(ProcessingRulesPtr rule_ptr) = 0;
 
-        virtual void all_to_all(ProcessingRulesPtr rule_ptr) = 0;
+        virtual StatusFlag all_gather(ProcessingRulesPtr rule_ptr) = 0;
+
+        virtual StatusFlag all_reduce(ProcessingRulesPtr rule_ptr) = 0;
+
+        virtual StatusFlag reduce_scatter(ProcessingRulesPtr rule_ptr) = 0;
+
+        virtual StatusFlag all_to_all(ProcessingRulesPtr rule_ptr) = 0;
+
+        [[nodiscard]] bool cluster_started() const { return _cluster_start; };
+
+    protected:
+        virtual void cluster_accept(unsigned cluster_size) = 0;
+
+        virtual void cluster_start() = 0;
+
+        virtual void cluster_end() = 0;
+
+        virtual StatusFlag handle_received_message(IdentityPtr& id, const MetaData& meta,
+                                                   SerializablePtr& data) = 0;
+
+        virtual StatusFlag handle_disconnect_request(IdentityPtr& id) = 0;
+
+    private:
+        StatusFlag handle_message(CommunicatorEvent& event) final;
 
     };
 

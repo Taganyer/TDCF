@@ -9,47 +9,21 @@
 
 namespace tdcf {
 
-    enum class EventType : uint8_t {
-        Null,
-
-        HTCBroadcast,
-        HTCScatter,
-        HTCReduce,
-        HTCAllGather,
-        HTCAllReduce,
-        HTCReduceScatter,
-        HTCAllToAll,
-
-        CTNBroadcast,
-        CTNScatter,
-        CTNReduce,
-        CTNAllGather,
-        CTNAllReduce,
-        CTNReduceScatter,
-        CTNAllToAll,
-
-        CTCBroadcast,
-        CTCScatter,
-        CTCReduce,
-        CTCAllGather,
-        CTCAllReduce,
-        CTCReduceScatter,
-        CTCAllToAll,
-    };
+    enum class ProgressType : uint8_t;
 
     class NodeInformation;
 
     using Variant = std::variant<SerializablePtr, DataPtr, DataSet>;
 
     struct EventProgress {
-        explicit EventProgress(EventType type, ProcessingRulesPtr rule) :
+        explicit EventProgress(ProgressType type, ProcessingRulesPtr rule) :
             type(type), rule(std::move(rule)) {};
 
         virtual ~EventProgress() = default;
 
-        virtual StatusFlag handle_event(const MetaData& meta, Variant* data, NodeInformation& node_info) = 0;
+        virtual StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) = 0;
 
-        EventType type;
+        ProgressType type;
 
         ProcessingRulesPtr rule;
 
@@ -66,40 +40,64 @@ namespace tdcf {
 
         virtual ~EventProgressAgent() = default;
 
-        virtual StatusFlag store(const MetaData& meta, Variant* data, NodeInformation& node_info) = 0;
-
-        EventProgress* event_progress = nullptr;
+        virtual StatusFlag store(const MetaData& meta, Variant& data, NodeInformation& info) = 0;
 
     };
 
-    struct ProcessorAgentFactory {
+    class ProcessorAgentFactory {
+    public:
         ProcessorAgentFactory() = default;
 
         virtual ~ProcessorAgentFactory() = default;
 
         virtual StatusFlag broadcast(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
-                                     NodeInformation& node_info, EventProgressAgent **agent_ptr) = 0;
+                                     NodeInformation& info, EventProgressAgent **agent_ptr) = 0;
 
         virtual StatusFlag scatter(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
-                                   NodeInformation& node_info, EventProgressAgent **agent_ptr) = 0;
+                                   NodeInformation& info, EventProgressAgent **agent_ptr) = 0;
 
         virtual StatusFlag reduce(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
-                                  NodeInformation& node_info, EventProgressAgent **agent_ptr) = 0;
+                                  NodeInformation& info, EventProgressAgent **agent_ptr) = 0;
 
         virtual StatusFlag all_gather(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
-                                      NodeInformation& node_info, EventProgressAgent **agent_ptr) = 0;
+                                      NodeInformation& info, EventProgressAgent **agent_ptr) = 0;
 
         virtual StatusFlag all_reduce(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
-                                      NodeInformation& node_info, EventProgressAgent **agent_ptr) = 0;
+                                      NodeInformation& info, EventProgressAgent **agent_ptr) = 0;
 
         virtual StatusFlag reduce_scatter(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
-                                          NodeInformation& node_info) = 0;
+                                          NodeInformation& info) = 0;
 
         virtual StatusFlag all_to_all(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
-                                      NodeInformation& node_info, EventProgressAgent **agent_ptr) = 0;
+                                      NodeInformation& info, EventProgressAgent **agent_ptr) = 0;
 
     };
 
     using ProcessorAgentFactoryPtr = std::unique_ptr<ProcessorAgentFactory>;
+
+#define ProcessorAgentFactoryMacro(classname) \
+    class classname : public ProcessorAgentFactory { \
+    public: \
+        StatusFlag broadcast(const ProcessingRulesPtr& rule, ProgressEventsMI iter, \
+                             NodeInformation& info, EventProgressAgent **agent_ptr) override; \
+        \
+        StatusFlag scatter(const ProcessingRulesPtr& rule, ProgressEventsMI iter, \
+                           NodeInformation& info, EventProgressAgent **agent_ptr) override; \
+        \
+        StatusFlag reduce(const ProcessingRulesPtr& rule, ProgressEventsMI iter, \
+                          NodeInformation& info, EventProgressAgent **agent_ptr) override; \
+        \
+        StatusFlag all_gather(const ProcessingRulesPtr& rule, ProgressEventsMI iter, \
+                              NodeInformation& info, EventProgressAgent **agent_ptr) override; \
+        \
+        StatusFlag all_reduce(const ProcessingRulesPtr& rule, ProgressEventsMI iter, \
+                              NodeInformation& info, EventProgressAgent **agent_ptr) override; \
+        \
+        StatusFlag reduce_scatter(const ProcessingRulesPtr& rule, ProgressEventsMI iter, \
+                                  NodeInformation& info) override; \
+        \
+        StatusFlag all_to_all(const ProcessingRulesPtr& rule, ProgressEventsMI iter, \
+                              NodeInformation& info, EventProgressAgent **agent_ptr) override; \
+    };
 
 }

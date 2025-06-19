@@ -7,21 +7,36 @@
 
 using namespace tdcf;
 
-/// TODO
-StatusFlag StarAgent::init(NodeInformation& info) {
+StatusFlag StarAgent::init(const MetaData& meta, NodeInformation& info) {
+    assert(meta.stage == Star::start);
     return StatusFlag::Success;
 }
 
-StatusFlag StarAgent::handle_connect_request(NodeInformation& info, IdentityPtr& id) {
+StatusFlag StarAgent::handle_disconnect_request(IdentityPtr& id, NodeInformation& info) {
 }
 
-StatusFlag StarAgent::handle_disconnect_request(NodeInformation& info, IdentityPtr& id) {
+StatusFlag StarAgent::serialize(void *buffer, unsigned buffer_size) const {
+    return StatusFlag::Success;
 }
 
-StatusFlag StarAgent::handle_data(NodeInformation& info, IdentityPtr& id,
-                                  const MetaData& meta, SerializablePtr& data) {
+StatusFlag StarAgent::deserialize(const void *buffer, unsigned buffer_size) {
+    return StatusFlag::Success;
 }
 
-StatusFlag StarAgent::create_progress(NodeInformation& info, const MetaData& meta, SerializablePtr& data) {
-    assert(info.progress_events.find(meta) == info.progress_events.end());
+SerializableType StarAgent::derived_type() const {
+    return ClusterType::star;
+}
+
+unsigned StarAgent::serialize_size() const {
+    return 0;
+}
+
+StatusFlag StarAgent::create_progress(const MetaData& meta, ProcessingRulesPtr& rule,
+                                   NodeInformation& info) {
+    switch (meta.operation_type) {
+        case OperationType::Broadcast:
+            return Broadcast::create(meta, rule, info);
+        default:
+            TDCF_RAISE_ERROR(error OperationType)
+    }
 }

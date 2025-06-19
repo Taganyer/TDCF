@@ -22,7 +22,7 @@ namespace tdcf {
 
         Type type = Null;
 
-        IdentityPtr target_id;
+        IdentityPtr id;
 
         MetaData meta;
 

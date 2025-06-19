@@ -14,36 +14,28 @@ namespace tdcf {
 
     class NodeAgent : public Serializable {
     public:
-        /// 通过此函数反序列化 NodeAgent。
-        static StatusFlag deserialize_NodeAgent(const void *buffer, unsigned buffer_size,
-                                                SerializableType derived_type, SerializablePtr& buffer_ptr);
+        /// INFO: 用户通过此函数反序列化 NodeAgent。
+        static StatusFlag deserialize_NodeAgent(const MetaData& meta, SerializablePtr& buffer_ptr,
+                                                const void *buffer, unsigned buffer_size);
 
         [[nodiscard]] SerializableType base_type() const final {
             return static_cast<SerializableType>(SerializableBaseTypes::NodeAgent);
         };
 
-        virtual StatusFlag init(NodeInformation& info) = 0;
+        /// 不得向 root 发送回应信息。
+        virtual StatusFlag init(const MetaData& meta, NodeInformation& info) = 0;
 
-        StatusFlag handle_received_message(NodeInformation& info, IdentityPtr& id,
-                                                   const MetaData& meta, SerializablePtr& data);
+        StatusFlag handle_received_message(IdentityPtr& id, const MetaData& meta,
+                                           SerializablePtr& data, NodeInformation& info);
 
-        virtual StatusFlag handle_connect_request(NodeInformation& info, IdentityPtr& id) = 0;
-
-        virtual StatusFlag handle_disconnect_request(NodeInformation& info, IdentityPtr& id) = 0;
+        virtual StatusFlag handle_disconnect_request(IdentityPtr& id, NodeInformation& info) = 0;
 
     protected:
-        virtual StatusFlag handle_data(NodeInformation& info, IdentityPtr& id,
-                               const MetaData& meta, SerializablePtr& data) = 0;
-
-        virtual StatusFlag create_progress(NodeInformation& info, const MetaData& meta,
-                                   SerializablePtr& data) = 0;
+        virtual StatusFlag create_progress(const MetaData& meta, ProcessingRulesPtr& rule,
+                                           NodeInformation& info) = 0;
 
     };
 
     using NodeAgentPtr = std::shared_ptr<NodeAgent>;
-
-    enum class NodeDataTypes {
-        StarNode,
-    };
 
 }

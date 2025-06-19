@@ -9,26 +9,37 @@ namespace tdcf {
 
     class StarCluster : public Cluster {
     public:
-        StarCluster(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp,
-                    IdentityPtr root_id, unsigned cluster_size);
+        StarCluster(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp, IdentityPtr root_id) :
+            Cluster(std::move(ip), std::move(cp), std::move(pp), std::move(root_id)) {};
 
-        ~StarCluster() override;
+        StatusFlag broadcast(ProcessingRulesPtr rule_ptr) override;
 
     private:
-        SerializablePtr create_node_data();
+        void cluster_accept(unsigned cluster_size) override;
+
+        void cluster_start() override;
+
+        static SerializablePtr create_node_data();
+
+        StatusFlag handle_received_message(IdentityPtr& id, const MetaData& meta, SerializablePtr& data) override;
+
+        StatusFlag handle_disconnect_request(IdentityPtr& id) override;
+
+        ProcessorAgentFactoryMacro(StarAgentFactory)
+
 
         using ProcessedData = NodeInformation::ProgressTask;
 
         class Broadcast : public EventProgress {
         public:
+            explicit Broadcast(ProgressType type, ProcessingRulesPtr rp);
+
             static StatusFlag create(ProcessingRulesPtr rp, NodeInformation& info);
 
-            StatusFlag handle_event(const MetaData& meta, Variant *data, NodeInformation& node_info) override;
+            StatusFlag handle_event(const MetaData& meta, Variant & data, NodeInformation& info) override;
 
         protected:
-            explicit Broadcast(EventType type, ProcessingRulesPtr rp);
-
-            StatusFlag send(NodeInformation& node_info);
+            StatusFlag send(NodeInformation& info);
 
             DataPtr _data;
 
@@ -40,67 +51,19 @@ namespace tdcf {
 
         class BroadcastAgent : public Broadcast, public EventProgressAgent {
         public:
+            BroadcastAgent(ProcessingRulesPtr rp, ProgressEventsMI iter);
+
             static StatusFlag create(ProcessingRulesPtr rp, ProgressEventsMI other,
                                      NodeInformation& info, EventProgressAgent **agent_ptr);
 
-            StatusFlag handle_event(const MetaData& meta, Variant *data, NodeInformation& node_info) override;
+            StatusFlag handle_event(const MetaData& meta, Variant & data, NodeInformation& info) override;
 
-            StatusFlag store(const MetaData& meta, Variant *data, NodeInformation& node_info) override;
+            StatusFlag store(const MetaData& meta, Variant& data, NodeInformation& info) override;
 
         private:
-            StatusFlag close(NodeInformation& node_info) const;
-
-            BroadcastAgent(ProcessingRulesPtr rp, ProgressEventsMI iter);
+            StatusFlag close(NodeInformation& info) const;
 
             ProgressEventsMI _other;
-
-        };
-
-        class Scatter : public EventProgress {
-        public:
-            explicit Scatter(ProcessingRulesPtr rp);
-
-            StatusFlag handle_event(const MetaData& meta, Variant *data, NodeInformation& node_info) override;
-
-        };
-
-        class Reduce : public EventProgress {
-        public:
-            explicit Reduce(ProcessingRulesPtr rp);
-
-            StatusFlag handle_event(const MetaData& meta, Variant *data, NodeInformation& node_info) override;
-
-        };
-
-        class AllGather : public EventProgress {
-        public:
-            explicit AllGather(ProcessingRulesPtr rp);
-
-            StatusFlag handle_event(const MetaData& meta, Variant *data, NodeInformation& node_info) override;
-
-        };
-
-        class AllReduce : public EventProgress {
-        public:
-            explicit AllReduce(ProcessingRulesPtr rp);
-
-            StatusFlag handle_event(const MetaData& meta, Variant *data, NodeInformation& node_info) override;
-
-        };
-
-        class ReduceScatter : public EventProgress {
-        public:
-            explicit ReduceScatter(ProcessingRulesPtr rp);
-
-            StatusFlag handle_event(const MetaData& meta, Variant *data, NodeInformation& node_info) override;
-
-        };
-
-        class AllToAll : public EventProgress {
-        public:
-            explicit AllToAll(ProcessingRulesPtr rp);
-
-            StatusFlag handle_event(const MetaData& meta, Variant *data, NodeInformation& node_info) override;
 
         };
 

@@ -3,19 +3,29 @@
 //
 
 #include <tdcf/base/Errors.hpp>
-#include <tdcf/detail/OperationInterpreter.hpp>
 #include <tdcf/cluster/StarCluster.hpp>
 
 using namespace tdcf;
 
+StarCluster::Broadcast::Broadcast(ProgressType type, ProcessingRulesPtr rp) :
+    EventProgress(type, std::move(rp)) {}
+
 StatusFlag StarCluster::Broadcast::create(ProcessingRulesPtr rp, NodeInformation& info) {
-    MetaData meta(info.progress_events_version++, MetaDataTypes::Broadcast);
+    MetaData meta(info.progress_events_version++, OperationType::Broadcast);
+    meta.progress_type = ProgressType::Root;
     auto [iter, success] = info.progress_events.emplace(
-        meta, std::make_unique<Broadcast>(EventType::HTCBroadcast, std::move(rp)));
+        meta, std::make_unique<Broadcast>(ProgressType::Root, std::move(rp)));
     TDCF_CHECK_EXPR(success)
 
-    meta.stage = ClusterBroadcast::acquire;
     auto& self = static_cast<Broadcast&>(*iter->second);
+
+    meta.stage = ClusterBroadcast::send_rule;
+    for (auto& id : info.identity_list) {
+        StatusFlag flag = info.send_message(id, meta, self.rule);
+        TDCF_CHECK_SUCCESS(flag)
+    }
+
+    meta.stage = ClusterBroadcast::acquire_data;
     StatusFlag flag = info.acquire_data(iter, meta, self.rule);
     if (flag != StatusFlag::Success) {
         info.progress_events.erase(iter);
@@ -26,18 +36,18 @@ StatusFlag StarCluster::Broadcast::create(ProcessingRulesPtr rp, NodeInformation
 }
 
 StatusFlag StarCluster::Broadcast::handle_event(const MetaData& meta,
-                                                Variant *data, NodeInformation& node_info) {
-    assert(meta.type == MetaDataTypes::Broadcast);
-    if (meta.stage == ClusterBroadcast::acquire) {
+                                                Variant& data, NodeInformation& info) {
+    assert(meta.operation_type == OperationType::Broadcast);
+    if (meta.stage == ClusterBroadcast::acquire_data) {
         if (_sent == 0) {
-            assert(data);
-            _data = std::move(std::get<DataPtr>(*data));
+            _data = std::move(std::get<DataPtr>(data));
         }
-        return send(node_info);
+        return send(info);
     }
     if (meta.stage == ClusterBroadcast::finish_ack) {
         ++_respond;
-        if (_respond == node_info.identity_list.size()) {
+        assert(meta.progress_type == ProgressType::Node);
+        if (_respond == info.identity_list.size()) {
             rule->finish_callback();
         }
         return StatusFlag::EventEnd;
@@ -45,78 +55,76 @@ StatusFlag StarCluster::Broadcast::handle_event(const MetaData& meta,
     TDCF_RAISE_ERROR(error type)
 }
 
-StarCluster::Broadcast::Broadcast(EventType type, ProcessingRulesPtr rp) :
-    EventProgress(type, std::move(rp)) {}
-
-StatusFlag StarCluster::Broadcast::send(NodeInformation& node_info) {
+StatusFlag StarCluster::Broadcast::send(NodeInformation& info) {
     MetaData meta(_self->first);
-    meta.stage = ClusterBroadcast::send;
+    meta.stage = ClusterBroadcast::send_data;
 
     StatusFlag flag = StatusFlag::Success;
-    for (; _sent < node_info.identity_list.size(); ++_sent) {
+    for (; _sent < info.identity_list.size(); ++_sent) {
         meta.serial = _sent;
-        meta.ack_serial = _sent;
-        auto& id = node_info.identity_list[_sent];
-        flag = node_info.send_message(id, meta, _self->second->rule);
+        auto& id = info.identity_list[_sent];
+        flag = info.send_message(id, meta, _self->second->rule);
         if (flag != StatusFlag::Success) return flag;
-        flag = node_info.send_message(id, meta, _data);
+        flag = info.send_message(id, meta, _data);
         if (flag != StatusFlag::Success) return flag;
     }
-    if (_sent == node_info.identity_list.size()) _data = nullptr;
+    if (_sent == info.identity_list.size()) _data = nullptr;
     return StatusFlag::Success;
 }
 
+StarCluster::BroadcastAgent::BroadcastAgent(ProcessingRulesPtr rp, ProgressEventsMI iter) :
+    Broadcast(ProgressType::NodeRoot, std::move(rp)), _other(iter) {}
+
 StatusFlag StarCluster::BroadcastAgent::create(ProcessingRulesPtr rp, ProgressEventsMI other,
                                                NodeInformation& info, EventProgressAgent **agent_ptr) {
-    MetaData meta(info.progress_events_version++, MetaDataTypes::Broadcast);
+    MetaData meta(info.progress_events_version++, OperationType::Broadcast);
+    meta.progress_type = ProgressType::NodeRoot;
     auto [iter, success] = info.progress_events.emplace(
         meta, std::make_unique<BroadcastAgent>(std::move(rp), other));
     TDCF_CHECK_EXPR(success)
 
     auto& self = static_cast<BroadcastAgent&>(*iter->second);
+
+    assert(meta.stage == AgentBroadcast::get_rule);
+    meta.stage = ClusterBroadcast::send_rule;
+    for (auto& id : info.identity_list) {
+        StatusFlag flag = info.send_message(id, meta, self.rule);
+        TDCF_CHECK_SUCCESS(flag)
+    }
+
     *agent_ptr = &self;
     self._self = iter;
     return StatusFlag::Success;
 }
 
-StatusFlag StarCluster::BroadcastAgent::handle_event(const MetaData& meta, Variant *data,
-                                                     NodeInformation& node_info) {
-    assert(meta.type == MetaDataTypes::Broadcast);
-    if (meta.stage == AgentBroadcast::acquire) {
+StatusFlag StarCluster::BroadcastAgent::handle_event(const MetaData& meta, Variant& data,
+                                                     NodeInformation& info) {
+    assert(meta.operation_type == OperationType::Broadcast);
+    if (meta.stage == AgentBroadcast::get_data) {
         if (_sent == 0) {
-            assert(data);
-            _data = std::move(std::get<DataPtr>(*data));
+            _data = std::move(std::get<DataPtr>(data));
+            info.store_data(rule, _data);
         }
-        return send(node_info);
+        return send(info);
     }
     if (meta.stage == ClusterBroadcast::finish_ack) {
         ++_respond;
-        if (_respond == node_info.identity_list.size()) {
-            return close(node_info);
+        if (_respond == info.identity_list.size()) {
+            return close(info);
         }
         return StatusFlag::Success;
     }
     TDCF_RAISE_ERROR(error type)
 }
 
-StatusFlag StarCluster::BroadcastAgent::store(const MetaData& meta, Variant *data,
-                                              NodeInformation& node_info) {
-    return handle_event(meta, data, node_info);
+StatusFlag StarCluster::BroadcastAgent::store(const MetaData& meta, Variant& data,
+                                              NodeInformation& info) {
+    return handle_event(meta, data, info);
 }
 
-StatusFlag StarCluster::BroadcastAgent::close(NodeInformation& node_info) const {
-    MetaData meta(0, MetaDataTypes::Broadcast);
+StatusFlag StarCluster::BroadcastAgent::close(NodeInformation& info) const {
+    MetaData meta(_other->first);
     meta.stage = AgentBroadcast::finish;
-
-    StatusFlag flag = _other->second->handle_event(meta, nullptr, node_info);
-    if (flag == StatusFlag::EventEnd) {
-        node_info.progress_events.erase(_other);
-        return StatusFlag::EventEnd;
-    }
-    assert(flag != StatusFlag::Success);
-    return flag;
+    info.processed_queue.emplace(_other, meta, SerializablePtr(nullptr));
+    return StatusFlag::EventEnd;
 }
-
-StarCluster::BroadcastAgent::BroadcastAgent(ProcessingRulesPtr rp, ProgressEventsMI iter) :
-    Broadcast(EventType::CTCBroadcast, std::move(rp)), _other(iter) {}
-

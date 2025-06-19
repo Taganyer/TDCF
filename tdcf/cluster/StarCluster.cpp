@@ -2,19 +2,88 @@
 // Created by taganyer on 25-5-22.
 //
 
-
+#include <algorithm>
+#include <tdcf/base/Errors.hpp>
 #include <tdcf/cluster/StarCluster.hpp>
+#include <tdcf/node/agents/star/StarAgent.hpp>
 
 using namespace tdcf;
 
 
-StarCluster::StarCluster(IdentityPtr ip, CommunicatorPtr cp,
-                         ProcessorPtr pp, IdentityPtr root_id,
-                         unsigned cluster_size) :
-    Cluster(std::move(ip), std::move(cp), std::move(pp), std::move(root_id)) {
-
+#define StarClusterFun(fun_name, class_name) \
+StatusFlag StarCluster::fun_name(ProcessingRulesPtr rule_ptr) { \
+    StatusFlag flag = class_name::create(std::move(rule_ptr), _info); \
+    if (flag != StatusFlag::Success) return flag; \
+    ++_cluster_events; \
+    return flag; \
 }
 
-StarCluster::~StarCluster() {
+StarClusterFun(broadcast, Broadcast)
+
+void StarCluster::cluster_accept(unsigned cluster_size) {
+    for (unsigned i = 0; i < cluster_size;) {
+        StatusFlag flag = active_communicator_events();
+        TDCF_CHECK_EXPR(flag == StatusFlag::Success ||
+            flag == StatusFlag::Timeout || flag == StatusFlag::FurtherWaiting)
+        while (!_info.message_queue.empty() && i < cluster_size) {
+            auto& [type, id, meta, data] = _info.message_queue.front();
+            if (type == CommunicatorEvent::ConnectRequest) {
+                assert(meta.stage == Star::connect);
+                flag = _info.communicator->accept(id);
+                TDCF_CHECK_SUCCESS(flag)
+                _info.identity_list.emplace_back(std::move(id));
+                ++i;
+            } else if (type == CommunicatorEvent::MessageSendable) {
+                flag = _info.send_delay_message(id);
+                TDCF_CHECK_SUCCESS(flag)
+            } else {
+                TDCF_RAISE_ERROR(type == CommunicatorEvent::ConnectRequest ||
+                    type == CommunicatorEvent::MessageSendable);
+            }
+            _info.message_queue.pop();
+        }
+    }
+    std::sort(_info.identity_list.begin(), _info.identity_list.end());
 }
 
+void StarCluster::cluster_start() {
+    MetaData meta;
+    meta.operation_type = OperationType::AgentCreate;
+    meta.stage = Star::start;
+    for (auto& id : _info.identity_list) {
+        StatusFlag flag = _info.send_message(id, meta, create_node_data());
+        ++meta.serial;
+        TDCF_CHECK_SUCCESS(flag)
+    }
+    _info.agent_factory = std::make_unique<StarAgentFactory>();
+}
+
+SerializablePtr StarCluster::create_node_data() {
+    return std::make_shared<StarAgent>();
+}
+
+StatusFlag StarCluster::handle_received_message(IdentityPtr& id, const MetaData& meta,
+                                                SerializablePtr& data) {
+    auto iter = _info.progress_events.find(meta);
+    assert(iter != _info.progress_events.end());
+    auto& [m, progress] = *iter;
+    Variant variant(std::move(data));
+    return progress->handle_event(meta, variant, _info);
+}
+
+StatusFlag StarCluster::handle_disconnect_request(IdentityPtr& id) {
+    StatusFlag flag = _info.communicator->disconnect(id);
+    TDCF_CHECK_SUCCESS(flag)
+    if (id != _info.root_id) {
+        _info.identity_list.erase(std::lower_bound(_info.identity_list.begin(), _info.identity_list.end(), id));
+    }
+    return StatusFlag::Success;
+}
+
+#define StarAgentFactoryFun(type, class_name) \
+StatusFlag StarCluster::StarAgentFactory::type(const ProcessingRulesPtr& rule, ProgressEventsMI iter, \
+                                               NodeInformation& info, EventProgressAgent **agent_ptr) { \
+    return class_name::create(rule, iter, info, agent_ptr); \
+}
+
+StarAgentFactoryFun(broadcast, BroadcastAgent)
