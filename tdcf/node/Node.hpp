@@ -15,16 +15,18 @@ namespace tdcf {
 
         Node(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp, IdentityPtr root_id);
 
-        virtual ~Node() { assert(!_start); };
+        virtual ~Node() { assert(!_node_agent_started); };
 
         virtual void start(unsigned cluster_size);
 
         [[nodiscard]] StatusFlag handle_a_loop();
 
-        [[nodiscard]] bool parent_cluster_started() const { return _start; };
+        [[nodiscard]] bool node_agent_started() const { return _node_agent_started; };
 
     protected:
         virtual StatusFlag handle_message(CommunicatorEvent& event);
+
+        void end_agent();
 
         StatusFlag handle_progress_task(NodeInformation::ProgressTask& task);
 
@@ -36,9 +38,11 @@ namespace tdcf {
 
         StatusFlag handle_processor_events();
 
-        bool _start = false;
+        bool _node_agent_started = false;
 
-        bool _cluster_start = false;
+        bool _cluster_started = false;
+
+        bool _cluster_closing = false;
 
         unsigned _cluster_events = 0;
 

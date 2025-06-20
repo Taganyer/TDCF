@@ -81,6 +81,8 @@ namespace tdcf {
 
         StatusFlag send_delay_message(const IdentityPtr& id) TDCF_NO_THROW;
 
+        bool delayed_message(const IdentityPtr& id) TDCF_NO_THROW;
+
     private:
         using DataRQ = Processor::EventQueue;
 

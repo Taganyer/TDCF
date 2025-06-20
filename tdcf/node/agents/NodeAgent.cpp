@@ -24,12 +24,19 @@ StatusFlag NodeAgent::deserialize_NodeAgent(const MetaData& meta, SerializablePt
 
 StatusFlag NodeAgent::handle_received_message(IdentityPtr& id, const MetaData& meta,
                                               SerializablePtr& data, NodeInformation& info) {
+    if (meta.operation_type == OperationType::Close) {
+        assert(!data);
+        StatusFlag flag = end_agent(meta, info);
+        TDCF_CHECK_SUCCESS(flag);
+        return StatusFlag::ClusterOffline;
+    }
     if (data->base_type() == (int) SerializableBaseTypes::ProcessingRules) {
         assert(info.progress_events.find(meta) == info.progress_events.end());
         assert(info.root_id == id);
         auto rule = std::dynamic_pointer_cast<ProcessingRules>(data);
         return create_progress(meta, rule, info);
     }
+
     auto iter = info.progress_events.find(meta);
     assert(iter != info.progress_events.end());
     Variant variant(data);

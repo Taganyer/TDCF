@@ -11,6 +11,7 @@ namespace tdcf {
         Null,
         Init,
         AgentCreate,
+        Close,
         Broadcast,
         Scatter,
         Reduce,
@@ -44,11 +45,7 @@ namespace tdcf {
     };
 
     struct Star {
-        static constexpr StageNum connect = 0;
-
         static constexpr StageNum start = 1;
-
-        static constexpr StageNum disconnect = 1;
 
         static constexpr StageNum close = 2;
 
@@ -74,18 +71,57 @@ namespace tdcf {
 
         static constexpr StageNum send_data = 6;
 
-        static constexpr StageNum finish = ClusterBroadcast::finish_ack;
-
         static constexpr StageNum finish_ack = 7;
+
+        static constexpr StageNum finish = ClusterBroadcast::finish_ack;
 
     };
 
     struct AgentBroadcast {
-        static constexpr StageNum get_rule = NodeAgentBroadcast::send_rule;
-
         static constexpr StageNum get_data = NodeAgentBroadcast::send_data;
 
+        static constexpr StageNum finish_ack = ClusterBroadcast::finish_ack;
+
         static constexpr StageNum finish = NodeAgentBroadcast::finish_ack;
+
+    };
+
+    struct ClusterScatter {
+        static constexpr StageNum acquire_data = 1;
+
+        static constexpr StageNum send_rule = 2;
+
+        static constexpr StageNum scatter_data = 3;
+
+        static constexpr StageNum send_data = 4;
+
+        static constexpr StageNum finish_ack = 5;
+
+    };
+
+    struct NodeAgentScatter {
+        static constexpr StageNum get_rule = ClusterScatter::send_rule;
+
+        static constexpr StageNum send_rule = 6;
+
+        static constexpr StageNum get_data = ClusterScatter::send_data;
+
+        static constexpr StageNum scatter_data = 7;
+
+        static constexpr StageNum send_data = 8;
+
+        static constexpr StageNum finish_ack = 9;
+
+        static constexpr StageNum finish = ClusterScatter::finish_ack;
+
+    };
+
+    struct AgentScatter {
+        static constexpr StageNum get_data = NodeAgentScatter::send_data;
+
+        static constexpr StageNum finish_ack = ClusterScatter::finish_ack;
+
+        static constexpr StageNum finish = NodeAgentScatter::finish_ack;
 
     };
 

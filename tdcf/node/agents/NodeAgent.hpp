@@ -28,11 +28,11 @@ namespace tdcf {
         StatusFlag handle_received_message(IdentityPtr& id, const MetaData& meta,
                                            SerializablePtr& data, NodeInformation& info);
 
-        virtual StatusFlag handle_disconnect_request(IdentityPtr& id, NodeInformation& info) = 0;
-
     protected:
         virtual StatusFlag create_progress(const MetaData& meta, ProcessingRulesPtr& rule,
                                            NodeInformation& info) = 0;
+
+        virtual StatusFlag end_agent(const MetaData& meta, NodeInformation& info) = 0;
 
     };
 

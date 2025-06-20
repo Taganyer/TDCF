@@ -19,6 +19,8 @@ namespace tdcf {
 
         void cluster_start() override;
 
+        void cluster_end() override;
+
         static SerializablePtr create_node_data();
 
         StatusFlag handle_received_message(IdentityPtr& id, const MetaData& meta, SerializablePtr& data) override;
@@ -36,12 +38,10 @@ namespace tdcf {
 
             static StatusFlag create(ProcessingRulesPtr rp, NodeInformation& info);
 
-            StatusFlag handle_event(const MetaData& meta, Variant & data, NodeInformation& info) override;
+            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
 
         protected:
-            StatusFlag send(NodeInformation& info);
-
-            DataPtr _data;
+            StatusFlag send_data(DataPtr& data, NodeInformation& info);
 
             ProgressEventsMI _self;
 
@@ -56,7 +56,44 @@ namespace tdcf {
             static StatusFlag create(ProcessingRulesPtr rp, ProgressEventsMI other,
                                      NodeInformation& info, EventProgressAgent **agent_ptr);
 
-            StatusFlag handle_event(const MetaData& meta, Variant & data, NodeInformation& info) override;
+            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
+
+            StatusFlag store(const MetaData& meta, Variant& data, NodeInformation& info) override;
+
+        private:
+            StatusFlag close(NodeInformation& info) const;
+
+            ProgressEventsMI _other;
+
+        };
+
+        class Scatter : public EventProgress {
+        public:
+            explicit Scatter(ProgressType type, ProcessingRulesPtr rp);
+
+            static StatusFlag create(ProcessingRulesPtr rp, NodeInformation& info);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
+
+        protected:
+            StatusFlag scatter_data(DataPtr& data, NodeInformation& info) const;
+
+            StatusFlag send_data(unsigned offset, DataSet& set, NodeInformation& info);
+
+            ProgressEventsMI _self;
+
+            unsigned _sent = 0, _respond = 0;
+
+        };
+
+        class ScatterAgent : public Scatter, public EventProgressAgent {
+        public:
+            ScatterAgent(ProcessingRulesPtr rp, ProgressEventsMI iter);
+
+            static StatusFlag create(ProcessingRulesPtr rp, ProgressEventsMI other,
+                                     NodeInformation& info, EventProgressAgent **agent_ptr);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
 
             StatusFlag store(const MetaData& meta, Variant& data, NodeInformation& info) override;
 

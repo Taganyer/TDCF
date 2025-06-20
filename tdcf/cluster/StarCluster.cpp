@@ -28,7 +28,6 @@ void StarCluster::cluster_accept(unsigned cluster_size) {
         while (!_info.message_queue.empty() && i < cluster_size) {
             auto& [type, id, meta, data] = _info.message_queue.front();
             if (type == CommunicatorEvent::ConnectRequest) {
-                assert(meta.stage == Star::connect);
                 flag = _info.communicator->accept(id);
                 TDCF_CHECK_SUCCESS(flag)
                 _info.identity_list.emplace_back(std::move(id));
@@ -58,6 +57,24 @@ void StarCluster::cluster_start() {
     _info.agent_factory = std::make_unique<StarAgentFactory>();
 }
 
+void StarCluster::cluster_end() {
+    MetaData meta;
+    meta.operation_type = OperationType::Close;
+    meta.data_type = SerializableBaseTypes::Null;
+    meta.progress_type = ProgressType::Root;
+    meta.stage = Star::close;
+    StatusFlag flag = StatusFlag::Success;
+    for (auto& id : _info.identity_list) {
+        flag = _info.send_message(id, meta, nullptr);
+        TDCF_CHECK_SUCCESS(flag)
+        ++meta.serial;
+    }
+    while (!_info.identity_list.empty()) {
+        flag = handle_a_loop();
+        TDCF_CHECK_SUCCESS(flag)
+    }
+}
+
 SerializablePtr StarCluster::create_node_data() {
     return std::make_shared<StarAgent>();
 }
@@ -72,11 +89,12 @@ StatusFlag StarCluster::handle_received_message(IdentityPtr& id, const MetaData&
 }
 
 StatusFlag StarCluster::handle_disconnect_request(IdentityPtr& id) {
+    assert(id != _info.root_id);
+    assert(id);
+    assert(!_info.delayed_message(id));
     StatusFlag flag = _info.communicator->disconnect(id);
     TDCF_CHECK_SUCCESS(flag)
-    if (id != _info.root_id) {
-        _info.identity_list.erase(std::lower_bound(_info.identity_list.begin(), _info.identity_list.end(), id));
-    }
+    _info.identity_list.erase(std::lower_bound(_info.identity_list.begin(), _info.identity_list.end(), id));
     return StatusFlag::Success;
 }
 
@@ -87,3 +105,5 @@ StatusFlag StarCluster::StarAgentFactory::type(const ProcessingRulesPtr& rule, P
 }
 
 StarAgentFactoryFun(broadcast, BroadcastAgent)
+
+StarAgentFactoryFun(scatter, ScatterAgent)

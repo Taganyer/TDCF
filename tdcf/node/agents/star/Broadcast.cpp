@@ -23,9 +23,9 @@ StatusFlag StarAgent::Broadcast::create(const MetaData& meta,
         new_meta, std::make_unique<Broadcast>(std::move(rp), meta));
     TDCF_CHECK_EXPR(success)
 
-    auto& self = static_cast<Broadcast&>(*iter->second);
     if (!info.agent_factory) return StatusFlag::Success;
 
+    auto& self = static_cast<Broadcast&>(*iter->second);
     StatusFlag flag = info.agent_factory->broadcast(self.rule, iter, info, &self._agent);
     if (flag != StatusFlag::Success || !self._agent) {
         info.progress_events.erase(iter);
@@ -39,28 +39,31 @@ StatusFlag StarAgent::Broadcast::handle_event(const MetaData& meta,
     assert(meta.operation_type == OperationType::Broadcast);
     if (!_agent) {
         assert(meta.stage == NodeAgentBroadcast::get_data);
-        auto& data_ptr = std::get<DataPtr>(data);
-        info.store_data(rule, data_ptr);
+        info.store_data(rule, std::get<DataPtr>(data));
         return close(info);
     }
     if (meta.stage == NodeAgentBroadcast::get_data) {
-        MetaData new_meta;
-        new_meta.operation_type = OperationType::Broadcast;
-        new_meta.stage = NodeAgentBroadcast::send_data;
-        return _agent->store(new_meta, data, info);
+        return agent_store(data, info);
     }
     /// 此时 _agent 指向的对象已销毁。
     if (meta.stage == NodeAgentBroadcast::finish_ack) {
         return close(info);
     }
-    TDCF_RAISE_ERROR(error type)
+    TDCF_RAISE_ERROR(meta.stage error type)
+}
+
+StatusFlag StarAgent::Broadcast::agent_store(Variant& data, NodeInformation& info) const {
+    MetaData meta;
+    meta.operation_type = OperationType::Broadcast;
+    meta.stage = NodeAgentBroadcast::send_data;
+    return _agent->store(meta, data, info);
 }
 
 StatusFlag StarAgent::Broadcast::close(NodeInformation& info) const {
-    MetaData new_meta(_root_meta);
-    new_meta.stage = NodeAgentBroadcast::finish;
+    MetaData meta(_root_meta);
+    meta.stage = NodeAgentBroadcast::finish;
     assert(info.root_id);
-    StatusFlag flag = info.send_message(info.root_id, new_meta, nullptr);
+    StatusFlag flag = info.send_message(info.root_id, meta, nullptr);
     if (flag != StatusFlag::Success) return flag;
     return StatusFlag::EventEnd;
 }

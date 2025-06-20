@@ -12,9 +12,6 @@ StatusFlag StarAgent::init(const MetaData& meta, NodeInformation& info) {
     return StatusFlag::Success;
 }
 
-StatusFlag StarAgent::handle_disconnect_request(IdentityPtr& id, NodeInformation& info) {
-}
-
 StatusFlag StarAgent::serialize(void *buffer, unsigned buffer_size) const {
     return StatusFlag::Success;
 }
@@ -36,7 +33,15 @@ StatusFlag StarAgent::create_progress(const MetaData& meta, ProcessingRulesPtr& 
     switch (meta.operation_type) {
         case OperationType::Broadcast:
             return Broadcast::create(meta, rule, info);
+        case OperationType::Scatter:
+            return Scatter::create(meta, rule, info);
         default:
             TDCF_RAISE_ERROR(error OperationType)
     }
+}
+
+StatusFlag StarAgent::end_agent(const MetaData& meta, NodeInformation& info) {
+    assert(meta.stage == Star::close);
+    assert(!info.delayed_message(info.root_id));
+    return info.communicator->disconnect(info.root_id);
 }

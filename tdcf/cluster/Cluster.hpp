@@ -13,11 +13,11 @@ namespace tdcf {
         Cluster(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp, IdentityPtr root_id) :
             Node(std::move(ip), std::move(cp), std::move(pp), std::move(root_id)) {};
 
-        ~Cluster() override { if (_cluster_start) Cluster::end(); };
+        ~Cluster() override { if (_cluster_started) end_cluster(); };
 
         void start(unsigned cluster_size) final;
 
-        virtual StatusFlag end();
+        StatusFlag end_cluster();
 
         virtual StatusFlag broadcast(ProcessingRulesPtr rule_ptr) = 0;
 
@@ -33,7 +33,7 @@ namespace tdcf {
 
         virtual StatusFlag all_to_all(ProcessingRulesPtr rule_ptr) = 0;
 
-        [[nodiscard]] bool cluster_started() const { return _cluster_start; };
+        [[nodiscard]] bool cluster_started() const { return _cluster_started; };
 
     protected:
         virtual void cluster_accept(unsigned cluster_size) = 0;

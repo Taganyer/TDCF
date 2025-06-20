@@ -31,6 +31,11 @@ StatusFlag NodeInformation::send_delay_message(const IdentityPtr& id) {
     return StatusFlag::Success;
 }
 
+bool NodeInformation::delayed_message(const IdentityPtr& id) {
+    auto& q = message_delay[id];
+    return !q.empty();
+}
+
 StatusFlag NodeInformation::get_progress_tasks() {
     StatusFlag flag = processor->get_events(data_queue);
     if (flag != StatusFlag::Success) return flag;

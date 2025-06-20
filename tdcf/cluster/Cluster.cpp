@@ -8,18 +8,19 @@
 using namespace tdcf;
 
 void Cluster::start(unsigned cluster_size) {
-    TDCF_CHECK_EXPR(_cluster_start == false)
+    TDCF_CHECK_EXPR(_cluster_started == false)
     cluster_accept(cluster_size);
     if (_info.root_id) {
         Node::start(0);
     }
     cluster_start();
-    _cluster_start = true;
+    _cluster_started = true;
 }
 
-StatusFlag Cluster::end() {
-    if (!_cluster_start) return StatusFlag::Success;
-    if (_start) {
+StatusFlag Cluster::end_cluster() {
+    if (!_cluster_started) return StatusFlag::Success;
+    _cluster_closing = true;
+    if (_node_agent_started) {
         _info.agent_factory = nullptr;
         assert(_info.progress_events.size() >= _cluster_events);
         while (_cluster_events) {
@@ -34,15 +35,16 @@ StatusFlag Cluster::end() {
         }
     }
     cluster_end();
-    _cluster_start = false;
+    _cluster_closing = false;
+    _cluster_started = false;
     return StatusFlag::Success;
 }
 
 StatusFlag Cluster::handle_message(CommunicatorEvent& event) {
-    if (_start && event.id == _info.root_id) {
+    if (_node_agent_started && event.id == _info.root_id) {
         return Node::handle_message(event);
     }
-    if (!_cluster_start) return StatusFlag::ClusterOffline;
+    if (!_cluster_started) return StatusFlag::ClusterOffline;
     auto& [type, id, meta, data] = event;
     StatusFlag flag = StatusFlag::Success;
     switch (type) {
@@ -53,6 +55,7 @@ StatusFlag Cluster::handle_message(CommunicatorEvent& event) {
             flag = _info.send_delay_message(id);
             break;
         case CommunicatorEvent::DisconnectRequest:
+            assert(_cluster_closing);
             flag = handle_disconnect_request(id);
             break;
         default:

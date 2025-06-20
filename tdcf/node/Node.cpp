@@ -19,7 +19,7 @@ Node::Node(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp,
 }
 
 void Node::start(unsigned) {
-    TDCF_CHECK_EXPR(!_start && !_cluster_start)
+    TDCF_CHECK_EXPR(!_node_agent_started)
     TDCF_CHECK_SUCCESS(_info.communicator->connect(_info.root_id))
     StatusFlag flag = StatusFlag::FurtherWaiting;
     while (flag == StatusFlag::FurtherWaiting) {
@@ -39,7 +39,7 @@ void Node::start(unsigned) {
 
     flag = _agent->init(meta, _info);
     TDCF_CHECK_SUCCESS(flag)
-    _start = true;
+    _node_agent_started = true;
 }
 
 StatusFlag Node::handle_message(CommunicatorEvent& event) {
@@ -52,13 +52,16 @@ StatusFlag Node::handle_message(CommunicatorEvent& event) {
         case CommunicatorEvent::MessageSendable:
             flag = _info.send_delay_message(id);
             break;
-        case CommunicatorEvent::DisconnectRequest:
-            flag = _agent->handle_disconnect_request(id, _info);
-            break;
         default:
             TDCF_RAISE_ERROR("Recieved wrong event type");
     }
     return flag;
+}
+
+void Node::end_agent() {
+    assert(_info.progress_events.size() - _cluster_events == 0);
+    _node_agent_started = false;
+    _agent = nullptr;
 }
 
 StatusFlag Node::handle_progress_task(NodeInformation::ProgressTask& task) {
@@ -97,6 +100,9 @@ StatusFlag Node::handle_communicator_events() {
             }
             _info.progress_events.erase(_info.message_queue.front().meta);
             flag = StatusFlag::Success;
+        } else if (unlikely(flag == StatusFlag::ClusterOffline)) {
+            end_agent();
+            flag = StatusFlag::Success;
         }
         /// TODO: 这里出错不丢弃事件
         if (flag != StatusFlag::Success) return flag;
@@ -119,7 +125,7 @@ StatusFlag Node::handle_processor_events() {
 }
 
 StatusFlag Node::handle_a_loop() {
-    if (!_start && !_cluster_start) return StatusFlag::ClusterOffline;
+    if (!_node_agent_started && !_cluster_started) return StatusFlag::ClusterOffline;
     StatusFlag flag = active_communicator_events();
     if (flag != StatusFlag::Success) return flag;
     flag = handle_communicator_events();
