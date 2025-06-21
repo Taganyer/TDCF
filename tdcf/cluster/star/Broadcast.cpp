@@ -46,7 +46,7 @@ StatusFlag StarCluster::Broadcast::handle_event(const MetaData& meta,
     }
     if (meta.stage == ClusterBroadcast::finish_ack) {
         ++_respond;
-        if (_respond == info.identity_list.size()) {
+        if (_respond == info.cluster_size) {
             rule->finish_callback();
         }
         return StatusFlag::EventEnd;
@@ -58,7 +58,8 @@ StatusFlag StarCluster::Broadcast::send_data(DataPtr& data, NodeInformation& inf
     MetaData meta(_self->first);
     meta.stage = ClusterBroadcast::send_data;
 
-    for (; _sent < info.identity_list.size(); ++_sent) {
+    assert(info.cluster_size == info.identity_list.size());
+    for (; _sent < info.cluster_size; ++_sent) {
         meta.serial = _sent;
         auto& id = info.identity_list[_sent];
         StatusFlag flag = info.send_message(id, meta, data);
@@ -101,7 +102,7 @@ StatusFlag StarCluster::BroadcastAgent::handle_event(const MetaData& meta, Varia
     }
     if (meta.stage == AgentBroadcast::finish_ack) {
         ++_respond;
-        if (_respond == info.identity_list.size()) {
+        if (_respond == info.cluster_size) {
             return close(info);
         }
         return StatusFlag::Success;

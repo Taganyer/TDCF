@@ -29,12 +29,14 @@ unsigned StarAgent::serialize_size() const {
 }
 
 StatusFlag StarAgent::create_progress(const MetaData& meta, ProcessingRulesPtr& rule,
-                                   NodeInformation& info) {
+                                      NodeInformation& info) {
     switch (meta.operation_type) {
         case OperationType::Broadcast:
             return Broadcast::create(meta, rule, info);
         case OperationType::Scatter:
             return Scatter::create(meta, rule, info);
+        case OperationType::Reduce:
+            return Reduce::create(meta, rule, info);
         default:
             TDCF_RAISE_ERROR(error OperationType)
     }

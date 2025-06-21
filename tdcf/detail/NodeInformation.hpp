@@ -20,6 +20,8 @@ namespace tdcf {
 
         IdentityPtr root_id;
 
+        unsigned cluster_size = 0;
+
         NodeInformation() = default;
 
         NodeInformation(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp, IdentityPtr cluster) :
@@ -104,7 +106,7 @@ namespace tdcf {
         StatusFlag acquire_data(ProgressEventsMI iter, const MetaData& meta,
                                 const ProcessingRulesPtr& rule_ptr) TDCF_THROW;
 
-        void store_data(const ProcessingRulesPtr& rule_ptr, const DataPtr& data_ptr) TDCF_THROW;
+        void store_data(const ProcessingRulesPtr& rule_ptr, const DataPtr& data_ptr) const TDCF_THROW;
 
         StatusFlag reduce_data(ProgressEventsMI iter, const MetaData& meta,
                                const ProcessingRulesPtr& rule_ptr, const DataSet& target) TDCF_THROW;

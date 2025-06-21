@@ -20,6 +20,10 @@ StatusFlag StarCluster::fun_name(ProcessingRulesPtr rule_ptr) { \
 
 StarClusterFun(broadcast, Broadcast)
 
+StarClusterFun(scatter, Scatter)
+
+StarClusterFun(reduce, Reduce)
+
 void StarCluster::cluster_accept(unsigned cluster_size) {
     for (unsigned i = 0; i < cluster_size;) {
         StatusFlag flag = active_communicator_events();

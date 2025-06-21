@@ -14,6 +14,7 @@ void Cluster::start(unsigned cluster_size) {
         Node::start(0);
     }
     cluster_start();
+    _info.cluster_size = cluster_size;
     _cluster_started = true;
 }
 
@@ -35,6 +36,7 @@ StatusFlag Cluster::end_cluster() {
         }
     }
     cluster_end();
+    _info.cluster_size = 0;
     _cluster_closing = false;
     _cluster_started = false;
     return StatusFlag::Success;

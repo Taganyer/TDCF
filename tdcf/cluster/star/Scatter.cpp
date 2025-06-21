@@ -7,7 +7,7 @@
 
 using namespace tdcf;
 
-StarCluster::Scatter::Scatter(ProgressType type, ProcessingRulesPtr rp):
+StarCluster::Scatter::Scatter(ProgressType type, ProcessingRulesPtr rp) :
     EventProgress(type, std::move(rp)) {}
 
 StatusFlag StarCluster::Scatter::create(ProcessingRulesPtr rp, NodeInformation& info) {
@@ -50,7 +50,7 @@ StatusFlag StarCluster::Scatter::handle_event(const MetaData& meta,
     if (meta.stage == ClusterScatter::finish_ack) {
         assert(meta.progress_type == ProgressType::Node);
         ++_respond;
-        if (_respond == info.identity_list.size()) {
+        if (_respond == info.cluster_size) {
             rule->finish_callback();
         }
         return StatusFlag::EventEnd;
@@ -61,15 +61,16 @@ StatusFlag StarCluster::Scatter::handle_event(const MetaData& meta,
 StatusFlag StarCluster::Scatter::scatter_data(DataPtr& data, NodeInformation& info) const {
     MetaData meta(_self->first);
     meta.stage = ClusterScatter::scatter_data;
-    return info.scatter_data(_self, meta, rule, info.identity_list.size(), data);
+    return info.scatter_data(_self, meta, rule, info.cluster_size, data);
 }
 
 StatusFlag StarCluster::Scatter::send_data(unsigned offset, DataSet& set, NodeInformation& info) {
-    TDCF_CHECK_EXPR(set.size() == info.identity_list.size());
+    TDCF_CHECK_EXPR(set.size() == info.cluster_size);
     MetaData meta(_self->first);
     meta.stage = ClusterScatter::send_data;
 
-    for (; _sent < info.identity_list.size(); ++_sent) {
+    assert(info.cluster_size == info.identity_list.size());
+    for (; _sent < info.cluster_size; ++_sent) {
         meta.serial = _sent;
         auto& id = info.identity_list[_sent];
         StatusFlag flag = info.send_message(id, meta, set[_sent + offset]);
@@ -91,7 +92,7 @@ StatusFlag StarCluster::ScatterAgent::create(ProcessingRulesPtr rp, ProgressEven
 
     auto& self = static_cast<ScatterAgent&>(*iter->second);
 
-    meta.stage = ClusterScatter::send_rule;
+    meta.stage = AgentScatter::send_rule;
     for (auto& id : info.identity_list) {
         StatusFlag flag = info.send_message(id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
@@ -112,7 +113,7 @@ StatusFlag StarCluster::ScatterAgent::handle_event(const MetaData& meta, Variant
     }
     if (meta.stage == AgentScatter::finish_ack) {
         ++_respond;
-        if (_respond == info.identity_list.size()) {
+        if (_respond == info.cluster_size) {
             return close(info);
         }
         return StatusFlag::Success;

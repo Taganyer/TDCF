@@ -18,7 +18,6 @@ StatusFlag StarAgent::Broadcast::create(const MetaData& meta,
 
     MetaData new_meta(info.progress_events_version++, OperationType::Broadcast);
     new_meta.progress_type = ProgressType::Node;
-    new_meta.stage = NodeAgentBroadcast::send_rule;
     auto [iter, success] = info.progress_events.emplace(
         new_meta, std::make_unique<Broadcast>(std::move(rp), meta));
     TDCF_CHECK_EXPR(success)

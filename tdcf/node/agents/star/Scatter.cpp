@@ -18,7 +18,6 @@ StatusFlag StarAgent::Scatter::create(const MetaData& meta,
 
     MetaData new_meta(info.progress_events_version++, OperationType::Scatter);
     new_meta.progress_type = ProgressType::Node;
-    new_meta.stage = NodeAgentScatter::send_rule;
     auto [iter, success] = info.progress_events.emplace(
         new_meta, std::make_unique<Scatter>(std::move(rp), meta));
     TDCF_CHECK_EXPR(success)
@@ -27,7 +26,7 @@ StatusFlag StarAgent::Scatter::create(const MetaData& meta,
 
     auto& self = static_cast<Scatter&>(*iter->second);
     self._self = iter;
-    StatusFlag flag = info.agent_factory->broadcast(self.rule, iter, info, &self._agent);
+    StatusFlag flag = info.agent_factory->scatter(self.rule, iter, info, &self._agent);
     if (flag != StatusFlag::Success || !self._agent) {
         info.progress_events.erase(iter);
         return flag;
@@ -58,13 +57,13 @@ StatusFlag StarAgent::Scatter::handle_event(const MetaData& meta, Variant& data,
 StatusFlag StarAgent::Scatter::scatter_data(DataPtr& data, NodeInformation& info) const {
     MetaData meta(_self->first);
     meta.stage = NodeAgentScatter::scatter_data;
-    StatusFlag flag = info.scatter_data(_self, meta, rule, info.identity_list.size() + 1, data);
+    StatusFlag flag = info.scatter_data(_self, meta, rule, info.cluster_size + 1, data);
     return flag;
 }
 
 StatusFlag StarAgent::Scatter::agent_store(Variant& data, NodeInformation& info) const {
     auto& set = std::get<DataSet>(data);
-    assert(set.size() == info.identity_list.size() + 1);
+    assert(set.size() == info.cluster_size + 1);
 
     MetaData meta;
     meta.operation_type = OperationType::Scatter;

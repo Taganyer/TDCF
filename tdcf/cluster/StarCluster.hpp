@@ -14,6 +14,10 @@ namespace tdcf {
 
         StatusFlag broadcast(ProcessingRulesPtr rule_ptr) override;
 
+        StatusFlag scatter(ProcessingRulesPtr rule_ptr) override;
+
+        StatusFlag reduce(ProcessingRulesPtr rule_ptr) override;
+
     private:
         void cluster_accept(unsigned cluster_size) override;
 
@@ -99,6 +103,41 @@ namespace tdcf {
 
         private:
             StatusFlag close(NodeInformation& info) const;
+
+            ProgressEventsMI _other;
+
+        };
+
+        class Reduce : public EventProgress {
+        public:
+            explicit Reduce(ProgressType type, ProcessingRulesPtr rp);
+
+            static StatusFlag create(ProcessingRulesPtr rp, NodeInformation& info);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
+
+        protected:
+            StatusFlag acquire_data(DataPtr& data, NodeInformation& info);
+
+            ProgressEventsMI _self;
+
+            DataSet _set;
+
+        };
+
+        class ReduceAgent : public Reduce, public EventProgressAgent {
+        public:
+            ReduceAgent(ProcessingRulesPtr rp, ProgressEventsMI iter);
+
+            static StatusFlag create(ProcessingRulesPtr rp, ProgressEventsMI other,
+                                     NodeInformation& info, EventProgressAgent **agent_ptr);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
+
+            StatusFlag store(const MetaData& meta, Variant& data, NodeInformation& info) override;
+
+        private:
+            StatusFlag close(DataPtr& data, NodeInformation& info) const;
 
             ProgressEventsMI _other;
 

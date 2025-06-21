@@ -117,11 +117,46 @@ namespace tdcf {
     };
 
     struct AgentScatter {
+        static constexpr StageNum send_rule = ClusterScatter::send_rule;
+
         static constexpr StageNum get_data = NodeAgentScatter::send_data;
 
         static constexpr StageNum finish_ack = ClusterScatter::finish_ack;
 
         static constexpr StageNum finish = NodeAgentScatter::finish_ack;
+
+    };
+
+    struct ClusterReduce {
+        static constexpr StageNum acquire_data = 1;
+
+        static constexpr StageNum send_rule = 2;
+
+        static constexpr StageNum reduce_data = 3;
+
+    };
+
+    struct NodeAgentReduce {
+        static constexpr StageNum get_rule = ClusterReduce::send_rule;
+
+        static constexpr StageNum send_rule = 4;
+
+        static constexpr StageNum acquire_data = 5;
+
+        static constexpr StageNum reduce_data = 6;
+
+        static constexpr StageNum send_data = ClusterReduce::acquire_data;
+
+    };
+
+    struct AgentReduce {
+        static constexpr StageNum send_rule = ClusterReduce::send_rule;
+
+        static constexpr StageNum acquire_data = ClusterReduce::acquire_data;
+
+        static constexpr StageNum reduce_data = ClusterReduce::reduce_data;
+
+        static constexpr StageNum send_data = NodeAgentReduce::acquire_data;
 
     };
 
