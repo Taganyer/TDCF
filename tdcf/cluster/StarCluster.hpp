@@ -12,13 +12,11 @@ namespace tdcf {
         StarCluster(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp, IdentityPtr root_id) :
             Cluster(std::move(ip), std::move(cp), std::move(pp), std::move(root_id)) {};
 
-        StatusFlag broadcast(ProcessingRulesPtr rule_ptr) override;
-
-        StatusFlag scatter(ProcessingRulesPtr rule_ptr) override;
-
-        StatusFlag reduce(ProcessingRulesPtr rule_ptr) override;
+        ClusterFunOverride
 
     private:
+        ProcessorAgentFactoryInherit(StarAgentFactory)
+
         void cluster_accept(unsigned cluster_size) override;
 
         void cluster_start() override;
@@ -30,9 +28,6 @@ namespace tdcf {
         StatusFlag handle_received_message(IdentityPtr& id, const MetaData& meta, SerializablePtr& data) override;
 
         StatusFlag handle_disconnect_request(IdentityPtr& id) override;
-
-        ProcessorAgentFactoryMacro(StarAgentFactory)
-
 
         using ProcessedData = NodeInformation::ProgressTask;
 
@@ -62,7 +57,7 @@ namespace tdcf {
 
             StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
 
-            StatusFlag store(const MetaData& meta, Variant& data, NodeInformation& info) override;
+            StatusFlag proxy_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
 
         private:
             StatusFlag close(NodeInformation& info) const;
@@ -99,7 +94,7 @@ namespace tdcf {
 
             StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
 
-            StatusFlag store(const MetaData& meta, Variant& data, NodeInformation& info) override;
+            StatusFlag proxy_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
 
         private:
             StatusFlag close(NodeInformation& info) const;
@@ -134,10 +129,54 @@ namespace tdcf {
 
             StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
 
-            StatusFlag store(const MetaData& meta, Variant& data, NodeInformation& info) override;
+            StatusFlag proxy_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
 
         private:
             StatusFlag close(DataPtr& data, NodeInformation& info) const;
+
+            ProgressEventsMI _other;
+
+        };
+
+        class AllReduce : public EventProgress {
+        public:
+            explicit AllReduce(ProgressType type, ProcessingRulesPtr rp);
+
+            static StatusFlag create(ProcessingRulesPtr rp, NodeInformation& info);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
+
+        protected:
+            StatusFlag acquire_data(const MetaData& meta, DataPtr& data, NodeInformation& info);
+
+            StatusFlag send_data(DataPtr& data, NodeInformation& info) const;
+
+            ProgressEventsMI _self;
+
+            DataSet _set;
+
+            /// 防止空数据。
+            std::vector<bool> _get;
+
+            unsigned _received = 0, _respond = 0;
+
+        };
+
+        class AllReduceAgent : public AllReduce, public EventProgressAgent {
+        public:
+            AllReduceAgent(ProcessingRulesPtr rp, ProgressEventsMI iter);
+
+            static StatusFlag create(ProcessingRulesPtr rp, ProgressEventsMI other,
+                                     NodeInformation& info, EventProgressAgent **agent_ptr);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
+
+            StatusFlag proxy_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
+
+        private:
+            StatusFlag reduce_data(DataPtr& data, NodeInformation& info) const;
+
+            StatusFlag close(NodeInformation& info);
 
             ProgressEventsMI _other;
 

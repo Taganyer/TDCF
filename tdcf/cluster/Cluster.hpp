@@ -25,8 +25,6 @@ namespace tdcf {
 
         virtual StatusFlag reduce(ProcessingRulesPtr rule_ptr) = 0;
 
-        virtual StatusFlag all_gather(ProcessingRulesPtr rule_ptr) = 0;
-
         virtual StatusFlag all_reduce(ProcessingRulesPtr rule_ptr) = 0;
 
         virtual StatusFlag reduce_scatter(ProcessingRulesPtr rule_ptr) = 0;
@@ -51,5 +49,18 @@ namespace tdcf {
         StatusFlag handle_message(CommunicatorEvent& event) final;
 
     };
+
+#define ClusterFunOverride \
+    StatusFlag broadcast(ProcessingRulesPtr rule_ptr) override; \
+    \
+    StatusFlag scatter(ProcessingRulesPtr rule_ptr) override; \
+    \
+    StatusFlag reduce(ProcessingRulesPtr rule_ptr) override; \
+    \
+    StatusFlag all_reduce(ProcessingRulesPtr rule_ptr) override; \
+    \
+    StatusFlag reduce_scatter(ProcessingRulesPtr rule_ptr) override; \
+    \
+    StatusFlag all_to_all(ProcessingRulesPtr rule_ptr) override;
 
 }

@@ -15,7 +15,6 @@ namespace tdcf {
         Broadcast,
         Scatter,
         Reduce,
-        AllGather,
         AllReduce,
         ReduceScatter,
         AllToAll,
@@ -157,6 +156,53 @@ namespace tdcf {
         static constexpr StageNum reduce_data = ClusterReduce::reduce_data;
 
         static constexpr StageNum send_data = NodeAgentReduce::acquire_data;
+
+    };
+
+    struct ClusterAllReduce {
+        static constexpr StageNum acquire_data = 1;
+
+        static constexpr StageNum send_rule = 2;
+
+        static constexpr StageNum reduce_data = 3;
+
+        static constexpr StageNum send_data = 4;
+
+        static constexpr StageNum finish_ack = 5;
+
+    };
+
+    struct NodeAgentAllReduce {
+        static constexpr StageNum get_rule = ClusterAllReduce::send_rule;
+
+        static constexpr StageNum acquire_data1 = 6;
+
+        static constexpr StageNum send_data1 = ClusterAllReduce::acquire_data;
+
+        static constexpr StageNum acquire_data2 = ClusterAllReduce::send_data;
+
+        static constexpr StageNum send_data2 = 7;
+
+        static constexpr StageNum finish_ack = 8;
+
+        static constexpr StageNum finish = ClusterAllReduce::finish_ack;
+
+    };
+
+    struct AgentAllReduce {
+        static constexpr StageNum acquire_data1 = ClusterAllReduce::acquire_data;
+
+        static constexpr StageNum send_rule = ClusterAllReduce::send_rule;
+
+        static constexpr StageNum reduce_data = ClusterAllReduce::reduce_data;
+
+        static constexpr StageNum send_data = NodeAgentAllReduce::acquire_data1;
+
+        static constexpr StageNum acquire_data2 = NodeAgentAllReduce::send_data2;
+
+        static constexpr StageNum finish_ack = ClusterAllReduce::finish_ack;
+
+        static constexpr StageNum finish = NodeAgentAllReduce::finish_ack;
 
     };
 

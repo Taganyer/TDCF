@@ -25,11 +25,14 @@ StatusFlag StarAgent::Broadcast::create(const MetaData& meta,
     if (!info.agent_factory) return StatusFlag::Success;
 
     auto& self = static_cast<Broadcast&>(*iter->second);
+    self._root_meta = meta;
+
     StatusFlag flag = info.agent_factory->broadcast(self.rule, iter, info, &self._agent);
     if (flag != StatusFlag::Success || !self._agent) {
         info.progress_events.erase(iter);
         return flag;
     }
+
     return StatusFlag::Success;
 }
 
@@ -55,7 +58,7 @@ StatusFlag StarAgent::Broadcast::agent_store(Variant& data, NodeInformation& inf
     MetaData meta;
     meta.operation_type = OperationType::Broadcast;
     meta.stage = NodeAgentBroadcast::send_data;
-    return _agent->store(meta, data, info);
+    return _agent->proxy_event(meta, data, info);
 }
 
 StatusFlag StarAgent::Broadcast::close(NodeInformation& info) const {

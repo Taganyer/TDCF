@@ -11,7 +11,8 @@ using namespace tdcf;
 StarAgent::Reduce::Reduce(ProcessingRulesPtr rp, const MetaData& meta) :
     EventProgress(ProgressType::NodeRoot, std::move(rp)), _root_meta(meta) {}
 
-StatusFlag StarAgent::Reduce::create(const MetaData& meta, ProcessingRulesPtr rp, NodeInformation& info) {
+StatusFlag StarAgent::Reduce::create(const MetaData& meta,
+                                     ProcessingRulesPtr rp, NodeInformation& info) {
     assert(meta.operation_type == OperationType::Reduce);
     assert(meta.stage == NodeAgentReduce::get_rule);
 
@@ -24,6 +25,7 @@ StatusFlag StarAgent::Reduce::create(const MetaData& meta, ProcessingRulesPtr rp
 
     auto& self = static_cast<Reduce&>(*iter->second);
     self._self = iter;
+    self._root_meta = meta;
 
     if (!info.agent_factory) {
         new_meta.stage = NodeAgentReduce::acquire_data;
@@ -43,7 +45,8 @@ StatusFlag StarAgent::Reduce::create(const MetaData& meta, ProcessingRulesPtr rp
     return StatusFlag::Success;
 }
 
-StatusFlag StarAgent::Reduce::handle_event(const MetaData& meta, Variant& data, NodeInformation& info) {
+StatusFlag StarAgent::Reduce::handle_event(const MetaData& meta,
+                                           Variant& data, NodeInformation& info) {
     assert(meta.operation_type == OperationType::Scatter);
     if (!_agent) {
         assert(meta.stage == NodeAgentReduce::acquire_data);

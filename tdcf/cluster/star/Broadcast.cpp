@@ -19,6 +19,7 @@ StatusFlag StarCluster::Broadcast::create(ProcessingRulesPtr rp, NodeInformation
     TDCF_CHECK_EXPR(success)
 
     auto& self = static_cast<Broadcast&>(*iter->second);
+    self._self = iter;
 
     meta.stage = ClusterBroadcast::acquire_data;
     StatusFlag flag = info.acquire_data(iter, meta, self.rule);
@@ -26,13 +27,13 @@ StatusFlag StarCluster::Broadcast::create(ProcessingRulesPtr rp, NodeInformation
         info.progress_events.erase(iter);
         return flag;
     }
-    self._self = iter;
 
     meta.stage = ClusterBroadcast::send_rule;
     for (auto& id : info.identity_list) {
         flag = info.send_message(id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
     }
+
     return flag;
 }
 
@@ -80,6 +81,8 @@ StatusFlag StarCluster::BroadcastAgent::create(ProcessingRulesPtr rp, ProgressEv
     TDCF_CHECK_EXPR(success)
 
     auto& self = static_cast<BroadcastAgent&>(*iter->second);
+    *agent_ptr = &self;
+    self._self = iter;
 
     meta.stage = ClusterBroadcast::send_rule;
     for (auto& id : info.identity_list) {
@@ -87,13 +90,11 @@ StatusFlag StarCluster::BroadcastAgent::create(ProcessingRulesPtr rp, ProgressEv
         TDCF_CHECK_SUCCESS(flag)
     }
 
-    *agent_ptr = &self;
-    self._self = iter;
     return StatusFlag::Success;
 }
 
-StatusFlag StarCluster::BroadcastAgent::handle_event(const MetaData& meta, Variant& data,
-                                                     NodeInformation& info) {
+StatusFlag StarCluster::BroadcastAgent::handle_event(const MetaData& meta,
+                                                     Variant& data, NodeInformation& info) {
     assert(meta.operation_type == OperationType::Broadcast);
     if (meta.stage == AgentBroadcast::get_data) {
         assert(_sent == 0);
@@ -110,14 +111,14 @@ StatusFlag StarCluster::BroadcastAgent::handle_event(const MetaData& meta, Varia
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag StarCluster::BroadcastAgent::store(const MetaData& meta, Variant& data,
-                                              NodeInformation& info) {
+StatusFlag StarCluster::BroadcastAgent::proxy_event(const MetaData& meta,
+                                              Variant& data, NodeInformation& info) {
     return handle_event(meta, data, info);
 }
 
 StatusFlag StarCluster::BroadcastAgent::close(NodeInformation& info) const {
     MetaData meta(_other->first);
     meta.stage = AgentBroadcast::finish;
-    info.processed_queue.emplace(_other, meta, SerializablePtr(nullptr));
+    info.processed_queue.emplace(_other, meta, SerializablePtr());
     return StatusFlag::EventEnd;
 }

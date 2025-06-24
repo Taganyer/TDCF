@@ -26,6 +26,8 @@ StatusFlag StarAgent::Scatter::create(const MetaData& meta,
 
     auto& self = static_cast<Scatter&>(*iter->second);
     self._self = iter;
+    self._root_meta = meta;
+
     StatusFlag flag = info.agent_factory->scatter(self.rule, iter, info, &self._agent);
     if (flag != StatusFlag::Success || !self._agent) {
         info.progress_events.erase(iter);
@@ -34,7 +36,8 @@ StatusFlag StarAgent::Scatter::create(const MetaData& meta,
     return StatusFlag::Success;
 }
 
-StatusFlag StarAgent::Scatter::handle_event(const MetaData& meta, Variant& data, NodeInformation& info) {
+StatusFlag StarAgent::Scatter::handle_event(const MetaData& meta,
+                                            Variant& data, NodeInformation& info) {
     assert(meta.operation_type == OperationType::Scatter);
     if (!_agent) {
         assert(meta.stage == NodeAgentScatter::get_data);
@@ -68,7 +71,7 @@ StatusFlag StarAgent::Scatter::agent_store(Variant& data, NodeInformation& info)
     MetaData meta;
     meta.operation_type = OperationType::Scatter;
     meta.stage = NodeAgentScatter::send_data;
-    return _agent->store(meta, data, info);
+    return _agent->proxy_event(meta, data, info);
 }
 
 StatusFlag StarAgent::Scatter::close(NodeInformation& info) const {

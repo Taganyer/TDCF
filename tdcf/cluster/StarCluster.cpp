@@ -18,11 +18,24 @@ StatusFlag StarCluster::fun_name(ProcessingRulesPtr rule_ptr) { \
     return flag; \
 }
 
-StarClusterFun(broadcast, Broadcast)
+#define StarAgentFactoryFun(type, class_name) \
+StatusFlag StarCluster::StarAgentFactory::type(const ProcessingRulesPtr& rule, ProgressEventsMI iter, \
+    NodeInformation& info, EventProgressAgent **agent_ptr) { \
+    return class_name::create(rule, iter, info, agent_ptr); \
+}
 
-StarClusterFun(scatter, Scatter)
+#define StarFunAll(fun, cluster_class, agent_class) \
+    StarClusterFun(fun, cluster_class) \
+    StarAgentFactoryFun(fun, agent_class)
 
-StarClusterFun(reduce, Reduce)
+
+StarFunAll(broadcast, Broadcast, BroadcastAgent)
+
+StarFunAll(scatter, Scatter, ScatterAgent)
+
+StarFunAll(reduce, Reduce, ReduceAgent)
+
+StarFunAll(all_reduce, AllReduce, ReduceAgent)
 
 void StarCluster::cluster_accept(unsigned cluster_size) {
     for (unsigned i = 0; i < cluster_size;) {
@@ -101,13 +114,3 @@ StatusFlag StarCluster::handle_disconnect_request(IdentityPtr& id) {
     _info.identity_list.erase(std::lower_bound(_info.identity_list.begin(), _info.identity_list.end(), id));
     return StatusFlag::Success;
 }
-
-#define StarAgentFactoryFun(type, class_name) \
-StatusFlag StarCluster::StarAgentFactory::type(const ProcessingRulesPtr& rule, ProgressEventsMI iter, \
-                                               NodeInformation& info, EventProgressAgent **agent_ptr) { \
-    return class_name::create(rule, iter, info, agent_ptr); \
-}
-
-StarAgentFactoryFun(broadcast, BroadcastAgent)
-
-StarAgentFactoryFun(scatter, ScatterAgent)

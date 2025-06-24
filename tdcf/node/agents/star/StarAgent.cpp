@@ -37,6 +37,8 @@ StatusFlag StarAgent::create_progress(const MetaData& meta, ProcessingRulesPtr& 
             return Scatter::create(meta, rule, info);
         case OperationType::Reduce:
             return Reduce::create(meta, rule, info);
+        case OperationType::AllReduce:
+            return AllReduce::create(meta, rule, info);
         default:
             TDCF_RAISE_ERROR(error OperationType)
     }

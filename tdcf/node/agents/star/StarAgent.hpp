@@ -87,6 +87,31 @@ namespace tdcf {
 
         };
 
+        class AllReduce : public EventProgress {
+        public:
+            explicit AllReduce(ProcessingRulesPtr rp, const MetaData& meta);
+
+            static StatusFlag create(const MetaData& meta, ProcessingRulesPtr rp, NodeInformation& info);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
+
+        private:
+            StatusFlag acquire_data1(DataPtr& data, NodeInformation& info) const;
+
+            StatusFlag acquire_data2(DataPtr& data, NodeInformation& info) const;
+
+            StatusFlag close(NodeInformation& info) const;
+
+            MetaData _root_meta;
+
+            ProgressEventsMI _self;
+
+            EventProgressAgent *_agent = nullptr;
+
+            unsigned _received = 0;
+
+        };
+
     };
 
 }
