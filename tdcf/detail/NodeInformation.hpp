@@ -12,34 +12,45 @@ namespace tdcf {
 
     class NodeInformation {
     public:
-        IdentityPtr id;
-
-        CommunicatorPtr communicator;
-
-        ProcessorPtr processor;
-
-        IdentityPtr root_id;
-
-        unsigned cluster_size = 0;
-
-        NodeInformation() = default;
-
         NodeInformation(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp, IdentityPtr cluster) :
-            id(std::move(ip)),
-            communicator(std::move(cp)),
-            processor(std::move(pp)),
-            root_id(std::move(cluster)) {};
+            _id(std::move(ip)),
+            _communicator(std::move(cp)),
+            _processor(std::move(pp)),
+            _root_id(std::move(cluster)) { assert(_id && _communicator && _processor); };
 
         NodeInformation(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp) :
             NodeInformation(std::move(ip), std::move(cp), std::move(pp), nullptr) {};
 
-        [[nodiscard]] bool check() const {
-            return id && communicator && processor;
-        };
+        void set_cluster_size(unsigned size) { _cluster_size = size; };
 
-        using IdentityList = std::vector<IdentityPtr>;
+        void connect(const IdentityPtr& id) const;
 
+        void accept(const IdentityPtr& id) const;
 
+        void disconnect(const IdentityPtr& id) const;
+
+        const IdentityPtr& id() const { return _id; };
+
+        const IdentityPtr& root_id() const { return _root_id; };
+
+        unsigned cluster_size() const { return _cluster_size; };
+
+        Version get_version() { return _version++; };
+
+    private:
+        IdentityPtr _id;
+
+        CommunicatorPtr _communicator;
+
+        ProcessorPtr _processor;
+
+        IdentityPtr _root_id;
+
+        unsigned _cluster_size = 0;
+
+        Version _version;
+
+    public:
         struct ProgressTask {
             ProgressEventsMI iter;
             MetaData meta;
@@ -59,7 +70,7 @@ namespace tdcf {
 
         };
 
-        Version progress_events_version;
+        using IdentityList = std::vector<IdentityPtr>;
 
         ProcessorAgentFactoryPtr agent_factory;
 
@@ -70,7 +81,7 @@ namespace tdcf {
     private:
         using SendDelayMQ = std::map<IdentityPtr, std::queue<std::pair<MetaData, SerializablePtr>>>;
 
-        SendDelayMQ message_delay;
+        SendDelayMQ _message_delay;
 
     public:
         using MessageRQ = Communicator::EventQueue;
@@ -81,7 +92,7 @@ namespace tdcf {
 
         StatusFlag send_message(const IdentityPtr& id, const MetaData& meta, SerializablePtr message) TDCF_NO_THROW;
 
-        StatusFlag send_delay_message(const IdentityPtr& id) TDCF_NO_THROW;
+        void send_delay_message(const IdentityPtr& id) TDCF_NO_THROW;
 
         bool delayed_message(const IdentityPtr& id) TDCF_NO_THROW;
 
@@ -90,11 +101,13 @@ namespace tdcf {
 
         using ProgressDelayM = std::unordered_map<Version, std::pair<ProgressEventsMI, MetaData>>;
 
-        DataRQ data_queue;
+        DataRQ _data_queue;
 
-        ProgressDelayM process_delay;
+        ProgressDelayM _process_delay;
 
-        Version data_version;
+        Version _data_version;
+
+        Version get_data_version();
 
     public:
         using ProcessedQueue = std::queue<ProgressTask>;
@@ -103,15 +116,15 @@ namespace tdcf {
 
         StatusFlag get_progress_tasks();
 
-        StatusFlag acquire_data(ProgressEventsMI iter, const MetaData& meta,
+        void acquire_data(ProgressEventsMI iter, const MetaData& meta,
                                 const ProcessingRulesPtr& rule_ptr) TDCF_THROW;
 
         void store_data(const ProcessingRulesPtr& rule_ptr, const DataPtr& data_ptr) const TDCF_THROW;
 
-        StatusFlag reduce_data(ProgressEventsMI iter, const MetaData& meta,
+        void reduce_data(ProgressEventsMI iter, const MetaData& meta,
                                const ProcessingRulesPtr& rule_ptr, const DataSet& target) TDCF_THROW;
 
-        StatusFlag scatter_data(ProgressEventsMI iter, const MetaData& meta,
+        void scatter_data(ProgressEventsMI iter, const MetaData& meta,
                                 const ProcessingRulesPtr& rule_ptr,
                                 unsigned scatter_size, const DataPtr& data_ptr) TDCF_THROW;
 

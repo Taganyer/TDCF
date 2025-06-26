@@ -8,29 +8,24 @@
 using namespace tdcf;
 
 Node::Node(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp) :
-    _info(std::move(ip), std::move(cp), std::move(pp)) {
-    assert(_info.check());
-}
+    _info(std::move(ip), std::move(cp), std::move(pp)) {}
 
-Node::Node(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp,
-           IdentityPtr root_id) :
-    _info(std::move(ip), std::move(cp), std::move(pp), std::move(root_id)) {
-    assert(_info.check());
-}
+Node::Node(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp, IdentityPtr root_id) :
+    _info(std::move(ip), std::move(cp), std::move(pp), std::move(root_id)) {}
 
 void Node::start(unsigned) {
     TDCF_CHECK_EXPR(!_node_agent_started)
-    TDCF_CHECK_SUCCESS(_info.communicator->connect(_info.root_id))
+    _info.connect(_info.root_id());
     StatusFlag flag = StatusFlag::FurtherWaiting;
     while (flag == StatusFlag::FurtherWaiting) {
-        flag = _info.communicator->get_events(_info.message_queue);
+        flag = _info.get_communicator_events();
     }
     TDCF_CHECK_SUCCESS(flag)
     assert(!_info.message_queue.empty());
 
     auto [type, id, meta, agent] = _info.message_queue.front();
     _info.message_queue.pop();
-    assert(type == CommunicatorEvent::ReceivedMessage && id == _info.root_id);
+    assert(type == CommunicatorEvent::ReceivedMessage && id == _info.root_id());
     assert(meta.operation_type == OperationType::AgentCreate);
 
     _agent = std::dynamic_pointer_cast<NodeAgent>(agent);
@@ -50,7 +45,7 @@ StatusFlag Node::handle_message(CommunicatorEvent& event) {
             flag = _agent->handle_received_message(id, meta, data, _info);
             break;
         case CommunicatorEvent::MessageSendable:
-            flag = _info.send_delay_message(id);
+            _info.send_delay_message(id);
             break;
         default:
             TDCF_RAISE_ERROR("Recieved wrong event type");

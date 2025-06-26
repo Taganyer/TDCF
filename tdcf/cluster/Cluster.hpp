@@ -29,8 +29,6 @@ namespace tdcf {
 
         virtual StatusFlag reduce_scatter(ProcessingRulesPtr rule_ptr) = 0;
 
-        virtual StatusFlag all_to_all(ProcessingRulesPtr rule_ptr) = 0;
-
         [[nodiscard]] bool cluster_started() const { return _cluster_started; };
 
     protected:
@@ -60,7 +58,5 @@ namespace tdcf {
     StatusFlag all_reduce(ProcessingRulesPtr rule_ptr) override; \
     \
     StatusFlag reduce_scatter(ProcessingRulesPtr rule_ptr) override; \
-    \
-    StatusFlag all_to_all(ProcessingRulesPtr rule_ptr) override;
 
 }

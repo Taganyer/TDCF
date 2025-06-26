@@ -10,11 +10,11 @@ using namespace tdcf;
 void Cluster::start(unsigned cluster_size) {
     TDCF_CHECK_EXPR(_cluster_started == false)
     cluster_accept(cluster_size);
-    if (_info.root_id) {
+    if (_info.root_id()) {
         Node::start(0);
     }
     cluster_start();
-    _info.cluster_size = cluster_size;
+    _info.set_cluster_size(cluster_size);
     _cluster_started = true;
 }
 
@@ -36,14 +36,14 @@ StatusFlag Cluster::end_cluster() {
         }
     }
     cluster_end();
-    _info.cluster_size = 0;
+    _info.set_cluster_size(0);
     _cluster_closing = false;
     _cluster_started = false;
     return StatusFlag::Success;
 }
 
 StatusFlag Cluster::handle_message(CommunicatorEvent& event) {
-    if (_node_agent_started && event.id == _info.root_id) {
+    if (_node_agent_started && event.id == _info.root_id()) {
         return Node::handle_message(event);
     }
     if (!_cluster_started) return StatusFlag::ClusterOffline;
@@ -54,7 +54,7 @@ StatusFlag Cluster::handle_message(CommunicatorEvent& event) {
             flag = handle_received_message(id, meta, data);
             break;
         case CommunicatorEvent::MessageSendable:
-            flag = _info.send_delay_message(id);
+            _info.send_delay_message(id);
             break;
         case CommunicatorEvent::DisconnectRequest:
             assert(_cluster_closing);

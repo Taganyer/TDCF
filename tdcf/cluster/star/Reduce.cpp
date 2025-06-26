@@ -11,7 +11,7 @@ StarCluster::Reduce::Reduce(ProgressType type, ProcessingRulesPtr rp) :
     EventProgress(type, std::move(rp)) {}
 
 StatusFlag StarCluster::Reduce::create(ProcessingRulesPtr rp, NodeInformation& info) {
-    MetaData meta(info.progress_events_version++, OperationType::Reduce);
+    MetaData meta(info.get_version(), OperationType::Reduce);
     meta.progress_type = ProgressType::Root;
 
     auto [iter, success] = info.progress_events.emplace(
@@ -20,18 +20,14 @@ StatusFlag StarCluster::Reduce::create(ProcessingRulesPtr rp, NodeInformation& i
 
     auto& self = static_cast<Reduce&>(*iter->second);
     self._self = iter;
-    self._set.reserve(info.cluster_size + 1);
+    self._set.reserve(info.cluster_size() + 1);
 
     meta.stage = ClusterReduce::acquire_data;
-    StatusFlag flag = info.acquire_data(iter, meta, self.rule);
-    if (flag != StatusFlag::Success) {
-        info.progress_events.erase(iter);
-        return flag;
-    }
+    info.acquire_data(iter, meta, self.rule);
 
     meta.stage = ClusterReduce::send_rule;
     for (auto& id : info.identity_list) {
-        flag = info.send_message(id, meta, self.rule);
+        StatusFlag flag = info.send_message(id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
     }
 
@@ -45,7 +41,7 @@ StatusFlag StarCluster::Reduce::handle_event(const MetaData& meta,
         return acquire_data(std::get<DataPtr>(data), info);
     }
     if (meta.stage == ClusterReduce::reduce_data) {
-        info.store_data(rule, std::get<DataPtr>(data));
+        info.store_data(rule, std::move(std::get<DataPtr>(data)));
         rule->finish_callback();
         return StatusFlag::EventEnd;
     }
@@ -54,12 +50,11 @@ StatusFlag StarCluster::Reduce::handle_event(const MetaData& meta,
 
 StatusFlag StarCluster::Reduce::acquire_data(DataPtr& data, NodeInformation& info) {
     _set.push_back(std::move(data));
-    if (_set.size() < info.cluster_size + 1) return StatusFlag::Success;
+    if (_set.size() < info.cluster_size() + 1) return StatusFlag::Success;
     MetaData meta(_self->first);
     meta.stage = ClusterReduce::reduce_data;
-    StatusFlag flag = info.reduce_data(_self, meta, rule, _set);
-    TDCF_CHECK_SUCCESS(flag)
-    return flag;
+    info.reduce_data(_self, meta, rule, _set);
+    return StatusFlag::Success;
 }
 
 StarCluster::ReduceAgent::ReduceAgent(ProcessingRulesPtr rp, ProgressEventsMI iter) :
@@ -67,7 +62,7 @@ StarCluster::ReduceAgent::ReduceAgent(ProcessingRulesPtr rp, ProgressEventsMI it
 
 StatusFlag StarCluster::ReduceAgent::create(ProcessingRulesPtr rp, ProgressEventsMI other,
                                             NodeInformation& info, EventProgressAgent **agent_ptr) {
-    MetaData meta(info.progress_events_version++, OperationType::Reduce);
+    MetaData meta(info.get_version(), OperationType::Reduce);
     meta.progress_type = ProgressType::NodeRoot;
     auto [iter, success] = info.progress_events.emplace(
         meta, std::make_unique<ReduceAgent>(std::move(rp), other));
@@ -78,15 +73,11 @@ StatusFlag StarCluster::ReduceAgent::create(ProcessingRulesPtr rp, ProgressEvent
     self._self = iter;
 
     meta.stage = AgentReduce::acquire_data;
-    StatusFlag flag = info.acquire_data(iter, meta, self.rule);
-    if (flag != StatusFlag::Success) {
-        info.progress_events.erase(iter);
-        return flag;
-    }
+    info.acquire_data(iter, meta, self.rule);
 
     meta.stage = AgentReduce::send_rule;
     for (auto& id : info.identity_list) {
-        flag = info.send_message(id, meta, self.rule);
+        StatusFlag flag = info.send_message(id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
     }
 

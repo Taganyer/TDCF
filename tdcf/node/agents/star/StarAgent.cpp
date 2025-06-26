@@ -39,6 +39,8 @@ StatusFlag StarAgent::create_progress(const MetaData& meta, ProcessingRulesPtr& 
             return Reduce::create(meta, rule, info);
         case OperationType::AllReduce:
             return AllReduce::create(meta, rule, info);
+        case OperationType::ReduceScatter:
+            return ReduceScatter::create(meta, rule, info);
         default:
             TDCF_RAISE_ERROR(error OperationType)
     }
@@ -46,6 +48,7 @@ StatusFlag StarAgent::create_progress(const MetaData& meta, ProcessingRulesPtr& 
 
 StatusFlag StarAgent::end_agent(const MetaData& meta, NodeInformation& info) {
     assert(meta.stage == Star::close);
-    assert(!info.delayed_message(info.root_id));
-    return info.communicator->disconnect(info.root_id);
+    assert(!info.delayed_message(info.root_id()));
+    info.disconnect(info.root_id());
+    return StatusFlag::Success;
 }

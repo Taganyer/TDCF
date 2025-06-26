@@ -149,7 +149,7 @@ namespace tdcf {
         protected:
             StatusFlag acquire_data(const MetaData& meta, DataPtr& data, NodeInformation& info);
 
-            StatusFlag send_data(DataPtr& data, NodeInformation& info) const;
+            StatusFlag send_data(DataPtr& data, NodeInformation& info);
 
             ProgressEventsMI _self;
 
@@ -174,12 +174,57 @@ namespace tdcf {
             StatusFlag proxy_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
 
         private:
-            StatusFlag reduce_data(DataPtr& data, NodeInformation& info) const;
+            StatusFlag reduce_data(DataPtr& data, NodeInformation& info);
 
             StatusFlag close(NodeInformation& info);
 
             ProgressEventsMI _other;
 
+        };
+
+        class ReduceScatter : public EventProgress {
+        public:
+            explicit ReduceScatter(ProgressType type, ProcessingRulesPtr rp);
+
+            static StatusFlag create(ProcessingRulesPtr rp, NodeInformation& info);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
+
+        protected:
+            StatusFlag acquire_data(const MetaData& meta, DataPtr& data, NodeInformation& info);
+
+            StatusFlag scatter_data(DataPtr& data, NodeInformation& info);
+
+            StatusFlag send_data(DataSet& set, NodeInformation& info) const;
+
+            ProgressEventsMI _self;
+
+            DataSet _set;
+
+            /// 防止空数据。
+            std::vector<bool> _get;
+
+            unsigned _received = 0, _respond = 0;
+
+        };
+
+        class ReduceScatterAgent : public ReduceScatter, public EventProgressAgent {
+        public:
+            explicit ReduceScatterAgent(ProcessingRulesPtr rp, ProgressEventsMI iter);
+
+            static StatusFlag create(ProcessingRulesPtr rp, ProgressEventsMI other,
+                                     NodeInformation& info, EventProgressAgent **agent_ptr);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
+
+            StatusFlag proxy_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
+
+        private:
+            StatusFlag reduce_data(DataPtr& data, NodeInformation& info);
+
+            StatusFlag close(NodeInformation& info);
+
+            ProgressEventsMI _other;
         };
 
     };

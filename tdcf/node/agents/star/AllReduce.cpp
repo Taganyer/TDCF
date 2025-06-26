@@ -16,7 +16,7 @@ StatusFlag StarAgent::AllReduce::create(const MetaData& meta,
     assert(meta.operation_type == OperationType::AllReduce);
     assert(meta.stage == NodeAgentAllReduce::get_rule);
 
-    MetaData new_meta(info.progress_events_version++, OperationType::AllReduce);
+    MetaData new_meta(info.get_version(), OperationType::AllReduce);
     new_meta.progress_type = ProgressType::Node;
     new_meta.serial = meta.serial;
 
@@ -25,16 +25,11 @@ StatusFlag StarAgent::AllReduce::create(const MetaData& meta,
     TDCF_CHECK_EXPR(success)
 
     auto& self = static_cast<AllReduce&>(*iter->second);
-    self._root_meta = meta;
     self._self = iter;
 
     if (!info.agent_factory) {
         new_meta.stage = NodeAgentAllReduce::acquire_data1;
-        StatusFlag flag = info.acquire_data(iter, new_meta, self.rule);
-        if (flag != StatusFlag::Success) {
-            info.progress_events.erase(iter);
-            return flag;
-        }
+        info.acquire_data(iter, new_meta, self.rule);
         return StatusFlag::Success;
     }
 
@@ -64,13 +59,13 @@ StatusFlag StarAgent::AllReduce::handle_event(const MetaData& meta,
 StatusFlag StarAgent::AllReduce::acquire_data1(DataPtr& data, NodeInformation& info) const {
     MetaData meta(_root_meta);
     meta.stage = NodeAgentAllReduce::send_data1;
-    StatusFlag flag = info.send_message(info.root_id, meta, data);
+    StatusFlag flag = info.send_message(info.root_id(), meta, data);
     return flag;
 }
 
 StatusFlag StarAgent::AllReduce::acquire_data2(DataPtr& data, NodeInformation& info) const {
     if (!_agent) {
-        info.store_data(rule, data);
+        info.store_data(rule, std::move(data));
         return close(info);
     }
     MetaData meta(_self->first);
@@ -87,7 +82,7 @@ StatusFlag StarAgent::AllReduce::acquire_data2(DataPtr& data, NodeInformation& i
 StatusFlag StarAgent::AllReduce::close(NodeInformation& info) const {
     MetaData meta(_root_meta);
     meta.stage = NodeAgentAllReduce::finish;
-    StatusFlag flag = info.send_message(info.root_id, _root_meta, nullptr);
+    StatusFlag flag = info.send_message(info.root_id(), _root_meta, nullptr);
     TDCF_CHECK_SUCCESS(flag)
     return StatusFlag::EventEnd;
 }

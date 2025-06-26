@@ -63,10 +63,7 @@ namespace tdcf {
                                       NodeInformation& info, EventProgressAgent **agent_ptr) = 0;
 
         virtual StatusFlag reduce_scatter(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
-                                          NodeInformation& info) = 0;
-
-        virtual StatusFlag all_to_all(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
-                                      NodeInformation& info, EventProgressAgent **agent_ptr) = 0;
+                                          NodeInformation& info, EventProgressAgent **agent_ptr) = 0;
 
     };
 
@@ -88,10 +85,8 @@ namespace tdcf {
                               NodeInformation& info, EventProgressAgent **agent_ptr) override; \
         \
         StatusFlag reduce_scatter(const ProcessingRulesPtr& rule, ProgressEventsMI iter, \
-                                  NodeInformation& info) override; \
+                                  NodeInformation& info, EventProgressAgent **agent_ptr) override; \
         \
-        StatusFlag all_to_all(const ProcessingRulesPtr& rule, ProgressEventsMI iter, \
-                              NodeInformation& info, EventProgressAgent **agent_ptr) override; \
     };
 
 }

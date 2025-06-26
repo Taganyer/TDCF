@@ -35,7 +35,9 @@ StarFunAll(scatter, Scatter, ScatterAgent)
 
 StarFunAll(reduce, Reduce, ReduceAgent)
 
-StarFunAll(all_reduce, AllReduce, ReduceAgent)
+StarFunAll(all_reduce, AllReduce, AllReduceAgent)
+
+StarFunAll(reduce_scatter, ReduceScatter, ReduceScatterAgent)
 
 void StarCluster::cluster_accept(unsigned cluster_size) {
     for (unsigned i = 0; i < cluster_size;) {
@@ -45,13 +47,11 @@ void StarCluster::cluster_accept(unsigned cluster_size) {
         while (!_info.message_queue.empty() && i < cluster_size) {
             auto& [type, id, meta, data] = _info.message_queue.front();
             if (type == CommunicatorEvent::ConnectRequest) {
-                flag = _info.communicator->accept(id);
-                TDCF_CHECK_SUCCESS(flag)
+                _info.accept(id);
                 _info.identity_list.emplace_back(std::move(id));
                 ++i;
             } else if (type == CommunicatorEvent::MessageSendable) {
-                flag = _info.send_delay_message(id);
-                TDCF_CHECK_SUCCESS(flag)
+                _info.send_delay_message(id);
             } else {
                 TDCF_RAISE_ERROR(type == CommunicatorEvent::ConnectRequest ||
                     type == CommunicatorEvent::MessageSendable);
@@ -106,11 +106,10 @@ StatusFlag StarCluster::handle_received_message(IdentityPtr& id, const MetaData&
 }
 
 StatusFlag StarCluster::handle_disconnect_request(IdentityPtr& id) {
-    assert(id != _info.root_id);
+    assert(id != _info.root_id());
     assert(id);
     assert(!_info.delayed_message(id));
-    StatusFlag flag = _info.communicator->disconnect(id);
-    TDCF_CHECK_SUCCESS(flag)
+    _info.disconnect(id);
     _info.identity_list.erase(std::lower_bound(_info.identity_list.begin(), _info.identity_list.end(), id));
     return StatusFlag::Success;
 }

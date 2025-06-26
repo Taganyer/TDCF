@@ -32,7 +32,7 @@ StatusFlag NodeAgent::handle_received_message(IdentityPtr& id, const MetaData& m
     }
     if (data->base_type() == (int) SerializableBaseTypes::ProcessingRules) {
         assert(info.progress_events.find(meta) == info.progress_events.end());
-        assert(info.root_id == id);
+        assert(info.root_id() == id);
         auto rule = std::dynamic_pointer_cast<ProcessingRules>(data);
         return create_progress(meta, rule, info);
     }

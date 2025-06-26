@@ -16,7 +16,7 @@ StatusFlag StarAgent::Broadcast::create(const MetaData& meta,
     assert(meta.operation_type == OperationType::Broadcast);
     assert(meta.stage == NodeAgentBroadcast::get_rule);
 
-    MetaData new_meta(info.progress_events_version++, OperationType::Broadcast);
+    MetaData new_meta(info.get_version(), OperationType::Broadcast);
     new_meta.progress_type = ProgressType::Node;
     auto [iter, success] = info.progress_events.emplace(
         new_meta, std::make_unique<Broadcast>(std::move(rp), meta));
@@ -25,7 +25,6 @@ StatusFlag StarAgent::Broadcast::create(const MetaData& meta,
     if (!info.agent_factory) return StatusFlag::Success;
 
     auto& self = static_cast<Broadcast&>(*iter->second);
-    self._root_meta = meta;
 
     StatusFlag flag = info.agent_factory->broadcast(self.rule, iter, info, &self._agent);
     if (flag != StatusFlag::Success || !self._agent) {
@@ -41,7 +40,7 @@ StatusFlag StarAgent::Broadcast::handle_event(const MetaData& meta,
     assert(meta.operation_type == OperationType::Broadcast);
     if (!_agent) {
         assert(meta.stage == NodeAgentBroadcast::get_data);
-        info.store_data(rule, std::get<DataPtr>(data));
+        info.store_data(rule, std::move(std::get<DataPtr>(data)));
         return close(info);
     }
     if (meta.stage == NodeAgentBroadcast::get_data) {
@@ -64,8 +63,8 @@ StatusFlag StarAgent::Broadcast::agent_store(Variant& data, NodeInformation& inf
 StatusFlag StarAgent::Broadcast::close(NodeInformation& info) const {
     MetaData meta(_root_meta);
     meta.stage = NodeAgentBroadcast::finish;
-    assert(info.root_id);
-    StatusFlag flag = info.send_message(info.root_id, meta, nullptr);
+    assert(info.root_id());
+    StatusFlag flag = info.send_message(info.root_id(), meta, nullptr);
     if (flag != StatusFlag::Success) return flag;
     return StatusFlag::EventEnd;
 }

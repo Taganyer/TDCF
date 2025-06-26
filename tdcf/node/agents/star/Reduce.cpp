@@ -16,7 +16,7 @@ StatusFlag StarAgent::Reduce::create(const MetaData& meta,
     assert(meta.operation_type == OperationType::Reduce);
     assert(meta.stage == NodeAgentReduce::get_rule);
 
-    MetaData new_meta(info.progress_events_version++, OperationType::Reduce);
+    MetaData new_meta(info.get_version(), OperationType::Reduce);
     new_meta.progress_type = ProgressType::Node;
 
     auto [iter, success] = info.progress_events.emplace(
@@ -25,15 +25,10 @@ StatusFlag StarAgent::Reduce::create(const MetaData& meta,
 
     auto& self = static_cast<Reduce&>(*iter->second);
     self._self = iter;
-    self._root_meta = meta;
 
     if (!info.agent_factory) {
         new_meta.stage = NodeAgentReduce::acquire_data;
-        StatusFlag flag = info.acquire_data(iter, new_meta, self.rule);
-        if (flag != StatusFlag::Success) {
-            info.progress_events.erase(iter);
-            return flag;
-        }
+        info.acquire_data(iter, new_meta, self.rule);
         return StatusFlag::Success;
     }
 
@@ -61,7 +56,7 @@ StatusFlag StarAgent::Reduce::handle_event(const MetaData& meta,
 StatusFlag StarAgent::Reduce::close(DataPtr& data, NodeInformation& info) const {
     MetaData meta(_root_meta);
     meta.stage = NodeAgentReduce::send_data;
-    StatusFlag flag = info.send_message(info.root_id, meta, data);
+    StatusFlag flag = info.send_message(info.root_id(), meta, data);
     TDCF_CHECK_SUCCESS(flag)
     return StatusFlag::EventEnd;
 }

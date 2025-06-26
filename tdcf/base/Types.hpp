@@ -17,7 +17,6 @@ namespace tdcf {
         Reduce,
         AllReduce,
         ReduceScatter,
-        AllToAll,
     };
 
     enum class SerializableBaseTypes : uint8_t {
@@ -203,6 +202,59 @@ namespace tdcf {
         static constexpr StageNum finish_ack = ClusterAllReduce::finish_ack;
 
         static constexpr StageNum finish = NodeAgentAllReduce::finish_ack;
+
+    };
+
+    struct ClusterReduceScatter {
+        static constexpr StageNum acquire_data = 1;
+
+        static constexpr StageNum send_rule = 2;
+
+        static constexpr StageNum reduce_data = 3;
+
+        static constexpr StageNum scatter_data = 4;
+
+        static constexpr StageNum send_data = 5;
+
+        static constexpr StageNum finish_ack = 6;
+
+    };
+
+    struct NodeAgentReduceScatter {
+        static constexpr StageNum get_rule = ClusterReduceScatter::send_rule;
+
+        static constexpr StageNum acquire_data1 = 7;
+
+        static constexpr StageNum send_data1 = ClusterReduceScatter::acquire_data;
+
+        static constexpr StageNum acquire_data2 = ClusterReduceScatter::send_data;
+
+        static constexpr StageNum send_data2 = 8;
+
+        static constexpr StageNum finish_ack = 9;
+
+        static constexpr StageNum finish = ClusterReduceScatter::finish_ack;
+
+    };
+
+    struct AgentReduceScatter {
+        static constexpr StageNum acquire_data1 = ClusterReduceScatter::acquire_data;
+
+        static constexpr StageNum send_rule = ClusterReduceScatter::send_rule;
+
+        static constexpr StageNum reduce_data = ClusterReduceScatter::reduce_data;
+
+        static constexpr StageNum send_data1 = NodeAgentReduceScatter::acquire_data1;
+
+        static constexpr StageNum acquire_data2 = NodeAgentReduceScatter::send_data2;
+
+        static constexpr StageNum scatter_data = ClusterReduceScatter::scatter_data;
+
+        static constexpr StageNum send_data2 = ClusterReduceScatter::send_data;
+
+        static constexpr StageNum finish_ack = ClusterReduceScatter::finish_ack;
+
+        static constexpr StageNum finish = NodeAgentReduceScatter::finish_ack;
 
     };
 
