@@ -23,6 +23,8 @@ namespace tdcf {
 
         virtual StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) = 0;
 
+        virtual void handle_error(NodeInformation& info) = 0;
+
         ProgressType type;
 
         ProcessingRulesPtr rule;

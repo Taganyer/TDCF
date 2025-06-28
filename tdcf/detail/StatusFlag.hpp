@@ -7,9 +7,13 @@ namespace tdcf {
 
 #define STATUS_FLAG_ITEM(MOD) \
     MOD(Success), \
-    MOD(Timeout), \
     MOD(EventEnd), \
-    MOD(FurtherWaiting), \
+    MOD(CommunicatorSendMessageFurtherWaiting), \
+    MOD(CommunicatorSendMessageError), \
+    MOD(CommunicatorGetEventsFurtherWaiting), \
+    MOD(CommunicatorGetEventsError), \
+    MOD(ProcessorGetEventsFurtherWaiting), \
+    MOD(ProcessorGetEventsError), \
     MOD(ClusterOffline),
 
 #define ENUM_MOD(item) item

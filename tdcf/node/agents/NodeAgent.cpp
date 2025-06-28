@@ -38,7 +38,13 @@ StatusFlag NodeAgent::handle_received_message(IdentityPtr& id, const MetaData& m
     }
 
     auto iter = info.progress_events.find(meta);
-    assert(iter != info.progress_events.end());
+    if (iter == info.progress_events.end()) return StatusFlag::Success;
+
+    if (meta.operation_type == OperationType::Error) {
+        iter->second->handle_error(info);
+        return StatusFlag::EventEnd;
+    }
+
     Variant variant(data);
     return iter->second->handle_event(meta, variant, info);
 }

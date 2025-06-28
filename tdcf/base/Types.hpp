@@ -17,6 +17,7 @@ namespace tdcf {
         Reduce,
         AllReduce,
         ReduceScatter,
+        Error,
     };
 
     enum class SerializableBaseTypes : uint8_t {
@@ -33,6 +34,12 @@ namespace tdcf {
         Root,
         Node,
         NodeRoot,
+    };
+
+    enum class OperationFlag : uint8_t {
+        Success,
+        FurtherWaiting,
+        Error,
     };
 
     using StageNum = uint8_t;

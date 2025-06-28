@@ -15,17 +15,24 @@ namespace tdcf {
 
     using DataVariant = std::variant<DataPtr, DataSet>;
 
+    enum class OperationFlag : uint8_t;
+
+    struct ProcessorEventMark {
+        Version version;
+        uint32_t serial = 0;
+    };
+
     struct ProcessorEvent {
-        enum Type {
+        enum Type : uint8_t {
             Null,
             Acquire,
             Reduce,
             Scatter,
-            Merge,
+            Error,
         };
 
         Type type = Null;
-        Version version;
+        ProcessorEventMark mark;
         DataVariant result;
 
     };
@@ -42,15 +49,15 @@ namespace tdcf {
 
         virtual void store(const ProcessingRulesPtr& rule_ptr, const DataPtr& data_ptr) = 0;
 
-        virtual void acquire(Version v, const ProcessingRulesPtr& rule_ptr) = 0;
+        virtual void acquire(ProcessorEventMark mark, const ProcessingRulesPtr& rule_ptr) = 0;
 
-        virtual void reduce(Version v, const ProcessingRulesPtr& rule_ptr,
+        virtual void reduce(ProcessorEventMark mark, const ProcessingRulesPtr& rule_ptr,
                             const DataSet& target) = 0;
 
-        virtual void scatter(Version v, const ProcessingRulesPtr& rule_ptr,
+        virtual void scatter(ProcessorEventMark mark, const ProcessingRulesPtr& rule_ptr,
                              unsigned scatter_size, const DataPtr& data_ptr) = 0;
 
-        virtual StatusFlag get_events(EventQueue& queue) = 0;
+        virtual OperationFlag get_events(EventQueue& queue) = 0;
 
     };
 

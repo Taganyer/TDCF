@@ -87,7 +87,7 @@ StatusFlag StarCluster::ReduceScatter::send_data(DataSet& set, NodeInformation& 
     assert(set.size() == info.cluster_size() + 1);
     MetaData meta(_self->first);
     meta.stage = ClusterReduceScatter::send_data;
-    info.store_data(rule, std::move(set[0]));
+    info.store_data(rule, set[0]);
     for (unsigned i = 0; i < info.cluster_size(); ++i) {
         StatusFlag flag = info.send_message(info.identity_list[i], meta, std::move(set[i + 1]));
         TDCF_CHECK_SUCCESS(flag)

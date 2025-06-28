@@ -24,9 +24,9 @@ namespace tdcf {
         [[nodiscard]] bool node_agent_started() const { return _node_agent_started; };
 
     protected:
-        virtual StatusFlag handle_message(CommunicatorEvent& event);
-
         void end_agent();
+
+        virtual StatusFlag handle_message(CommunicatorEvent& event);
 
         StatusFlag handle_progress_task(NodeInformation::ProgressTask& task);
 

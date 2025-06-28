@@ -40,7 +40,7 @@ StatusFlag StarAgent::Broadcast::handle_event(const MetaData& meta,
     assert(meta.operation_type == OperationType::Broadcast);
     if (!_agent) {
         assert(meta.stage == NodeAgentBroadcast::get_data);
-        info.store_data(rule, std::move(std::get<DataPtr>(data)));
+        info.store_data(rule, std::get<DataPtr>(data));
         return close(info);
     }
     if (meta.stage == NodeAgentBroadcast::get_data) {

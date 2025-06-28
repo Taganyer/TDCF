@@ -18,16 +18,16 @@ namespace tdcf {
             return MetaData::serialize_size();
         };
 
-        StatusFlag serialize(void *buffer, unsigned buffer_size) const final {
-            if (buffer_size < MetaData::serialize_size()) return StatusFlag::FurtherWaiting;
+        bool serialize(void *buffer, unsigned buffer_size) const final {
+            if (buffer_size < MetaData::serialize_size()) return false;
             meta_data.serialize(buffer);
-            return StatusFlag::Success;
+            return true;
         };
 
-        StatusFlag deserialize(const void *buffer, unsigned buffer_size) final {
-            if (buffer_size < MetaData::serialize_size()) return StatusFlag::FurtherWaiting;
+        bool deserialize(const void *buffer, unsigned buffer_size) final {
+            if (buffer_size < MetaData::serialize_size()) return false;
             meta_data.deserialize(buffer);
-            return StatusFlag::Success;
+            return true;
         };
 
         [[nodiscard]] SerializableType base_type() const final {

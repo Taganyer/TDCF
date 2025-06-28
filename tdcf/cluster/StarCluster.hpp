@@ -39,6 +39,8 @@ namespace tdcf {
 
             StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
 
+            void handle_error(NodeInformation& info) override;
+
         protected:
             StatusFlag send_data(DataPtr& data, NodeInformation& info);
 
@@ -57,6 +59,8 @@ namespace tdcf {
 
             StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
 
+            void handle_error(NodeInformation& info) override;
+
             StatusFlag proxy_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
 
         private:
@@ -73,6 +77,8 @@ namespace tdcf {
             static StatusFlag create(ProcessingRulesPtr rp, NodeInformation& info);
 
             StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
+
+            void handle_error(NodeInformation& info) override;
 
         protected:
             StatusFlag scatter_data(DataPtr& data, NodeInformation& info) const;
@@ -94,6 +100,8 @@ namespace tdcf {
 
             StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
 
+            void handle_error(NodeInformation& info) override;
+
             StatusFlag proxy_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
 
         private:
@@ -110,6 +118,8 @@ namespace tdcf {
             static StatusFlag create(ProcessingRulesPtr rp, NodeInformation& info);
 
             StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
+
+            void handle_error(NodeInformation& info) override;
 
         protected:
             StatusFlag acquire_data(DataPtr& data, NodeInformation& info);
@@ -129,6 +139,8 @@ namespace tdcf {
 
             StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
 
+            void handle_error(NodeInformation& info) override;
+
             StatusFlag proxy_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
 
         private:
@@ -145,6 +157,8 @@ namespace tdcf {
             static StatusFlag create(ProcessingRulesPtr rp, NodeInformation& info);
 
             StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
+
+            void handle_error(NodeInformation& info) override;
 
         protected:
             StatusFlag acquire_data(const MetaData& meta, DataPtr& data, NodeInformation& info);
@@ -171,6 +185,8 @@ namespace tdcf {
 
             StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
 
+            void handle_error(NodeInformation& info) override;
+
             StatusFlag proxy_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
 
         private:
@@ -189,6 +205,8 @@ namespace tdcf {
             static StatusFlag create(ProcessingRulesPtr rp, NodeInformation& info);
 
             StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
+
+            void handle_error(NodeInformation& info) override;
 
         protected:
             StatusFlag acquire_data(const MetaData& meta, DataPtr& data, NodeInformation& info);
@@ -216,6 +234,8 @@ namespace tdcf {
                                      NodeInformation& info, EventProgressAgent **agent_ptr);
 
             StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
+
+            void handle_error(NodeInformation& info) override;
 
             StatusFlag proxy_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
 

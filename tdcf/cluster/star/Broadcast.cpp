@@ -51,6 +51,10 @@ StatusFlag StarCluster::Broadcast::handle_event(const MetaData& meta,
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
+void StarCluster::Broadcast::handle_error(NodeInformation& info) {
+
+}
+
 StatusFlag StarCluster::Broadcast::send_data(DataPtr& data, NodeInformation& info) {
     MetaData meta(_self->first);
     meta.stage = ClusterBroadcast::send_data;
@@ -107,8 +111,12 @@ StatusFlag StarCluster::BroadcastAgent::handle_event(const MetaData& meta,
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
+void StarCluster::BroadcastAgent::handle_error(NodeInformation& info) {
+    Broadcast::handle_error(info);
+}
+
 StatusFlag StarCluster::BroadcastAgent::proxy_event(const MetaData& meta,
-                                              Variant& data, NodeInformation& info) {
+                                                    Variant& data, NodeInformation& info) {
     return handle_event(meta, data, info);
 }
 

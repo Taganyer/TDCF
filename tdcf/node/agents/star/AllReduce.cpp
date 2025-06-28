@@ -65,7 +65,7 @@ StatusFlag StarAgent::AllReduce::acquire_data1(DataPtr& data, NodeInformation& i
 
 StatusFlag StarAgent::AllReduce::acquire_data2(DataPtr& data, NodeInformation& info) const {
     if (!_agent) {
-        info.store_data(rule, std::move(data));
+        info.store_data(rule, data);
         return close(info);
     }
     MetaData meta(_self->first);

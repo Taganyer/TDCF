@@ -42,8 +42,7 @@ StarFunAll(reduce_scatter, ReduceScatter, ReduceScatterAgent)
 void StarCluster::cluster_accept(unsigned cluster_size) {
     for (unsigned i = 0; i < cluster_size;) {
         StatusFlag flag = active_communicator_events();
-        TDCF_CHECK_EXPR(flag == StatusFlag::Success ||
-            flag == StatusFlag::Timeout || flag == StatusFlag::FurtherWaiting)
+        TDCF_CHECK_EXPR(flag != StatusFlag::CommunicatorGetEventsError)
         while (!_info.message_queue.empty() && i < cluster_size) {
             auto& [type, id, meta, data] = _info.message_queue.front();
             if (type == CommunicatorEvent::ConnectRequest) {
@@ -99,7 +98,13 @@ SerializablePtr StarCluster::create_node_data() {
 StatusFlag StarCluster::handle_received_message(IdentityPtr& id, const MetaData& meta,
                                                 SerializablePtr& data) {
     auto iter = _info.progress_events.find(meta);
-    assert(iter != _info.progress_events.end());
+    if (iter == _info.progress_events.end()) return StatusFlag::Success;
+
+    if (meta.operation_type == OperationType::Error) {
+        iter->second->handle_error(_info);
+        return StatusFlag::EventEnd;
+    }
+
     auto& [m, progress] = *iter;
     Variant variant(std::move(data));
     return progress->handle_event(meta, variant, _info);

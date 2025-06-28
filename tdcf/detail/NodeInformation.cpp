@@ -9,41 +9,49 @@
 using namespace tdcf;
 
 void NodeInformation::connect(const IdentityPtr& id) const {
-    StatusFlag flag = _communicator->connect(id);
-    TDCF_CHECK_SUCCESS(flag)
+    bool success = _communicator->connect(id);
+    TDCF_CHECK_EXPR(success)
 }
 
 void NodeInformation::accept(const IdentityPtr& id) const {
-    StatusFlag flag = _communicator->accept(id);
-    TDCF_CHECK_SUCCESS(flag)
+    bool success = _communicator->accept(id);
+    TDCF_CHECK_EXPR(success)
 }
 
 void NodeInformation::disconnect(const IdentityPtr& id) const {
-    StatusFlag flag = _communicator->disconnect(id);
-    TDCF_CHECK_SUCCESS(flag)
+    bool success = _communicator->disconnect(id);
+    TDCF_CHECK_EXPR(success)
 }
 
 StatusFlag NodeInformation::get_communicator_events() {
-    return _communicator->get_events(message_queue);
+    OperationFlag flag = _communicator->get_events(message_queue);
+    switch (flag) {
+        case OperationFlag::Success: return StatusFlag::Success;
+        case OperationFlag::FurtherWaiting: return StatusFlag::CommunicatorGetEventsFurtherWaiting;
+        case OperationFlag::Error: return StatusFlag::CommunicatorGetEventsError;
+    }
+    TDCF_RAISE_ERROR(unknown type)
 }
 
 StatusFlag NodeInformation::send_message(const IdentityPtr& id, const MetaData& meta, SerializablePtr message) {
     if (_message_delay[id].empty()) {
-        StatusFlag flag = _communicator->send_message(id, Message(meta), message);
-        if (flag != StatusFlag::FurtherWaiting) return flag;
+        OperationFlag flag = _communicator->send_message(id, Message(meta), message);
+        if (flag == OperationFlag::Success) return StatusFlag::Success;
+        if (flag == OperationFlag::Error) return StatusFlag::CommunicatorSendMessageError;
     }
     _message_delay[id].emplace(meta, std::move(message));
     return StatusFlag::Success;
 }
 
-void NodeInformation::send_delay_message(const IdentityPtr& id) {
+StatusFlag NodeInformation::send_delay_message(const IdentityPtr& id) {
     auto& q = _message_delay[id];
     while (!q.empty()) {
-        StatusFlag flag = _communicator->send_message(id, Message(q.front().first), q.front().second);
-        if (flag == StatusFlag::FurtherWaiting) break;
-        TDCF_CHECK_SUCCESS(flag)
+        OperationFlag flag = _communicator->send_message(id, Message(q.front().first), q.front().second);
+        if (flag == OperationFlag::FurtherWaiting) break;
+        if (unlikely(flag == OperationFlag::Error)) return StatusFlag::CommunicatorSendMessageError;
         q.pop();
     }
+    return StatusFlag::Success;
 }
 
 bool NodeInformation::delayed_message(const IdentityPtr& id) {
@@ -51,31 +59,36 @@ bool NodeInformation::delayed_message(const IdentityPtr& id) {
     return !q.empty();
 }
 
-Version NodeInformation::get_data_version() {
-    Version version = ++_data_version;
-    while (_process_delay.find(version) != _process_delay.end()) ++version;
-    return version;
+ProcessorEventMark NodeInformation::get_mark(ProgressEventsMI iter) {
+    return { iter->first.version(), ++_data_version.version };
 }
 
 StatusFlag NodeInformation::get_progress_tasks() {
-    StatusFlag flag = _processor->get_events(_data_queue);
-    if (flag != StatusFlag::Success) return flag;
+    OperationFlag flag = _processor->get_events(_data_queue);
+    if (flag != OperationFlag::Success) {
+        return flag == OperationFlag::Error ? StatusFlag::ProcessorGetEventsError :
+                   StatusFlag::ProcessorGetEventsFurtherWaiting;
+    }
     while (!_data_queue.empty()) {
-        auto event = std::move(_data_queue.front());
+        auto [type, mark, result] = std::move(_data_queue.front());
         _data_queue.pop();
-        auto iter = _process_delay.find(event.version);
-        assert(iter != _process_delay.end());
-        processed_queue.emplace(iter->second.first, iter->second.second, std::move(event.result));
+        auto iter = _process_delay.find(mark);
+        if (iter == _process_delay.end()) continue;
+        MetaData meta = iter->second.second;
+        if (type == ProcessorEvent::Error)
+            meta.operation_type = OperationType::Error;
+        processed_queue.emplace(iter->second.first, meta, std::move(result));
+        _process_delay.erase(iter);
     }
     return StatusFlag::Success;
 }
 
 void NodeInformation::acquire_data(ProgressEventsMI iter, const MetaData& meta,
                                    const ProcessingRulesPtr& rule_ptr) {
-
-    auto [i, success] = _process_delay.emplace(get_version(), std::pair(iter, meta));
+    ProcessorEventMark mark = get_mark(iter);
+    auto [i, success] = _process_delay.emplace(mark, std::pair(iter, meta));
     assert(success);
-    _processor->acquire(_data_version, rule_ptr);
+    _processor->acquire(mark, rule_ptr);
 }
 
 void NodeInformation::store_data(const ProcessingRulesPtr& rule_ptr, const DataPtr& data_ptr) const {
@@ -84,15 +97,17 @@ void NodeInformation::store_data(const ProcessingRulesPtr& rule_ptr, const DataP
 
 void NodeInformation::reduce_data(ProgressEventsMI iter, const MetaData& meta,
                                   const ProcessingRulesPtr& rule_ptr, const DataSet& target) {
-    auto [i, success] = _process_delay.emplace(get_data_version(), std::pair(iter, meta));
+    ProcessorEventMark mark = get_mark(iter);
+    auto [i, success] = _process_delay.emplace(mark, std::pair(iter, meta));
     assert(success);
-    _processor->reduce(_data_version, rule_ptr, target);
+    _processor->reduce(mark, rule_ptr, target);
 }
 
 void NodeInformation::scatter_data(ProgressEventsMI iter, const MetaData& meta,
                                    const ProcessingRulesPtr& rule_ptr,
                                    unsigned scatter_size, const DataPtr& data_ptr) {
-    auto [i, success] = _process_delay.emplace(get_data_version(), std::pair(iter, meta));
+    ProcessorEventMark mark = get_mark(iter);
+    auto [i, success] = _process_delay.emplace(mark, std::pair(iter, meta));
     assert(success);
-    _processor->scatter(_data_version, rule_ptr, scatter_size, data_ptr);
+    _processor->scatter(mark, rule_ptr, scatter_size, data_ptr);
 }

@@ -12,12 +12,12 @@ StatusFlag StarAgent::init(const MetaData& meta, NodeInformation& info) {
     return StatusFlag::Success;
 }
 
-StatusFlag StarAgent::serialize(void *buffer, unsigned buffer_size) const {
-    return StatusFlag::Success;
+bool StarAgent::serialize(void *buffer, unsigned buffer_size) const {
+    return true;
 }
 
-StatusFlag StarAgent::deserialize(const void *buffer, unsigned buffer_size) {
-    return StatusFlag::Success;
+bool StarAgent::deserialize(const void *buffer, unsigned buffer_size) {
+    return true;
 }
 
 SerializableType StarAgent::derived_type() const {

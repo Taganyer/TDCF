@@ -57,6 +57,5 @@ namespace tdcf {
     \
     StatusFlag all_reduce(ProcessingRulesPtr rule_ptr) override; \
     \
-    StatusFlag reduce_scatter(ProcessingRulesPtr rule_ptr) override; \
-
+    StatusFlag reduce_scatter(ProcessingRulesPtr rule_ptr) override;
 }

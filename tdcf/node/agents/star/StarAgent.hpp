@@ -12,9 +12,9 @@ namespace tdcf {
     public:
         StatusFlag init(const MetaData& meta, NodeInformation& info) override;
 
-        StatusFlag serialize(void *buffer, unsigned buffer_size) const override;
+        bool serialize(void *buffer, unsigned buffer_size) const override;
 
-        StatusFlag deserialize(const void *buffer, unsigned buffer_size) override;
+        bool deserialize(const void *buffer, unsigned buffer_size) override;
 
         [[nodiscard]] SerializableType derived_type() const override;
 

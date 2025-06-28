@@ -7,12 +7,13 @@
 #include <queue>
 #include <tdcf/base/NoCopy.hpp>
 #include <tdcf/frame/Identity.hpp>
-#include <tdcf/detail/StatusFlag.hpp>
 
 namespace tdcf {
 
+    enum class OperationFlag : uint8_t;
+
     struct CommunicatorEvent {
-        enum Type {
+        enum Type : uint8_t {
             Null,
             MessageSendable,
             ReceivedMessage,
@@ -21,12 +22,10 @@ namespace tdcf {
         };
 
         Type type = Null;
-
         IdentityPtr id;
-
         MetaData meta;
-
         SerializablePtr data;
+
     };
 
     class Communicator : NoCopy {
@@ -37,16 +36,16 @@ namespace tdcf {
 
         virtual ~Communicator() = default;
 
-        virtual StatusFlag connect(const IdentityPtr& target);
+        virtual bool connect(const IdentityPtr& target);
 
-        virtual StatusFlag accept(const IdentityPtr& target);
+        virtual bool accept(const IdentityPtr& target);
 
-        virtual StatusFlag disconnect(const IdentityPtr& id) = 0;
+        virtual bool disconnect(const IdentityPtr& id) = 0;
 
-        virtual StatusFlag send_message(const IdentityPtr& id, const Message& message,
-                                        const SerializablePtr& data) = 0;
+        virtual OperationFlag send_message(const IdentityPtr& id, const Message& message,
+                                           const SerializablePtr& data) = 0;
 
-        virtual StatusFlag get_events(EventQueue& queue) = 0;
+        virtual OperationFlag get_events(EventQueue& queue) = 0;
 
     };
 

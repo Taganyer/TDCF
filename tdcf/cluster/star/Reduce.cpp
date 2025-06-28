@@ -41,7 +41,7 @@ StatusFlag StarCluster::Reduce::handle_event(const MetaData& meta,
         return acquire_data(std::get<DataPtr>(data), info);
     }
     if (meta.stage == ClusterReduce::reduce_data) {
-        info.store_data(rule, std::move(std::get<DataPtr>(data)));
+        info.store_data(rule, std::get<DataPtr>(data));
         rule->finish_callback();
         return StatusFlag::EventEnd;
     }

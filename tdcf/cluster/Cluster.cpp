@@ -54,7 +54,7 @@ StatusFlag Cluster::handle_message(CommunicatorEvent& event) {
             flag = handle_received_message(id, meta, data);
             break;
         case CommunicatorEvent::MessageSendable:
-            _info.send_delay_message(id);
+            flag = _info.send_delay_message(id);
             break;
         case CommunicatorEvent::DisconnectRequest:
             assert(_cluster_closing);

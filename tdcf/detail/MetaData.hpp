@@ -3,6 +3,12 @@
 //
 #pragma once
 
+#ifdef _WIN32
+    #include <winsock2.h>
+    #pragma comment(lib, "ws2_32.lib")
+#else
+#include <netinet/in.h>
+#endif
 
 #include <tdcf/base/Types.hpp>
 #include <tdcf/base/Version.hpp>
@@ -58,7 +64,7 @@ namespace tdcf {
             data4[0] = ntohl(ptr[3]);
         };
 
-        [[nodiscard]] unsigned data() const { return _v.version; };
+        [[nodiscard]] Version version() const { return _v; };
 
         MetaData& operator++() {
             ++_v;
@@ -113,6 +119,7 @@ namespace tdcf {
             uint16_t data2[2];
             uint32_t data4[1] {};
         };
+
     };
 
 }

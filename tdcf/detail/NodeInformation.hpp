@@ -88,18 +88,25 @@ namespace tdcf {
 
         MessageRQ message_queue;
 
-        StatusFlag get_communicator_events() TDCF_NO_THROW;
+        StatusFlag get_communicator_events();
 
-        StatusFlag send_message(const IdentityPtr& id, const MetaData& meta, SerializablePtr message) TDCF_NO_THROW;
+        StatusFlag send_message(const IdentityPtr& id, const MetaData& meta, SerializablePtr message);
 
-        void send_delay_message(const IdentityPtr& id) TDCF_NO_THROW;
+        StatusFlag send_delay_message(const IdentityPtr& id);
 
-        bool delayed_message(const IdentityPtr& id) TDCF_NO_THROW;
+        bool delayed_message(const IdentityPtr& id);
 
     private:
+        struct Cmp {
+            bool operator()(ProcessorEventMark lhs, ProcessorEventMark rhs) const {
+                if (lhs.version != rhs.version) return lhs.version < rhs.version;
+                return lhs.serial < rhs.serial;
+            };
+        };
+
         using DataRQ = Processor::EventQueue;
 
-        using ProgressDelayM = std::unordered_map<Version, std::pair<ProgressEventsMI, MetaData>>;
+        using ProgressDelayM = std::map<ProcessorEventMark, std::pair<ProgressEventsMI, MetaData>, Cmp>;
 
         DataRQ _data_queue;
 
@@ -107,7 +114,7 @@ namespace tdcf {
 
         Version _data_version;
 
-        Version get_data_version();
+        ProcessorEventMark get_mark(ProgressEventsMI iter);
 
     public:
         using ProcessedQueue = std::queue<ProgressTask>;
@@ -117,16 +124,16 @@ namespace tdcf {
         StatusFlag get_progress_tasks();
 
         void acquire_data(ProgressEventsMI iter, const MetaData& meta,
-                                const ProcessingRulesPtr& rule_ptr) TDCF_THROW;
+                          const ProcessingRulesPtr& rule_ptr);
 
-        void store_data(const ProcessingRulesPtr& rule_ptr, const DataPtr& data_ptr) const TDCF_THROW;
+        void store_data(const ProcessingRulesPtr& rule_ptr, const DataPtr& data_ptr) const;
 
         void reduce_data(ProgressEventsMI iter, const MetaData& meta,
-                               const ProcessingRulesPtr& rule_ptr, const DataSet& target) TDCF_THROW;
+                         const ProcessingRulesPtr& rule_ptr, const DataSet& target);
 
         void scatter_data(ProgressEventsMI iter, const MetaData& meta,
-                                const ProcessingRulesPtr& rule_ptr,
-                                unsigned scatter_size, const DataPtr& data_ptr) TDCF_THROW;
+                          const ProcessingRulesPtr& rule_ptr,
+                          unsigned scatter_size, const DataPtr& data_ptr);
 
     };
 
