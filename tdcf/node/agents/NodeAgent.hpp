@@ -10,7 +10,7 @@ namespace tdcf {
 
     struct CommunicatorEvent;
 
-    class NodeInformation;
+    class Handle;
 
     class NodeAgent : public Serializable {
     public:
@@ -23,16 +23,16 @@ namespace tdcf {
         };
 
         /// 不得向 root 发送回应信息。
-        virtual StatusFlag init(const MetaData& meta, NodeInformation& info) = 0;
+        virtual StatusFlag init(const MetaData& meta, Handle& handle) = 0;
 
-        StatusFlag handle_received_message(IdentityPtr& id, const MetaData& meta,
-                                           SerializablePtr& data, NodeInformation& info);
+        StatusFlag handle_received_message(uint32_t from_id, const MetaData& meta,
+                                           SerializablePtr& data, Handle& handle);
 
     protected:
         virtual StatusFlag create_progress(const MetaData& meta, ProcessingRulesPtr& rule,
-                                           NodeInformation& info) = 0;
+                                           Handle& handle) = 0;
 
-        virtual StatusFlag end_agent(const MetaData& meta, NodeInformation& info) = 0;
+        virtual StatusFlag end_agent(const MetaData& meta, Handle& handle) = 0;
 
     };
 

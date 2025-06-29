@@ -3,7 +3,7 @@
 //
 
 #include <tdcf/base/Errors.hpp>
-#include <tdcf/detail/NodeInformation.hpp>
+#include <tdcf/handle/Handle.hpp>
 #include <tdcf/node/agents/star/StarAgent.hpp>
 
 using namespace tdcf;
@@ -12,7 +12,7 @@ StarAgent::Scatter::Scatter(ProcessingRulesPtr rp, const MetaData& meta) :
     EventProgress(ProgressType::NodeRoot, std::move(rp)), _root_meta(meta) {}
 
 StatusFlag StarAgent::Scatter::create(const MetaData& meta,
-                                      ProcessingRulesPtr rp, NodeInformation& info) {
+                                      ProcessingRulesPtr rp, Handle& info) {
     assert(meta.operation_type == OperationType::Scatter);
     assert(meta.stage == NodeAgentScatter::get_rule);
 
@@ -36,7 +36,7 @@ StatusFlag StarAgent::Scatter::create(const MetaData& meta,
 }
 
 StatusFlag StarAgent::Scatter::handle_event(const MetaData& meta,
-                                            Variant& data, NodeInformation& info) {
+                                            Variant& data, Handle& info) {
     assert(meta.operation_type == OperationType::Scatter);
     if (!_agent) {
         assert(meta.stage == NodeAgentScatter::get_data);
@@ -56,14 +56,14 @@ StatusFlag StarAgent::Scatter::handle_event(const MetaData& meta,
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag StarAgent::Scatter::scatter_data(DataPtr& data, NodeInformation& info) const {
+StatusFlag StarAgent::Scatter::scatter_data(DataPtr& data, Handle& info) const {
     MetaData meta(_self->first);
     meta.stage = NodeAgentScatter::scatter_data;
     info.scatter_data(_self, meta, rule, info.cluster_size() + 1, data);
     return StatusFlag::Success;
 }
 
-StatusFlag StarAgent::Scatter::agent_store(Variant& data, NodeInformation& info) const {
+StatusFlag StarAgent::Scatter::agent_store(Variant& data, Handle& info) const {
     auto& set = std::get<DataSet>(data);
     assert(set.size() == info.cluster_size() + 1);
 
@@ -73,11 +73,11 @@ StatusFlag StarAgent::Scatter::agent_store(Variant& data, NodeInformation& info)
     return _agent->proxy_event(meta, data, info);
 }
 
-StatusFlag StarAgent::Scatter::close(NodeInformation& info) const {
+StatusFlag StarAgent::Scatter::close(Handle& info) const {
     MetaData meta(_root_meta);
     meta.stage = NodeAgentScatter::finish;
-    assert(info.root_id());
-    StatusFlag flag = info.send_message(info.root_id(), meta, nullptr);
+    assert(info.root_identity());
+    StatusFlag flag = info.send_message(info.root_identity(), meta, nullptr);
     if (flag != StatusFlag::Success) return flag;
     return StatusFlag::EventEnd;
 }

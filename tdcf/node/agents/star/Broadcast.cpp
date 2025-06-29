@@ -3,7 +3,7 @@
 //
 
 #include <tdcf/base/Errors.hpp>
-#include <tdcf/detail/NodeInformation.hpp>
+#include <tdcf/handle/Handle.hpp>
 #include <tdcf/node/agents/star/StarAgent.hpp>
 
 using namespace tdcf;
@@ -12,7 +12,7 @@ StarAgent::Broadcast::Broadcast(ProcessingRulesPtr rp, const MetaData& meta) :
     EventProgress(ProgressType::NodeRoot, std::move(rp)), _root_meta(meta) {}
 
 StatusFlag StarAgent::Broadcast::create(const MetaData& meta,
-                                        ProcessingRulesPtr rp, NodeInformation& info) {
+                                        ProcessingRulesPtr rp, Handle& info) {
     assert(meta.operation_type == OperationType::Broadcast);
     assert(meta.stage == NodeAgentBroadcast::get_rule);
 
@@ -36,7 +36,7 @@ StatusFlag StarAgent::Broadcast::create(const MetaData& meta,
 }
 
 StatusFlag StarAgent::Broadcast::handle_event(const MetaData& meta,
-                                              Variant& data, NodeInformation& info) {
+                                              Variant& data, Handle& info) {
     assert(meta.operation_type == OperationType::Broadcast);
     if (!_agent) {
         assert(meta.stage == NodeAgentBroadcast::get_data);
@@ -53,18 +53,18 @@ StatusFlag StarAgent::Broadcast::handle_event(const MetaData& meta,
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag StarAgent::Broadcast::agent_store(Variant& data, NodeInformation& info) const {
+StatusFlag StarAgent::Broadcast::agent_store(Variant& data, Handle& info) const {
     MetaData meta;
     meta.operation_type = OperationType::Broadcast;
     meta.stage = NodeAgentBroadcast::send_data;
     return _agent->proxy_event(meta, data, info);
 }
 
-StatusFlag StarAgent::Broadcast::close(NodeInformation& info) const {
+StatusFlag StarAgent::Broadcast::close(Handle& info) const {
     MetaData meta(_root_meta);
     meta.stage = NodeAgentBroadcast::finish;
-    assert(info.root_id());
-    StatusFlag flag = info.send_message(info.root_id(), meta, nullptr);
+    assert(info.root_identity());
+    StatusFlag flag = info.send_message(info.root_identity(), meta, nullptr);
     if (flag != StatusFlag::Success) return flag;
     return StatusFlag::EventEnd;
 }

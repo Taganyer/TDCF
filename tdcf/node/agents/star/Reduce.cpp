@@ -3,7 +3,7 @@
 //
 
 #include <tdcf/base/Errors.hpp>
-#include <tdcf/detail/NodeInformation.hpp>
+#include <tdcf/handle/Handle.hpp>
 #include <tdcf/node/agents/star/StarAgent.hpp>
 
 using namespace tdcf;
@@ -12,7 +12,7 @@ StarAgent::Reduce::Reduce(ProcessingRulesPtr rp, const MetaData& meta) :
     EventProgress(ProgressType::NodeRoot, std::move(rp)), _root_meta(meta) {}
 
 StatusFlag StarAgent::Reduce::create(const MetaData& meta,
-                                     ProcessingRulesPtr rp, NodeInformation& info) {
+                                     ProcessingRulesPtr rp, Handle& info) {
     assert(meta.operation_type == OperationType::Reduce);
     assert(meta.stage == NodeAgentReduce::get_rule);
 
@@ -41,7 +41,7 @@ StatusFlag StarAgent::Reduce::create(const MetaData& meta,
 }
 
 StatusFlag StarAgent::Reduce::handle_event(const MetaData& meta,
-                                           Variant& data, NodeInformation& info) {
+                                           Variant& data, Handle& info) {
     assert(meta.operation_type == OperationType::Scatter);
     if (!_agent) {
         assert(meta.stage == NodeAgentReduce::acquire_data);
@@ -53,10 +53,10 @@ StatusFlag StarAgent::Reduce::handle_event(const MetaData& meta,
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag StarAgent::Reduce::close(DataPtr& data, NodeInformation& info) const {
+StatusFlag StarAgent::Reduce::close(DataPtr& data, Handle& info) const {
     MetaData meta(_root_meta);
     meta.stage = NodeAgentReduce::send_data;
-    StatusFlag flag = info.send_message(info.root_id(), meta, data);
+    StatusFlag flag = info.send_message(info.root_identity(), meta, data);
     TDCF_CHECK_SUCCESS(flag)
     return StatusFlag::EventEnd;
 }

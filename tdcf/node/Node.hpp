@@ -3,7 +3,7 @@
 //
 #pragma once
 
-#include <tdcf/detail/NodeInformation.hpp>
+#include <tdcf/handle/Handle.hpp>
 #include <tdcf/node/agents/NodeAgent.hpp>
 
 
@@ -23,12 +23,15 @@ namespace tdcf {
 
         [[nodiscard]] bool node_agent_started() const { return _node_agent_started; };
 
+    private:
+        MetaData get_agent();
+
     protected:
         void end_agent();
 
-        virtual StatusFlag handle_message(CommunicatorEvent& event);
+        virtual StatusFlag handle_message(Handle::MessageEvent& event);
 
-        StatusFlag handle_progress_task(NodeInformation::ProgressTask& task);
+        StatusFlag handle_progress_task(Handle::ProgressTask& task);
 
         StatusFlag active_communicator_events();
 
@@ -46,7 +49,7 @@ namespace tdcf {
 
         unsigned _cluster_events = 0;
 
-        NodeInformation _info;
+        Handle _handle;
 
         NodeAgentPtr _agent;
 

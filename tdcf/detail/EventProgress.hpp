@@ -11,7 +11,7 @@ namespace tdcf {
 
     enum class ProgressType : uint8_t;
 
-    class NodeInformation;
+    class Handle;
 
     using Variant = std::variant<SerializablePtr, DataPtr, DataSet>;
 
@@ -21,9 +21,9 @@ namespace tdcf {
 
         virtual ~EventProgress() = default;
 
-        virtual StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) = 0;
+        virtual StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& info) = 0;
 
-        virtual void handle_error(NodeInformation& info) = 0;
+        virtual void handle_error(Handle& info) = 0;
 
         ProgressType type;
 
@@ -42,7 +42,7 @@ namespace tdcf {
 
         virtual ~EventProgressAgent() = default;
 
-        virtual StatusFlag proxy_event(const MetaData& meta, Variant& data, NodeInformation& info) = 0;
+        virtual StatusFlag proxy_event(const MetaData& meta, Variant& data, Handle& info) = 0;
 
     };
 
@@ -53,19 +53,19 @@ namespace tdcf {
         virtual ~ProcessorAgentFactory() = default;
 
         virtual StatusFlag broadcast(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
-                                     NodeInformation& info, EventProgressAgent **agent_ptr) = 0;
+                                     Handle& info, EventProgressAgent **agent_ptr) = 0;
 
         virtual StatusFlag scatter(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
-                                   NodeInformation& info, EventProgressAgent **agent_ptr) = 0;
+                                   Handle& info, EventProgressAgent **agent_ptr) = 0;
 
         virtual StatusFlag reduce(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
-                                  NodeInformation& info, EventProgressAgent **agent_ptr) = 0;
+                                  Handle& info, EventProgressAgent **agent_ptr) = 0;
 
         virtual StatusFlag all_reduce(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
-                                      NodeInformation& info, EventProgressAgent **agent_ptr) = 0;
+                                      Handle& info, EventProgressAgent **agent_ptr) = 0;
 
         virtual StatusFlag reduce_scatter(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
-                                          NodeInformation& info, EventProgressAgent **agent_ptr) = 0;
+                                          Handle& info, EventProgressAgent **agent_ptr) = 0;
 
     };
 
@@ -75,19 +75,19 @@ namespace tdcf {
     class classname : public ProcessorAgentFactory { \
     public: \
         StatusFlag broadcast(const ProcessingRulesPtr& rule, ProgressEventsMI iter, \
-                             NodeInformation& info, EventProgressAgent **agent_ptr) override; \
+                             Handle& handle, EventProgressAgent **agent_ptr) override; \
         \
         StatusFlag scatter(const ProcessingRulesPtr& rule, ProgressEventsMI iter, \
-                           NodeInformation& info, EventProgressAgent **agent_ptr) override; \
+                           Handle& handle, EventProgressAgent **agent_ptr) override; \
         \
         StatusFlag reduce(const ProcessingRulesPtr& rule, ProgressEventsMI iter, \
-                          NodeInformation& info, EventProgressAgent **agent_ptr) override; \
+                          Handle& handle, EventProgressAgent **agent_ptr) override; \
         \
         StatusFlag all_reduce(const ProcessingRulesPtr& rule, ProgressEventsMI iter, \
-                              NodeInformation& info, EventProgressAgent **agent_ptr) override; \
+                              Handle& handle, EventProgressAgent **agent_ptr) override; \
         \
         StatusFlag reduce_scatter(const ProcessingRulesPtr& rule, ProgressEventsMI iter, \
-                                  NodeInformation& info, EventProgressAgent **agent_ptr) override; \
+                                  Handle& handle, EventProgressAgent **agent_ptr) override; \
         \
     };
 

@@ -10,7 +10,7 @@ using namespace tdcf;
 StarCluster::ReduceScatter::ReduceScatter(ProgressType type, ProcessingRulesPtr rp) :
     EventProgress(type, std::move(rp)) {}
 
-StatusFlag StarCluster::ReduceScatter::create(ProcessingRulesPtr rp, NodeInformation& info) {
+StatusFlag StarCluster::ReduceScatter::create(ProcessingRulesPtr rp, Handle& info) {
     MetaData meta(info.get_version(), OperationType::ReduceScatter);
     meta.progress_type = ProgressType::Root;
     meta.data4[0] = info.cluster_size() + 1;
@@ -39,7 +39,7 @@ StatusFlag StarCluster::ReduceScatter::create(ProcessingRulesPtr rp, NodeInforma
 }
 
 StatusFlag StarCluster::ReduceScatter::handle_event(const MetaData& meta,
-                                                    Variant& data, NodeInformation& info) {
+                                                    Variant& data, Handle& info) {
     assert(meta.operation_type == OperationType::ReduceScatter);
     if (meta.stage == ClusterAllReduce::acquire_data) {
         return acquire_data(meta, std::get<DataPtr>(data), info);
@@ -62,7 +62,7 @@ StatusFlag StarCluster::ReduceScatter::handle_event(const MetaData& meta,
 }
 
 StatusFlag StarCluster::ReduceScatter::acquire_data(const MetaData& meta,
-                                                    DataPtr& data, NodeInformation& info) {
+                                                    DataPtr& data, Handle& info) {
     assert(!_get[meta.serial]);
     _set[meta.serial] = std::move(data);
     _get[meta.serial] = true;
@@ -75,7 +75,7 @@ StatusFlag StarCluster::ReduceScatter::acquire_data(const MetaData& meta,
     return StatusFlag::Success;
 }
 
-StatusFlag StarCluster::ReduceScatter::scatter_data(DataPtr& data, NodeInformation& info) {
+StatusFlag StarCluster::ReduceScatter::scatter_data(DataPtr& data, Handle& info) {
     _set.clear();
     MetaData meta(_self->first);
     meta.stage = ClusterReduceScatter::scatter_data;
@@ -83,7 +83,7 @@ StatusFlag StarCluster::ReduceScatter::scatter_data(DataPtr& data, NodeInformati
     return StatusFlag::Success;
 }
 
-StatusFlag StarCluster::ReduceScatter::send_data(DataSet& set, NodeInformation& info) const {
+StatusFlag StarCluster::ReduceScatter::send_data(DataSet& set, Handle& info) const {
     assert(set.size() == info.cluster_size() + 1);
     MetaData meta(_self->first);
     meta.stage = ClusterReduceScatter::send_data;
@@ -99,7 +99,7 @@ StarCluster::ReduceScatterAgent::ReduceScatterAgent(ProcessingRulesPtr rp, Progr
     ReduceScatter(ProgressType::NodeRoot, std::move(rp)), _other(iter) {}
 
 StatusFlag StarCluster::ReduceScatterAgent::create(ProcessingRulesPtr rp, ProgressEventsMI other,
-                                                   NodeInformation& info, EventProgressAgent **agent_ptr) {
+                                                   Handle& info, EventProgressAgent **agent_ptr) {
     MetaData meta(info.get_version(), OperationType::ReduceScatter);
     meta.progress_type = ProgressType::NodeRoot;
     auto [iter, success] = info.progress_events.emplace(
@@ -125,7 +125,7 @@ StatusFlag StarCluster::ReduceScatterAgent::create(ProcessingRulesPtr rp, Progre
 }
 
 StatusFlag StarCluster::ReduceScatterAgent::handle_event(const MetaData& meta,
-                                                         Variant& data, NodeInformation& info) {
+                                                         Variant& data, Handle& info) {
     assert(meta.operation_type == OperationType::ReduceScatter);
     if (meta.stage == AgentReduceScatter::acquire_data1) {
         return acquire_data(meta, std::get<DataPtr>(data), info);
@@ -150,11 +150,11 @@ StatusFlag StarCluster::ReduceScatterAgent::handle_event(const MetaData& meta,
 }
 
 StatusFlag StarCluster::ReduceScatterAgent::proxy_event(const MetaData& meta,
-                                                        Variant& data, NodeInformation& info) {
+                                                        Variant& data, Handle& info) {
     return handle_event(meta, data, info);
 }
 
-StatusFlag StarCluster::ReduceScatterAgent::reduce_data(DataPtr& data, NodeInformation& info) {
+StatusFlag StarCluster::ReduceScatterAgent::reduce_data(DataPtr& data, Handle& info) {
     _set.clear();
     MetaData meta(_other->first);
     meta.stage = AgentReduceScatter::send_data1;
@@ -162,7 +162,7 @@ StatusFlag StarCluster::ReduceScatterAgent::reduce_data(DataPtr& data, NodeInfor
     return StatusFlag::Success;
 }
 
-StatusFlag StarCluster::ReduceScatterAgent::close(NodeInformation& info) {
+StatusFlag StarCluster::ReduceScatterAgent::close(Handle& info) {
     MetaData meta(_other->first);
     meta.stage = AgentReduceScatter::finish;
     info.processed_queue.emplace(_other, meta, SerializablePtr());

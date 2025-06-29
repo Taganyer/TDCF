@@ -8,51 +8,55 @@
 using namespace tdcf;
 
 Node::Node(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp) :
-    _info(std::move(ip), std::move(cp), std::move(pp)) {}
+    _handle(std::move(ip), std::move(cp), std::move(pp)) {}
 
 Node::Node(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp, IdentityPtr root_id) :
-    _info(std::move(ip), std::move(cp), std::move(pp), std::move(root_id)) {}
+    _handle(std::move(ip), std::move(cp), std::move(pp), std::move(root_id)) {}
 
 void Node::start(unsigned) {
     TDCF_CHECK_EXPR(!_node_agent_started)
-    _info.connect(_info.root_id());
+    _handle.connect(_handle.root_identity());
+    _handle.start_communicator_handle();
 
-    StatusFlag flag;
-    do {
-        flag = _info.get_communicator_events();
-    } while (flag == StatusFlag::CommunicatorGetEventsFurtherWaiting);
+    MetaData meta = get_agent();
+    _handle.agent_factory = nullptr;
+    StatusFlag flag = _agent->init(meta, _handle);
     TDCF_CHECK_SUCCESS(flag)
-    assert(!_info.message_queue.empty());
-
-    auto [type, id, meta, agent] = _info.message_queue.front();
-    _info.message_queue.pop();
-    assert(type == CommunicatorEvent::ReceivedMessage && id == _info.root_id());
-    assert(meta.operation_type == OperationType::AgentCreate);
-
-    _agent = std::dynamic_pointer_cast<NodeAgent>(agent);
-    TDCF_CHECK_EXPR(_agent);
-    _info.agent_factory = nullptr;
-
-    flag = _agent->init(meta, _info);
-    TDCF_CHECK_SUCCESS(flag)
+    _handle.set_root_serial(_handle.get_identity_serial(_handle.root_identity()));
     _node_agent_started = true;
 }
 
+MetaData Node::get_agent() {
+    StatusFlag flag;
+    do {
+        flag = _handle.get_communicator_events();
+    } while (flag == StatusFlag::CommunicatorGetEventsFurtherWaiting);
+    TDCF_CHECK_SUCCESS(flag)
+    assert(_handle.communicator_events_size());
+
+    auto [from_id, type, meta, agent] = _handle.get_message();
+    assert(from_id == _handle.root_serial());
+    assert(meta.operation_type == OperationType::AgentCreate);
+    _agent = std::dynamic_pointer_cast<NodeAgent>(agent);
+    TDCF_CHECK_EXPR(_agent);
+    return meta;
+}
+
 void Node::end_agent() {
-    assert(_info.progress_events.size() - _cluster_events == 0);
+    assert(_handle.progress_events.size() - _cluster_events == 0);
     _node_agent_started = false;
     _agent = nullptr;
 }
 
-StatusFlag Node::handle_message(CommunicatorEvent& event) {
-    auto& [type, id, meta, data] = event;
+StatusFlag Node::handle_message(Handle::MessageEvent& event) {
+    auto& [from_id, type, meta, data] = event;
     StatusFlag flag;
     switch (type) {
         case CommunicatorEvent::ReceivedMessage:
-            flag = _agent->handle_received_message(id, meta, data, _info);
+            flag = _agent->handle_received_message(from_id, meta, data, _handle);
             break;
         case CommunicatorEvent::MessageSendable:
-            flag = _info.send_delay_message(id);
+            flag = _handle.send_delay_message(from_id);
             break;
         default:
             TDCF_RAISE_ERROR("Recieved wrong event type");
@@ -60,68 +64,67 @@ StatusFlag Node::handle_message(CommunicatorEvent& event) {
     return flag;
 }
 
-StatusFlag Node::handle_progress_task(NodeInformation::ProgressTask& task) {
+StatusFlag Node::handle_progress_task(Handle::ProgressTask& task) {
     auto& [iter, meta, result] = task;
     auto& [_, event_progress] = *iter;
     StatusFlag flag;
     if (meta.operation_type == OperationType::Error) {
-        event_progress->handle_error(_info);
+        event_progress->handle_error(_handle);
         flag = StatusFlag::EventEnd;
     } else {
-        flag = event_progress->handle_event(meta, result, _info);
+        flag = event_progress->handle_event(meta, result, _handle);
     }
     if (flag == StatusFlag::EventEnd) {
         if (meta.progress_type == ProgressType::Root) {
             assert(_cluster_events);
             --_cluster_events;
         }
-        _info.progress_events.erase(iter);
+        _handle.progress_events.erase(iter);
         flag = StatusFlag::Success;
     }
     return flag;
 }
 
 StatusFlag Node::active_communicator_events() {
-    return _info.get_communicator_events();
+    return _handle.get_communicator_events();
 }
 
 StatusFlag Node::active_processor_events() {
-    return _info.get_progress_tasks();
+    return _handle.get_processor_events();
 }
 
 StatusFlag Node::handle_communicator_events() {
-    auto size = _info.message_queue.size();
+    auto size = _handle.communicator_events_size();
     StatusFlag flag = StatusFlag::Success;
     while (size && flag == StatusFlag::Success) {
-        assert(size <= _info.message_queue.size());
+        assert(size <= _handle.communicator_events_size());
         --size;
-        flag = handle_message(_info.message_queue.front());
+        auto message = _handle.get_message();
+        flag = handle_message(message);
         if (flag == StatusFlag::EventEnd) {
-            if (_info.message_queue.front().meta.progress_type == ProgressType::Root) {
+            if (message.meta.progress_type == ProgressType::Root) {
                 assert(_cluster_events);
                 --_cluster_events;
             }
-            _info.progress_events.erase(_info.message_queue.front().meta);
+            _handle.progress_events.erase(message.meta);
             flag = StatusFlag::Success;
         } else if (unlikely(flag == StatusFlag::ClusterOffline)) {
             end_agent();
             flag = StatusFlag::Success;
         }
-        /// TODO: 这里出错丢弃事件
-        _info.message_queue.pop();
     }
     return flag;
 }
 
 StatusFlag Node::handle_processor_events() {
-    auto size = _info.processed_queue.size();
+    auto size = _handle.processor_event_size();
     StatusFlag flag = StatusFlag::Success;
     while (size && flag == StatusFlag::Success) {
-        assert(size <= _info.processed_queue.size());
+        assert(size <= _handle.processor_event_size());
         --size;
-        flag = handle_progress_task(_info.processed_queue.front());
-        /// TODO: 这里出错丢弃事件
-        _info.message_queue.pop();
+        Handle::ProgressTask task;
+        if (!_handle.get_task(task)) break;
+        flag = handle_progress_task(task);
     }
     return flag;
 }

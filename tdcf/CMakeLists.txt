@@ -7,10 +7,7 @@ FILE(GLOB_RECURSE SRC_LIST "*.cpp")
 FILE(GLOB_RECURSE HEAD_LIST "*.hpp")
 
 add_library(${PROJECT_NAME} SHARED ${SRC_LIST} ${HEAD_LIST}
-        node/agents/star/AllReduce.cpp
-        cluster/star/AllReduce.cpp
-        node/agents/star/ReduceScatter.cpp
-        cluster/star/ReduceScatter.cpp)
+        handle/CommunicatorHandle.hpp)
 
 target_include_directories(${PROJECT_NAME}
         PRIVATE

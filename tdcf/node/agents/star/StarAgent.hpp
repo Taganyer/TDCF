@@ -10,7 +10,7 @@ namespace tdcf {
 
     class StarAgent : public NodeAgent {
     public:
-        StatusFlag init(const MetaData& meta, NodeInformation& info) override;
+        StatusFlag init(const MetaData& meta, Handle& info) override;
 
         bool serialize(void *buffer, unsigned buffer_size) const override;
 
@@ -22,22 +22,22 @@ namespace tdcf {
 
     private:
         StatusFlag create_progress(const MetaData& meta, ProcessingRulesPtr& rule,
-                                   NodeInformation& info) override;
+                                   Handle& info) override;
 
-        StatusFlag end_agent(const MetaData& meta, NodeInformation& info) override;
+        StatusFlag end_agent(const MetaData& meta, Handle& info) override;
 
         class Broadcast : public EventProgress {
         public:
             explicit Broadcast(ProcessingRulesPtr rp, const MetaData& meta);
 
-            static StatusFlag create(const MetaData& meta, ProcessingRulesPtr rp, NodeInformation& info);
+            static StatusFlag create(const MetaData& meta, ProcessingRulesPtr rp, Handle& info);
 
-            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
+            StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& info) override;
 
         private:
-            StatusFlag agent_store(Variant& data, NodeInformation& info) const;
+            StatusFlag agent_store(Variant& data, Handle& info) const;
 
-            StatusFlag close(NodeInformation& info) const;
+            StatusFlag close(Handle& info) const;
 
             MetaData _root_meta;
 
@@ -49,16 +49,16 @@ namespace tdcf {
         public:
             explicit Scatter(ProcessingRulesPtr rp, const MetaData& meta);
 
-            static StatusFlag create(const MetaData& meta, ProcessingRulesPtr rp, NodeInformation& info);
+            static StatusFlag create(const MetaData& meta, ProcessingRulesPtr rp, Handle& info);
 
-            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
+            StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& info) override;
 
         private:
-            StatusFlag scatter_data(DataPtr& data, NodeInformation& info) const;
+            StatusFlag scatter_data(DataPtr& data, Handle& info) const;
 
-            StatusFlag agent_store(Variant& data, NodeInformation& info) const;
+            StatusFlag agent_store(Variant& data, Handle& info) const;
 
-            StatusFlag close(NodeInformation& info) const;
+            StatusFlag close(Handle& info) const;
 
             MetaData _root_meta;
 
@@ -72,12 +72,12 @@ namespace tdcf {
         public:
             explicit Reduce(ProcessingRulesPtr rp, const MetaData& meta);
 
-            static StatusFlag create(const MetaData& meta, ProcessingRulesPtr rp, NodeInformation& info);
+            static StatusFlag create(const MetaData& meta, ProcessingRulesPtr rp, Handle& info);
 
-            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
+            StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& info) override;
 
         private:
-            StatusFlag close(DataPtr& data, NodeInformation& info) const;
+            StatusFlag close(DataPtr& data, Handle& info) const;
 
             MetaData _root_meta;
 
@@ -91,16 +91,16 @@ namespace tdcf {
         public:
             explicit AllReduce(ProcessingRulesPtr rp, const MetaData& meta);
 
-            static StatusFlag create(const MetaData& meta, ProcessingRulesPtr rp, NodeInformation& info);
+            static StatusFlag create(const MetaData& meta, ProcessingRulesPtr rp, Handle& info);
 
-            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
+            StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& info) override;
 
         private:
-            StatusFlag acquire_data1(DataPtr& data, NodeInformation& info) const;
+            StatusFlag acquire_data1(DataPtr& data, Handle& info) const;
 
-            StatusFlag acquire_data2(DataPtr& data, NodeInformation& info) const;
+            StatusFlag acquire_data2(DataPtr& data, Handle& info) const;
 
-            StatusFlag close(NodeInformation& info) const;
+            StatusFlag close(Handle& info) const;
 
             MetaData _root_meta;
 
@@ -114,16 +114,16 @@ namespace tdcf {
         public:
             explicit ReduceScatter(ProcessingRulesPtr rp, const MetaData& meta);
 
-            static StatusFlag create(const MetaData& meta, ProcessingRulesPtr rp, NodeInformation& info);
+            static StatusFlag create(const MetaData& meta, ProcessingRulesPtr rp, Handle& info);
 
-            StatusFlag handle_event(const MetaData& meta, Variant& data, NodeInformation& info) override;
+            StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& info) override;
 
         private:
-            StatusFlag acquire_data1(DataPtr& data, NodeInformation& info) const;
+            StatusFlag acquire_data1(DataPtr& data, Handle& info) const;
 
-            StatusFlag acquire_data2(DataPtr& data, NodeInformation& info) const;
+            StatusFlag acquire_data2(DataPtr& data, Handle& info) const;
 
-            StatusFlag close(NodeInformation& info) const;
+            StatusFlag close(Handle& info) const;
 
             MetaData _root_meta;
 

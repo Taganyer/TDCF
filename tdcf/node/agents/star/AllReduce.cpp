@@ -3,7 +3,7 @@
 //
 
 #include <tdcf/base/Errors.hpp>
-#include <tdcf/detail/NodeInformation.hpp>
+#include <tdcf/handle/Handle.hpp>
 #include <tdcf/node/agents/star/StarAgent.hpp>
 
 using namespace tdcf;
@@ -12,7 +12,7 @@ StarAgent::AllReduce::AllReduce(ProcessingRulesPtr rp, const MetaData& meta) :
     EventProgress(ProgressType::NodeRoot, std::move(rp)), _root_meta(meta) {}
 
 StatusFlag StarAgent::AllReduce::create(const MetaData& meta,
-                                        ProcessingRulesPtr rp, NodeInformation& info) {
+                                        ProcessingRulesPtr rp, Handle& info) {
     assert(meta.operation_type == OperationType::AllReduce);
     assert(meta.stage == NodeAgentAllReduce::get_rule);
 
@@ -42,7 +42,7 @@ StatusFlag StarAgent::AllReduce::create(const MetaData& meta,
 }
 
 StatusFlag StarAgent::AllReduce::handle_event(const MetaData& meta,
-                                              Variant& data, NodeInformation& info) {
+                                              Variant& data, Handle& info) {
     assert(meta.operation_type == OperationType::AllReduce);
     if (meta.stage == NodeAgentAllReduce::acquire_data1) {
         return acquire_data1(std::get<DataPtr>(data), info);
@@ -56,14 +56,14 @@ StatusFlag StarAgent::AllReduce::handle_event(const MetaData& meta,
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag StarAgent::AllReduce::acquire_data1(DataPtr& data, NodeInformation& info) const {
+StatusFlag StarAgent::AllReduce::acquire_data1(DataPtr& data, Handle& info) const {
     MetaData meta(_root_meta);
     meta.stage = NodeAgentAllReduce::send_data1;
-    StatusFlag flag = info.send_message(info.root_id(), meta, data);
+    StatusFlag flag = info.send_message(info.root_identity(), meta, data);
     return flag;
 }
 
-StatusFlag StarAgent::AllReduce::acquire_data2(DataPtr& data, NodeInformation& info) const {
+StatusFlag StarAgent::AllReduce::acquire_data2(DataPtr& data, Handle& info) const {
     if (!_agent) {
         info.store_data(rule, data);
         return close(info);
@@ -79,10 +79,10 @@ StatusFlag StarAgent::AllReduce::acquire_data2(DataPtr& data, NodeInformation& i
     return StatusFlag::Success;
 }
 
-StatusFlag StarAgent::AllReduce::close(NodeInformation& info) const {
+StatusFlag StarAgent::AllReduce::close(Handle& info) const {
     MetaData meta(_root_meta);
     meta.stage = NodeAgentAllReduce::finish;
-    StatusFlag flag = info.send_message(info.root_id(), _root_meta, nullptr);
+    StatusFlag flag = info.send_message(info.root_identity(), _root_meta, nullptr);
     TDCF_CHECK_SUCCESS(flag)
     return StatusFlag::EventEnd;
 }

@@ -10,7 +10,7 @@ using namespace tdcf;
 StarCluster::Broadcast::Broadcast(ProgressType type, ProcessingRulesPtr rp) :
     EventProgress(type, std::move(rp)) {}
 
-StatusFlag StarCluster::Broadcast::create(ProcessingRulesPtr rp, NodeInformation& info) {
+StatusFlag StarCluster::Broadcast::create(ProcessingRulesPtr rp, Handle& info) {
     MetaData meta(info.get_version(), OperationType::Broadcast);
     meta.progress_type = ProgressType::Root;
 
@@ -34,7 +34,7 @@ StatusFlag StarCluster::Broadcast::create(ProcessingRulesPtr rp, NodeInformation
 }
 
 StatusFlag StarCluster::Broadcast::handle_event(const MetaData& meta,
-                                                Variant& data, NodeInformation& info) {
+                                                Variant& data, Handle& info) {
     assert(meta.operation_type == OperationType::Broadcast);
     assert(meta.progress_type == _self->first.progress_type);
     if (meta.stage == ClusterBroadcast::acquire_data) {
@@ -51,11 +51,11 @@ StatusFlag StarCluster::Broadcast::handle_event(const MetaData& meta,
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-void StarCluster::Broadcast::handle_error(NodeInformation& info) {
+void StarCluster::Broadcast::handle_error(Handle& info) {
 
 }
 
-StatusFlag StarCluster::Broadcast::send_data(DataPtr& data, NodeInformation& info) {
+StatusFlag StarCluster::Broadcast::send_data(DataPtr& data, Handle& info) {
     MetaData meta(_self->first);
     meta.stage = ClusterBroadcast::send_data;
 
@@ -73,7 +73,7 @@ StarCluster::BroadcastAgent::BroadcastAgent(ProcessingRulesPtr rp, ProgressEvent
     Broadcast(ProgressType::NodeRoot, std::move(rp)), _other(iter) {}
 
 StatusFlag StarCluster::BroadcastAgent::create(ProcessingRulesPtr rp, ProgressEventsMI other,
-                                               NodeInformation& info, EventProgressAgent **agent_ptr) {
+                                               Handle& info, EventProgressAgent **agent_ptr) {
     MetaData meta(info.get_version(), OperationType::Broadcast);
     meta.progress_type = ProgressType::NodeRoot;
     auto [iter, success] = info.progress_events.emplace(
@@ -94,7 +94,7 @@ StatusFlag StarCluster::BroadcastAgent::create(ProcessingRulesPtr rp, ProgressEv
 }
 
 StatusFlag StarCluster::BroadcastAgent::handle_event(const MetaData& meta,
-                                                     Variant& data, NodeInformation& info) {
+                                                     Variant& data, Handle& info) {
     assert(meta.operation_type == OperationType::Broadcast);
     if (meta.stage == AgentBroadcast::get_data) {
         assert(_sent == 0);
@@ -111,16 +111,16 @@ StatusFlag StarCluster::BroadcastAgent::handle_event(const MetaData& meta,
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-void StarCluster::BroadcastAgent::handle_error(NodeInformation& info) {
+void StarCluster::BroadcastAgent::handle_error(Handle& info) {
     Broadcast::handle_error(info);
 }
 
 StatusFlag StarCluster::BroadcastAgent::proxy_event(const MetaData& meta,
-                                                    Variant& data, NodeInformation& info) {
+                                                    Variant& data, Handle& info) {
     return handle_event(meta, data, info);
 }
 
-StatusFlag StarCluster::BroadcastAgent::close(NodeInformation& info) const {
+StatusFlag StarCluster::BroadcastAgent::close(Handle& info) const {
     MetaData meta(_other->first);
     meta.stage = AgentBroadcast::finish;
     info.processed_queue.emplace(_other, meta, SerializablePtr());

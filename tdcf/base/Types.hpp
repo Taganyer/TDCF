@@ -9,8 +9,8 @@ namespace tdcf {
 
     enum class OperationType : uint8_t {
         Null,
-        Init,
         AgentCreate,
+        Init,
         Close,
         Broadcast,
         Scatter,

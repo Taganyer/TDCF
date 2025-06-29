@@ -1,13 +1,14 @@
 //
 // Created by taganyer on 25-6-15.
 //
+
 #include <tdcf/base/Errors.hpp>
-#include <tdcf/detail/NodeInformation.hpp>
+#include <tdcf/handle/Handle.hpp>
 #include <tdcf/node/agents/star/StarAgent.hpp>
 
 using namespace tdcf;
 
-StatusFlag StarAgent::init(const MetaData& meta, NodeInformation& info) {
+StatusFlag StarAgent::init(const MetaData& meta, Handle& info) {
     assert(meta.stage == Star::start);
     return StatusFlag::Success;
 }
@@ -29,7 +30,7 @@ unsigned StarAgent::serialize_size() const {
 }
 
 StatusFlag StarAgent::create_progress(const MetaData& meta, ProcessingRulesPtr& rule,
-                                      NodeInformation& info) {
+                                      Handle& info) {
     switch (meta.operation_type) {
         case OperationType::Broadcast:
             return Broadcast::create(meta, rule, info);
@@ -46,9 +47,9 @@ StatusFlag StarAgent::create_progress(const MetaData& meta, ProcessingRulesPtr& 
     }
 }
 
-StatusFlag StarAgent::end_agent(const MetaData& meta, NodeInformation& info) {
+StatusFlag StarAgent::end_agent(const MetaData& meta, Handle& info) {
     assert(meta.stage == Star::close);
-    assert(!info.delayed_message(info.root_id()));
-    info.disconnect(info.root_id());
+    assert(!info.delayed_message(info.root_identity()));
+    info.disconnect(info.root_identity());
     return StatusFlag::Success;
 }

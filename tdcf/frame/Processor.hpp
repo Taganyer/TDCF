@@ -18,7 +18,7 @@ namespace tdcf {
     enum class OperationFlag : uint8_t;
 
     struct ProcessorEventMark {
-        Version version;
+        uint32_t version = 0;
         uint32_t serial = 0;
     };
 

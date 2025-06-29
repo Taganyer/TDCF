@@ -10,7 +10,7 @@ using namespace tdcf;
 StarCluster::AllReduce::AllReduce(ProgressType type, ProcessingRulesPtr rp) :
     EventProgress(type, std::move(rp)) {}
 
-StatusFlag StarCluster::AllReduce::create(ProcessingRulesPtr rp, NodeInformation& info) {
+StatusFlag StarCluster::AllReduce::create(ProcessingRulesPtr rp, Handle& info) {
     MetaData meta(info.get_version(), OperationType::AllReduce);
     meta.progress_type = ProgressType::Root;
     meta.data4[0] = info.cluster_size() + 1;
@@ -39,7 +39,7 @@ StatusFlag StarCluster::AllReduce::create(ProcessingRulesPtr rp, NodeInformation
 }
 
 StatusFlag StarCluster::AllReduce::handle_event(const MetaData& meta,
-                                                Variant& data, NodeInformation& info) {
+                                                Variant& data, Handle& info) {
     assert(meta.operation_type == OperationType::AllReduce);
     if (meta.stage == ClusterAllReduce::acquire_data) {
         return acquire_data(meta, std::get<DataPtr>(data), info);
@@ -59,7 +59,7 @@ StatusFlag StarCluster::AllReduce::handle_event(const MetaData& meta,
 }
 
 StatusFlag StarCluster::AllReduce::acquire_data(const MetaData& meta,
-                                                DataPtr& data, NodeInformation& info) {
+                                                DataPtr& data, Handle& info) {
     assert(!_get[meta.serial]);
     _set[meta.serial] = std::move(data);
     _get[meta.serial] = true;
@@ -72,7 +72,7 @@ StatusFlag StarCluster::AllReduce::acquire_data(const MetaData& meta,
     return StatusFlag::Success;
 }
 
-StatusFlag StarCluster::AllReduce::send_data(DataPtr& data, NodeInformation& info) {
+StatusFlag StarCluster::AllReduce::send_data(DataPtr& data, Handle& info) {
     _set.clear();
     MetaData meta(_self->first);
     meta.stage = ClusterAllReduce::send_data;
@@ -88,7 +88,7 @@ StarCluster::AllReduceAgent::AllReduceAgent(ProcessingRulesPtr rp, ProgressEvent
     AllReduce(ProgressType::NodeRoot, std::move(rp)), _other(iter) {}
 
 StatusFlag StarCluster::AllReduceAgent::create(ProcessingRulesPtr rp, ProgressEventsMI other,
-                                               NodeInformation& info, EventProgressAgent **agent_ptr) {
+                                               Handle& info, EventProgressAgent **agent_ptr) {
     MetaData meta(info.get_version(), OperationType::AllReduce);
     meta.progress_type = ProgressType::NodeRoot;
     auto [iter, success] = info.progress_events.emplace(
@@ -114,7 +114,7 @@ StatusFlag StarCluster::AllReduceAgent::create(ProcessingRulesPtr rp, ProgressEv
 }
 
 StatusFlag StarCluster::AllReduceAgent::handle_event(const MetaData& meta,
-                                                     Variant& data, NodeInformation& info) {
+                                                     Variant& data, Handle& info) {
     assert(meta.operation_type == OperationType::AllReduce);
     if (meta.stage == AgentAllReduce::acquire_data1) {
         return acquire_data(meta, std::get<DataPtr>(data), info);
@@ -136,11 +136,11 @@ StatusFlag StarCluster::AllReduceAgent::handle_event(const MetaData& meta,
 }
 
 StatusFlag StarCluster::AllReduceAgent::proxy_event(const MetaData& meta,
-                                              Variant& data, NodeInformation& info) {
+                                              Variant& data, Handle& info) {
     return handle_event(meta, data, info);
 }
 
-StatusFlag StarCluster::AllReduceAgent::reduce_data(DataPtr& data, NodeInformation& info) {
+StatusFlag StarCluster::AllReduceAgent::reduce_data(DataPtr& data, Handle& info) {
     _set.clear();
     MetaData meta(_other->first);
     meta.stage = AgentAllReduce::send_data;
@@ -148,7 +148,7 @@ StatusFlag StarCluster::AllReduceAgent::reduce_data(DataPtr& data, NodeInformati
     return StatusFlag::Success;
 }
 
-StatusFlag StarCluster::AllReduceAgent::close(NodeInformation& info) {
+StatusFlag StarCluster::AllReduceAgent::close(Handle& info) {
     MetaData meta(_other->first);
     meta.stage = AgentAllReduce::finish;
     info.processed_queue.emplace(_other, meta, SerializablePtr());

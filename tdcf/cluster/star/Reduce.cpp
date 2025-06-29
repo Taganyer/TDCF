@@ -10,7 +10,7 @@ using namespace tdcf;
 StarCluster::Reduce::Reduce(ProgressType type, ProcessingRulesPtr rp) :
     EventProgress(type, std::move(rp)) {}
 
-StatusFlag StarCluster::Reduce::create(ProcessingRulesPtr rp, NodeInformation& info) {
+StatusFlag StarCluster::Reduce::create(ProcessingRulesPtr rp, Handle& info) {
     MetaData meta(info.get_version(), OperationType::Reduce);
     meta.progress_type = ProgressType::Root;
 
@@ -35,7 +35,7 @@ StatusFlag StarCluster::Reduce::create(ProcessingRulesPtr rp, NodeInformation& i
 }
 
 StatusFlag StarCluster::Reduce::handle_event(const MetaData& meta,
-                                             Variant& data, NodeInformation& info) {
+                                             Variant& data, Handle& info) {
     assert(meta.operation_type == OperationType::Reduce);
     if (meta.stage == ClusterReduce::acquire_data) {
         return acquire_data(std::get<DataPtr>(data), info);
@@ -48,7 +48,7 @@ StatusFlag StarCluster::Reduce::handle_event(const MetaData& meta,
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag StarCluster::Reduce::acquire_data(DataPtr& data, NodeInformation& info) {
+StatusFlag StarCluster::Reduce::acquire_data(DataPtr& data, Handle& info) {
     _set.push_back(std::move(data));
     if (_set.size() < info.cluster_size() + 1) return StatusFlag::Success;
     MetaData meta(_self->first);
@@ -61,7 +61,7 @@ StarCluster::ReduceAgent::ReduceAgent(ProcessingRulesPtr rp, ProgressEventsMI it
     Reduce(ProgressType::NodeRoot, std::move(rp)), _other(iter) {}
 
 StatusFlag StarCluster::ReduceAgent::create(ProcessingRulesPtr rp, ProgressEventsMI other,
-                                            NodeInformation& info, EventProgressAgent **agent_ptr) {
+                                            Handle& info, EventProgressAgent **agent_ptr) {
     MetaData meta(info.get_version(), OperationType::Reduce);
     meta.progress_type = ProgressType::NodeRoot;
     auto [iter, success] = info.progress_events.emplace(
@@ -85,7 +85,7 @@ StatusFlag StarCluster::ReduceAgent::create(ProcessingRulesPtr rp, ProgressEvent
 }
 
 StatusFlag StarCluster::ReduceAgent::handle_event(const MetaData& meta,
-                                                  Variant& data, NodeInformation& info) {
+                                                  Variant& data, Handle& info) {
     assert(meta.operation_type == OperationType::Reduce);
     if (meta.stage == AgentReduce::acquire_data) {
         return acquire_data(std::get<DataPtr>(data), info);
@@ -97,11 +97,11 @@ StatusFlag StarCluster::ReduceAgent::handle_event(const MetaData& meta,
 }
 
 StatusFlag StarCluster::ReduceAgent::proxy_event(const MetaData& meta,
-                                           Variant& data, NodeInformation& info) {
+                                           Variant& data, Handle& info) {
     return handle_event(meta, data, info);
 }
 
-StatusFlag StarCluster::ReduceAgent::close(DataPtr& data, NodeInformation& info) const {
+StatusFlag StarCluster::ReduceAgent::close(DataPtr& data, Handle& info) const {
     MetaData meta(_other->first);
     meta.stage = AgentReduce::send_data;
     info.processed_queue.emplace(_other, meta, std::static_pointer_cast<Serializable>(data));
