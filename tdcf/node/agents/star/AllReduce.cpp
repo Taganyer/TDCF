@@ -11,14 +11,12 @@ using namespace tdcf;
 StarAgent::AllReduce::AllReduce(uint32_t version, ProcessingRulesPtr rp) :
     EventProgress(OperationType::AllReduce, ProgressType::NodeRoot, version, std::move(rp)) {}
 
-StatusFlag StarAgent::AllReduce::create(const MetaData& meta,
+StatusFlag StarAgent::AllReduce::create(uint32_t version, const MetaData& meta,
                                         ProcessingRulesPtr rp, Handle& handle) {
     assert(meta.operation_type == OperationType::AllReduce);
     assert(meta.stage == NodeAgentAllReduce::get_rule);
 
-    uint32_t version = handle.create_conversation_version();
-    auto iter = handle.create_progress(
-        std::make_unique<AllReduce>(version, std::move(rp)));
+    auto iter = handle.create_progress(std::make_unique<AllReduce>(version, std::move(rp)));
 
     auto& self = static_cast<AllReduce&>(*iter->second);
     self.serial = meta.serial;

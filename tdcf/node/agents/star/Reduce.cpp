@@ -11,12 +11,11 @@ using namespace tdcf;
 StarAgent::Reduce::Reduce(uint32_t version, ProcessingRulesPtr rp) :
     EventProgress(OperationType::Reduce, ProgressType::NodeRoot, version, std::move(rp)) {}
 
-StatusFlag StarAgent::Reduce::create(const MetaData& meta,
+StatusFlag StarAgent::Reduce::create(uint32_t version, const MetaData& meta,
                                      ProcessingRulesPtr rp, Handle& handle) {
     assert(meta.operation_type == OperationType::Reduce);
     assert(meta.stage == NodeAgentReduce::get_rule);
 
-    uint32_t version = handle.create_conversation_version();
     auto iter = handle.create_progress(std::make_unique<Reduce>(version, std::move(rp)));
 
     auto& self = static_cast<Reduce&>(*iter->second);

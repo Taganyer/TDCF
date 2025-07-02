@@ -11,14 +11,12 @@ using namespace tdcf;
 StarAgent::Broadcast::Broadcast(uint32_t version, ProcessingRulesPtr rp) :
     EventProgress(OperationType::Broadcast, ProgressType::NodeRoot, version, std::move(rp)) {}
 
-StatusFlag StarAgent::Broadcast::create(const MetaData& meta,
+StatusFlag StarAgent::Broadcast::create(uint32_t version, const MetaData& meta,
                                         ProcessingRulesPtr rp, Handle& handle) {
     assert(meta.operation_type == OperationType::Broadcast);
     assert(meta.stage == NodeAgentBroadcast::get_rule);
 
-    uint32_t version = handle.create_conversation_version();
-    auto iter = handle.create_progress(
-        std::make_unique<Broadcast>(version, std::move(rp)));
+    auto iter = handle.create_progress(std::make_unique<Broadcast>(version, std::move(rp)));
 
     if (!handle.agent_factory) return StatusFlag::Success;
 

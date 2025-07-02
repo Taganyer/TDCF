@@ -29,19 +29,19 @@ unsigned StarAgent::serialize_size() const {
     return 0;
 }
 
-StatusFlag StarAgent::create_progress(const MetaData& meta, ProcessingRulesPtr& rule,
-                                      Handle& handle) {
+StatusFlag StarAgent::create_progress(uint32_t version, const MetaData& meta,
+                                      ProcessingRulesPtr& rule, Handle& handle) {
     switch (meta.operation_type) {
         case OperationType::Broadcast:
-            return Broadcast::create(meta, rule, handle);
+            return Broadcast::create(version, meta, rule, handle);
         case OperationType::Scatter:
-            return Scatter::create(meta, rule, handle);
+            return Scatter::create(version, meta, rule, handle);
         case OperationType::Reduce:
-            return Reduce::create(meta, rule, handle);
+            return Reduce::create(version, meta, rule, handle);
         case OperationType::AllReduce:
-            return AllReduce::create(meta, rule, handle);
+            return AllReduce::create(version, meta, rule, handle);
         case OperationType::ReduceScatter:
-            return ReduceScatter::create(meta, rule, handle);
+            return ReduceScatter::create(version, meta, rule, handle);
         default:
             TDCF_RAISE_ERROR(error OperationType)
     }

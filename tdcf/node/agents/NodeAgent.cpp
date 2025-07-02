@@ -30,11 +30,13 @@ StatusFlag NodeAgent::handle_received_message(const IdentityPtr& from_id, const 
         TDCF_CHECK_SUCCESS(flag);
         return StatusFlag::ClusterOffline;
     }
-    if (data->base_type() == (int) SerializableBaseTypes::ProcessingRules) {
-        assert(handle.check_progress(handle.find_progress(meta.version)));
+    if (meta.link_mark == LinkMark::Create) {
         assert(handle.root_identity() == from_id);
+        assert(!handle.check_progress(handle.find_progress(meta.version)));
+        assert(data->base_type() == (int) SerializableBaseTypes::ProcessingRules);
         auto rule = std::dynamic_pointer_cast<ProcessingRules>(data);
-        return create_progress(meta, rule, handle);
+        assert(rule);
+        return create_progress(meta.version, meta, rule, handle);
     }
 
     auto iter = handle.find_progress(meta.version);

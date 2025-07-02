@@ -11,12 +11,11 @@ using namespace tdcf;
 StarAgent::ReduceScatter::ReduceScatter(uint32_t version, ProcessingRulesPtr rp) :
     EventProgress(OperationType::ReduceScatter, ProgressType::NodeRoot, version, std::move(rp)) {}
 
-StatusFlag StarAgent::ReduceScatter::create(const MetaData& meta,
+StatusFlag StarAgent::ReduceScatter::create(uint32_t version, const MetaData& meta,
                                             ProcessingRulesPtr rp, Handle& handle) {
     assert(meta.operation_type == OperationType::ReduceScatter);
     assert(meta.stage == NodeAgentReduceScatter::get_rule);
 
-    uint32_t version = handle.create_conversation_version();
     auto iter = handle.create_progress(std::make_unique<ReduceScatter>(version, std::move(rp)));
 
     auto& self = static_cast<ReduceScatter&>(*iter->second);

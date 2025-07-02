@@ -21,8 +21,8 @@ namespace tdcf {
         [[nodiscard]] unsigned serialize_size() const override;
 
     private:
-        StatusFlag create_progress(const MetaData& meta, ProcessingRulesPtr& rule,
-                                   Handle& handle) override;
+        StatusFlag create_progress(uint32_t version, const MetaData& meta,
+                                   ProcessingRulesPtr& rule, Handle& handle) override;
 
         StatusFlag end_agent(const MetaData& meta, Handle& handle) override;
 
@@ -30,7 +30,7 @@ namespace tdcf {
         public:
             explicit Broadcast(uint32_t version, ProcessingRulesPtr rp);
 
-            static StatusFlag create(const MetaData& meta, ProcessingRulesPtr rp, Handle& handle);
+            static StatusFlag create(uint32_t version, const MetaData& meta, ProcessingRulesPtr rp, Handle& handle);
 
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
@@ -47,7 +47,7 @@ namespace tdcf {
         public:
             explicit Scatter(uint32_t version, ProcessingRulesPtr rp);
 
-            static StatusFlag create(const MetaData& meta, ProcessingRulesPtr rp, Handle& handle);
+            static StatusFlag create(uint32_t version, const MetaData& meta, ProcessingRulesPtr rp, Handle& handle);
 
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
@@ -68,7 +68,7 @@ namespace tdcf {
         public:
             explicit Reduce(uint32_t version, ProcessingRulesPtr rp);
 
-            static StatusFlag create(const MetaData& meta, ProcessingRulesPtr rp, Handle& handle);
+            static StatusFlag create(uint32_t version, const MetaData& meta, ProcessingRulesPtr rp, Handle& handle);
 
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
@@ -83,7 +83,7 @@ namespace tdcf {
         public:
             explicit AllReduce(uint32_t version, ProcessingRulesPtr rp);
 
-            static StatusFlag create(const MetaData& meta, ProcessingRulesPtr rp, Handle& handle);
+            static StatusFlag create(uint32_t version, const MetaData& meta, ProcessingRulesPtr rp, Handle& handle);
 
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
@@ -102,7 +102,7 @@ namespace tdcf {
         public:
             explicit ReduceScatter(uint32_t version, ProcessingRulesPtr rp);
 
-            static StatusFlag create(const MetaData& meta, ProcessingRulesPtr rp, Handle& handle);
+            static StatusFlag create(uint32_t version, const MetaData& meta, ProcessingRulesPtr rp, Handle& handle);
 
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 

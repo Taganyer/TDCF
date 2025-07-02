@@ -29,8 +29,8 @@ namespace tdcf {
                                            SerializablePtr& data, Handle& handle);
 
     protected:
-        virtual StatusFlag create_progress(const MetaData& meta, ProcessingRulesPtr& rule,
-                                           Handle& handle) = 0;
+        virtual StatusFlag create_progress(uint32_t version, const MetaData& meta,
+                                           ProcessingRulesPtr& rule, Handle& handle) = 0;
 
         virtual StatusFlag end_agent(const MetaData& meta, Handle& handle) = 0;
 
