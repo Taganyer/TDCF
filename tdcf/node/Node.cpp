@@ -16,13 +16,11 @@ Node::Node(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp, IdentityPtr root
 void Node::start(unsigned) {
     TDCF_CHECK_EXPR(!_node_agent_started)
     _handle.connect(_handle.root_identity());
-    _handle.start_communicator_handle();
 
     MetaData meta = get_agent();
     _handle.agent_factory = nullptr;
     StatusFlag flag = _agent->init(meta, _handle);
     TDCF_CHECK_SUCCESS(flag)
-    _handle.set_root_serial(_handle.get_identity_serial(_handle.root_identity()));
     _node_agent_started = true;
 }
 
@@ -32,10 +30,13 @@ MetaData Node::get_agent() {
         flag = _handle.get_communicator_events();
     } while (flag == StatusFlag::CommunicatorGetEventsFurtherWaiting);
     TDCF_CHECK_SUCCESS(flag)
-    assert(_handle.communicator_events_size());
 
-    auto [from_id, type, meta, agent] = _handle.get_message();
-    assert(from_id == _handle.root_serial());
+    CommunicatorEvent message;
+    bool success = _handle.get_message(message);
+    TDCF_CHECK_EXPR(success)
+
+    auto& [type, from_id, meta, agent] = message;
+    assert(from_id == _handle.root_identity());
     assert(meta.operation_type == OperationType::AgentCreate);
     _agent = std::dynamic_pointer_cast<NodeAgent>(agent);
     TDCF_CHECK_EXPR(_agent);
@@ -43,13 +44,13 @@ MetaData Node::get_agent() {
 }
 
 void Node::end_agent() {
-    assert(_handle.progress_events.size() - _cluster_events == 0);
+    assert(_handle.total_events() - _handle.cluster_events() == 0);
     _node_agent_started = false;
     _agent = nullptr;
 }
 
-StatusFlag Node::handle_message(Handle::MessageEvent& event) {
-    auto& [from_id, type, meta, data] = event;
+StatusFlag Node::handle_message(CommunicatorEvent& event) {
+    auto& [type, from_id, meta, data] = event;
     StatusFlag flag;
     switch (type) {
         case CommunicatorEvent::ReceivedMessage:
@@ -67,22 +68,7 @@ StatusFlag Node::handle_message(Handle::MessageEvent& event) {
 StatusFlag Node::handle_progress_task(Handle::ProgressTask& task) {
     auto& [iter, meta, result] = task;
     auto& [_, event_progress] = *iter;
-    StatusFlag flag;
-    if (meta.operation_type == OperationType::Error) {
-        event_progress->handle_error(_handle);
-        flag = StatusFlag::EventEnd;
-    } else {
-        flag = event_progress->handle_event(meta, result, _handle);
-    }
-    if (flag == StatusFlag::EventEnd) {
-        if (meta.progress_type == ProgressType::Root) {
-            assert(_cluster_events);
-            --_cluster_events;
-        }
-        _handle.progress_events.erase(iter);
-        flag = StatusFlag::Success;
-    }
-    return flag;
+    return event_progress->handle_event(meta, result, _handle);
 }
 
 StatusFlag Node::active_communicator_events() {
@@ -94,19 +80,13 @@ StatusFlag Node::active_processor_events() {
 }
 
 StatusFlag Node::handle_communicator_events() {
-    auto size = _handle.communicator_events_size();
     StatusFlag flag = StatusFlag::Success;
-    while (size && flag == StatusFlag::Success) {
-        assert(size <= _handle.communicator_events_size());
-        --size;
-        auto message = _handle.get_message();
+    CommunicatorEvent message;
+    while (flag == StatusFlag::Success && _handle.get_message(message)) {
         flag = handle_message(message);
         if (flag == StatusFlag::EventEnd) {
-            if (message.meta.progress_type == ProgressType::Root) {
-                assert(_cluster_events);
-                --_cluster_events;
-            }
-            _handle.progress_events.erase(message.meta);
+            auto iter = _handle.find_progress(message.meta.version);
+            _handle.destroy_progress(iter);
             flag = StatusFlag::Success;
         } else if (unlikely(flag == StatusFlag::ClusterOffline)) {
             end_agent();
@@ -117,14 +97,14 @@ StatusFlag Node::handle_communicator_events() {
 }
 
 StatusFlag Node::handle_processor_events() {
-    auto size = _handle.processor_event_size();
     StatusFlag flag = StatusFlag::Success;
-    while (size && flag == StatusFlag::Success) {
-        assert(size <= _handle.processor_event_size());
-        --size;
-        Handle::ProgressTask task;
-        if (!_handle.get_task(task)) break;
+    Handle::ProgressTask task;
+    while (flag == StatusFlag::Success && _handle.get_progress_task(task)) {
         flag = handle_progress_task(task);
+        if (flag == StatusFlag::EventEnd) {
+            _handle.destroy_progress(task.iter);
+            flag = StatusFlag::Success;
+        }
     }
     return flag;
 }

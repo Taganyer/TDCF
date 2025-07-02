@@ -36,38 +36,33 @@ void ProcessorHandle::scatter_data(ProgressEventsMI iter, const MetaData& meta,
     _processor->scatter(mark, rule_ptr, scatter_size, data_ptr);
 }
 
+void ProcessorHandle::create_processor_event(ProgressEventsMI iter,
+                                             const MetaData& meta, SerializablePtr ptr) {
+    _processed_queue.emplace(iter, meta, std::move(ptr));
+}
+
 StatusFlag ProcessorHandle::get_processor_events() {
     OperationFlag flag = _processor->get_events(_data_queue);
     if (flag != OperationFlag::Success) {
         return flag == OperationFlag::Error ? StatusFlag::ProcessorGetEventsError :
                    StatusFlag::ProcessorGetEventsFurtherWaiting;
     }
+    ProgressTask task;
+    while (get_task(task)) {
+        _processed_queue.emplace(std::move(task));
+    }
     return StatusFlag::Success;
 }
 
-bool ProcessorHandle::get_task(ProgressTask& task) {
-    while (!_data_queue.empty()) {
-        auto [type, mark, result] = std::move(_data_queue.front());
-        _data_queue.pop();
-        auto iter = _process_delay.find(mark);
-        if (iter == _process_delay.end()) continue;
-        MetaData meta = iter->second.second;
-        if (type == ProcessorEvent::Error) {
-            meta.operation_type = OperationType::Error;
-        }
-        task = std::move(ProgressTask(iter->second.first, meta, std::move(result)));
-        _process_delay.erase(iter);
-        return true;
-    }
-    return false;
-}
-
-uint32_t ProcessorHandle::processor_event_size() const {
-    return _data_queue.size();
+bool ProcessorHandle::get_progress_task(ProgressTask& task) {
+    if (_processed_queue.empty()) return false;
+    task = std::move(_processed_queue.front());
+    _processed_queue.pop();
+    return true;
 }
 
 ProcessorEventMark ProcessorHandle::get_mark(ProgressEventsMI iter) {
-    return { iter->first.version, ++_version.version };
+    return { iter->first, ++_version.version };
 }
 
 ProcessorHandle::ProgressTask::ProgressTask(ProgressEventsMI iter,
@@ -78,4 +73,17 @@ ProcessorHandle::ProgressTask::ProgressTask(ProgressEventsMI iter,
     } else {
         result = std::move(std::get<DataSet>(data));
     }
+}
+
+bool ProcessorHandle::get_task(ProgressTask& task) {
+    while (!_data_queue.empty()) {
+        auto [type, mark, result] = std::move(_data_queue.front());
+        _data_queue.pop();
+        auto iter = _process_delay.find(mark);
+        if (iter == _process_delay.end()) continue;
+        task = ProgressTask(iter->second.first, iter->second.second, std::move(result));
+        _process_delay.erase(iter);
+        return true;
+    }
+    return false;
 }

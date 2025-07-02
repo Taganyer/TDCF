@@ -14,7 +14,6 @@ using namespace tdcf;
 StatusFlag StarCluster::fun_name(ProcessingRulesPtr rule_ptr) { \
     StatusFlag flag = class_name::create(std::move(rule_ptr), _handle); \
     if (flag != StatusFlag::Success) return flag; \
-    ++_cluster_events; \
     return flag; \
 }
 
@@ -43,10 +42,13 @@ void StarCluster::cluster_accept(unsigned cluster_size) {
     for (unsigned i = 0; i < cluster_size;) {
         StatusFlag flag = active_communicator_events();
         TDCF_CHECK_EXPR(flag != StatusFlag::CommunicatorGetEventsError)
-        while (_handle.communicator_events_size() && i < cluster_size) {
-            auto [from_id, type, meta, data] = _handle.get_message();
+        CommunicatorEvent event;
+        while (i < cluster_size && _handle.get_message(event)) {
+            auto& [type, from_id, meta, data] = event;
             if (type == CommunicatorEvent::ConnectRequest) {
-                _handle.accept(std::dynamic_pointer_cast<Identity>(data));
+                _handle.accept(from_id);
+                auto [iter, success] = _handle.identities.emplace(from_id);
+                assert(success);
                 ++i;
             } else {
                 TDCF_RAISE_ERROR(type == CommunicatorEvent::ConnectRequest ||
@@ -60,9 +62,9 @@ void StarCluster::cluster_start() {
     MetaData meta;
     meta.operation_type = OperationType::AgentCreate;
     meta.stage = Star::start;
-    for (uint32_t id = 0; id < _handle.cluster_size(); ++id) {
-        if (id == _handle.root_serial()) continue;
-        StatusFlag flag = _handle.send_message(0, id, meta, create_node_data());
+    for (auto& id : _handle.identities) {
+        if (id == _handle.root_identity()) continue;
+        StatusFlag flag = _handle.send_message(id, meta, create_node_data());
         TDCF_CHECK_SUCCESS(flag)
     }
     _handle.agent_factory = std::make_unique<StarAgentFactory>();
@@ -71,17 +73,13 @@ void StarCluster::cluster_start() {
 void StarCluster::cluster_end() {
     MetaData meta;
     meta.operation_type = OperationType::Close;
-    meta.data_type = SerializableBaseTypes::Null;
-    meta.progress_type = ProgressType::Root;
     meta.stage = Star::close;
     StatusFlag flag = StatusFlag::Success;
-    for (uint32_t id = 0; id < _handle.cluster_size(); ++id) {
-        if (id == _handle.root_serial()) continue;
-        flag = _handle.send_message(0, id, meta, nullptr);
+    for (const auto& id : _handle.identities) {
+        flag = _handle.send_message(id, meta, nullptr);
         TDCF_CHECK_SUCCESS(flag)
-        ++meta.serial;
     }
-    while (!_handle.id_list_size()) {
+    while (!_handle.identities.empty()) {
         flag = handle_a_loop();
         TDCF_CHECK_SUCCESS(flag)
     }
@@ -91,24 +89,20 @@ SerializablePtr StarCluster::create_node_data() {
     return std::make_shared<StarAgent>();
 }
 
-StatusFlag StarCluster::handle_received_message(uint32_t from_id, const MetaData& meta,
+StatusFlag StarCluster::handle_received_message(const IdentityPtr& from_id, const MetaData& meta,
                                                 SerializablePtr& data) {
-    auto iter = _handle.progress_events.find(meta);
-    if (iter == _handle.progress_events.end()) return StatusFlag::Success;
-
-    if (meta.operation_type == OperationType::Error) {
-        iter->second->handle_error(_handle);
-        return StatusFlag::EventEnd;
-    }
+    auto iter = _handle.find_progress(meta.version);
+    TDCF_CHECK_EXPR(_handle.check_progress(iter))
 
     auto& [m, progress] = *iter;
     Variant variant(std::move(data));
     return progress->handle_event(meta, variant, _handle);
 }
 
-StatusFlag StarCluster::handle_disconnect_request(uint32_t from_id) {
-    assert(from_id != _handle.root_serial());
+StatusFlag StarCluster::handle_disconnect_request(const IdentityPtr& from_id) {
+    assert(from_id != _handle.root_identity());
     assert(!_handle.delayed_message(from_id));
     _handle.disconnect(from_id);
+    _handle.identities.erase(from_id);
     return StatusFlag::Success;
 }

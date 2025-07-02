@@ -17,7 +17,6 @@ namespace tdcf {
         Reduce,
         AllReduce,
         ReduceScatter,
-        Error,
     };
 
     enum class SerializableBaseTypes : uint8_t {
@@ -27,6 +26,12 @@ namespace tdcf {
         NodeAgent,
         Data,
         ProcessingRules,
+    };
+
+    enum class LinkMark : uint8_t {
+        Null,
+        Create,
+        Info,
     };
 
     enum class ProgressType : uint8_t {

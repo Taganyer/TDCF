@@ -15,9 +15,6 @@ namespace tdcf {
             return static_cast<SerializableType>(SerializableBaseTypes::ProcessingRules);
         };
 
-        /// 可以由所有节点调用。
-        virtual void error_callback() = 0;
-
         /// 由 root 节点调用，
         virtual void finish_callback() = 0;
 

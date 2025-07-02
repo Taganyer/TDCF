@@ -29,11 +29,11 @@ namespace tdcf {
                           const ProcessingRulesPtr& rule_ptr,
                           uint32_t scatter_size, const DataPtr& data_ptr);
 
+        void create_processor_event(ProgressEventsMI iter, const MetaData& meta, SerializablePtr ptr);
+
         StatusFlag get_processor_events();
 
-        bool get_task(ProgressTask& task);
-
-        [[nodiscard]] uint32_t processor_event_size() const;
+        bool get_progress_task(ProgressTask& task);
 
     private:
         struct Cmp {
@@ -57,6 +57,8 @@ namespace tdcf {
 
         ProcessorEventMark get_mark(ProgressEventsMI iter);
 
+        bool get_task(ProgressTask& task);
+
     public:
         struct ProgressTask {
             ProgressEventsMI iter {};
@@ -71,6 +73,11 @@ namespace tdcf {
                 iter(iter), meta(meta), result(std::move(ptr)) {};
 
         };
+
+    private:
+        using ProcessedQueue = std::queue<ProgressTask>;
+
+        ProcessedQueue _processed_queue;
 
     };
 

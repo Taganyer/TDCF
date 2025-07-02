@@ -7,27 +7,25 @@
 
 using namespace tdcf;
 
-StarCluster::Reduce::Reduce(ProgressType type, ProcessingRulesPtr rp) :
-    EventProgress(type, std::move(rp)) {}
+StarCluster::Reduce::Reduce(ProgressType type, uint32_t version, ProcessingRulesPtr rp) :
+    EventProgress(OperationType::Reduce, type, version, std::move(rp)) {}
 
-StatusFlag StarCluster::Reduce::create(ProcessingRulesPtr rp, Handle& info) {
-    MetaData meta(info.get_version(), OperationType::Reduce);
-    meta.progress_type = ProgressType::Root;
-
-    auto [iter, success] = info.progress_events.emplace(
-        meta, std::make_unique<Reduce>(ProgressType::Root, std::move(rp)));
-    TDCF_CHECK_EXPR(success);
+StatusFlag StarCluster::Reduce::create(ProcessingRulesPtr rp, Handle& handle) {
+    uint32_t version = handle.create_conversation_version();
+    auto iter = handle.create_progress(
+        std::make_unique<Reduce>(ProgressType::Root, version, std::move(rp)));
 
     auto& self = static_cast<Reduce&>(*iter->second);
     self._self = iter;
-    self._set.reserve(info.cluster_size() + 1);
+    self._set.reserve(handle.cluster_size() + 1);
 
+    MetaData meta = self.create_meta();
     meta.stage = ClusterReduce::acquire_data;
-    info.acquire_data(iter, meta, self.rule);
+    handle.acquire_data(iter, meta, self.rule);
 
     meta.stage = ClusterReduce::send_rule;
-    for (auto& id : info.identity_list) {
-        StatusFlag flag = info.send_message(id, meta, self.rule);
+    for (auto& id : handle.identities) {
+        StatusFlag flag = handle.start_progress_message(version, id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
     }
 
@@ -35,49 +33,48 @@ StatusFlag StarCluster::Reduce::create(ProcessingRulesPtr rp, Handle& info) {
 }
 
 StatusFlag StarCluster::Reduce::handle_event(const MetaData& meta,
-                                             Variant& data, Handle& info) {
+                                             Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Reduce);
     if (meta.stage == ClusterReduce::acquire_data) {
-        return acquire_data(std::get<DataPtr>(data), info);
+        return acquire_data(std::get<DataPtr>(data), handle);
     }
     if (meta.stage == ClusterReduce::reduce_data) {
-        info.store_data(rule, std::get<DataPtr>(data));
+        handle.store_data(rule, std::get<DataPtr>(data));
         rule->finish_callback();
         return StatusFlag::EventEnd;
     }
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag StarCluster::Reduce::acquire_data(DataPtr& data, Handle& info) {
+StatusFlag StarCluster::Reduce::acquire_data(DataPtr& data, Handle& handle) {
     _set.push_back(std::move(data));
-    if (_set.size() < info.cluster_size() + 1) return StatusFlag::Success;
+    if (_set.size() < handle.cluster_size() + 1) return StatusFlag::Success;
     MetaData meta(_self->first);
     meta.stage = ClusterReduce::reduce_data;
-    info.reduce_data(_self, meta, rule, _set);
+    handle.reduce_data(_self, meta, rule, _set);
     return StatusFlag::Success;
 }
 
-StarCluster::ReduceAgent::ReduceAgent(ProcessingRulesPtr rp, ProgressEventsMI iter) :
-    Reduce(ProgressType::NodeRoot, std::move(rp)), _other(iter) {}
+StarCluster::ReduceAgent::ReduceAgent(uint32_t version, ProcessingRulesPtr rp, ProgressEventsMI iter) :
+    Reduce(ProgressType::NodeRoot, version, std::move(rp)), _other(iter) {}
 
 StatusFlag StarCluster::ReduceAgent::create(ProcessingRulesPtr rp, ProgressEventsMI other,
-                                            Handle& info, EventProgressAgent **agent_ptr) {
-    MetaData meta(info.get_version(), OperationType::Reduce);
-    meta.progress_type = ProgressType::NodeRoot;
-    auto [iter, success] = info.progress_events.emplace(
-        meta, std::make_unique<ReduceAgent>(std::move(rp), other));
-    TDCF_CHECK_EXPR(success);
+                                            Handle& handle, EventProgressAgent **agent_ptr) {
+    uint32_t version = handle.create_conversation_version();
+    auto iter = handle.create_progress(
+        std::make_unique<ReduceAgent>(version, std::move(rp), other));
 
     auto& self = static_cast<ReduceAgent&>(*iter->second);
     *agent_ptr = &self;
     self._self = iter;
 
+    MetaData meta = self.create_meta();
     meta.stage = AgentReduce::acquire_data;
-    info.acquire_data(iter, meta, self.rule);
+    handle.acquire_data(iter, meta, self.rule);
 
     meta.stage = AgentReduce::send_rule;
-    for (auto& id : info.identity_list) {
-        StatusFlag flag = info.send_message(id, meta, self.rule);
+    for (auto& id : handle.identities) {
+        StatusFlag flag = handle.start_progress_message(version, id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
     }
 
@@ -85,25 +82,25 @@ StatusFlag StarCluster::ReduceAgent::create(ProcessingRulesPtr rp, ProgressEvent
 }
 
 StatusFlag StarCluster::ReduceAgent::handle_event(const MetaData& meta,
-                                                  Variant& data, Handle& info) {
+                                                  Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Reduce);
     if (meta.stage == AgentReduce::acquire_data) {
-        return acquire_data(std::get<DataPtr>(data), info);
+        return acquire_data(std::get<DataPtr>(data), handle);
     }
     if (meta.stage == AgentReduce::reduce_data) {
-        return close(std::get<DataPtr>(data), info);
+        return close(std::get<DataPtr>(data), handle);
     }
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
 StatusFlag StarCluster::ReduceAgent::proxy_event(const MetaData& meta,
-                                           Variant& data, Handle& info) {
-    return handle_event(meta, data, info);
+                                                 Variant& data, Handle& handle) {
+    return handle_event(meta, data, handle);
 }
 
-StatusFlag StarCluster::ReduceAgent::close(DataPtr& data, Handle& info) const {
-    MetaData meta(_other->first);
+StatusFlag StarCluster::ReduceAgent::close(DataPtr& data, Handle& handle) const {
+    MetaData meta = create_meta();
     meta.stage = AgentReduce::send_data;
-    info.processed_queue.emplace(_other, meta, std::static_pointer_cast<Serializable>(data));
+    handle.create_processor_event(_other, meta, std::static_pointer_cast<Serializable>(data));
     return StatusFlag::EventEnd;
 }

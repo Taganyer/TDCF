@@ -38,7 +38,7 @@ namespace tdcf {
             ptr[0] = htonl(version);
             ptr[1] = htonl(
                 ((uint32_t) operation_type << 24) +
-                ((uint32_t) data_type << 16) +
+                ((uint32_t) link_mark << 16) +
                 ((uint32_t) progress_type << 8) +
                 ((uint32_t) stage << 0));
             ptr[2] = htonl(serial);
@@ -51,7 +51,7 @@ namespace tdcf {
             uint32_t t = ntohl(ptr[1]);
             constexpr uint32_t mask = 0xff;
             operation_type = static_cast<OperationType>((t & (mask << 24)) >> 24);
-            data_type = static_cast<SerializableBaseTypes>((t & (mask << 16)) >> 16);
+            link_mark = static_cast<LinkMark>((t & (mask << 16)) >> 16);
             progress_type = static_cast<ProgressType>((t & (mask << 8)) >> 16);
             stage = static_cast<uint8_t>((t & (mask << 0)) >> 0);
             serial = ntohl(ptr[2]);
@@ -79,7 +79,7 @@ namespace tdcf {
 
         uint32_t version = 0;
         OperationType operation_type = OperationType::Null;
-        SerializableBaseTypes data_type = SerializableBaseTypes::Null;
+        LinkMark link_mark = LinkMark::Null;
         ProgressType progress_type = ProgressType::Null;
 
         uint8_t stage = 0;

@@ -25,7 +25,7 @@ namespace tdcf {
         /// 不得向 root 发送回应信息。
         virtual StatusFlag init(const MetaData& meta, Handle& handle) = 0;
 
-        StatusFlag handle_received_message(uint32_t from_id, const MetaData& meta,
+        StatusFlag handle_received_message(const IdentityPtr& from_id, const MetaData& meta,
                                            SerializablePtr& data, Handle& handle);
 
     protected:

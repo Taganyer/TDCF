@@ -7,31 +7,28 @@
 
 using namespace tdcf;
 
-StarCluster::ReduceScatter::ReduceScatter(ProgressType type, ProcessingRulesPtr rp) :
-    EventProgress(type, std::move(rp)) {}
+StarCluster::ReduceScatter::ReduceScatter(ProgressType type, uint32_t version, ProcessingRulesPtr rp) :
+    EventProgress(OperationType::ReduceScatter, type, version, std::move(rp)) {}
 
-StatusFlag StarCluster::ReduceScatter::create(ProcessingRulesPtr rp, Handle& info) {
-    MetaData meta(info.get_version(), OperationType::ReduceScatter);
-    meta.progress_type = ProgressType::Root;
-    meta.data4[0] = info.cluster_size() + 1;
-
-    auto [iter, success] = info.progress_events.emplace(
-        meta, std::make_unique<ReduceScatter>(ProgressType::Root, std::move(rp)));
-    TDCF_CHECK_EXPR(success)
+StatusFlag StarCluster::ReduceScatter::create(ProcessingRulesPtr rp, Handle& handle) {
+    uint32_t version = handle.create_conversation_version();
+    auto iter = handle.create_progress(
+        std::make_unique<AllReduce>(ProgressType::Root, version, std::move(rp)));
 
     auto& self = static_cast<ReduceScatter&>(*iter->second);
     self._self = iter;
-    self._set.resize(info.cluster_size());
-    self._get.resize(info.cluster_size());
+    self._set.resize(handle.cluster_size());
+    self._get.resize(handle.cluster_size());
 
+    MetaData meta = self.create_meta();
     meta.stage = ClusterReduceScatter::acquire_data;
-    info.acquire_data(iter, meta, self.rule);
+    handle.acquire_data(iter, meta, self.rule);
 
     meta.stage = ClusterReduceScatter::send_rule;
-    unsigned serial = 1;
-    for (auto& id : info.identity_list) {
+    uint32_t serial = 1;
+    for (auto& id : handle.identities) {
         meta.serial = serial++;
-        StatusFlag flag = info.send_message(id, meta, self.rule);
+        StatusFlag flag = handle.start_progress_message(version, id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
     }
 
@@ -39,20 +36,20 @@ StatusFlag StarCluster::ReduceScatter::create(ProcessingRulesPtr rp, Handle& inf
 }
 
 StatusFlag StarCluster::ReduceScatter::handle_event(const MetaData& meta,
-                                                    Variant& data, Handle& info) {
+                                                    Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::ReduceScatter);
     if (meta.stage == ClusterAllReduce::acquire_data) {
-        return acquire_data(meta, std::get<DataPtr>(data), info);
+        return acquire_data(meta, std::get<DataPtr>(data), handle);
     }
     if (meta.stage == ClusterAllReduce::reduce_data) {
-        return scatter_data(std::get<DataPtr>(data), info);
+        return scatter_data(std::get<DataPtr>(data), handle);
     }
     if (meta.stage == ClusterReduceScatter::scatter_data) {
-        return send_data(std::get<DataSet>(data), info);
+        return send_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == ClusterReduceScatter::finish_ack) {
         ++_respond;
-        if (_respond == info.cluster_size()) {
+        if (_respond == handle.cluster_size()) {
             rule->finish_callback();
             return StatusFlag::EventEnd;
         }
@@ -62,62 +59,63 @@ StatusFlag StarCluster::ReduceScatter::handle_event(const MetaData& meta,
 }
 
 StatusFlag StarCluster::ReduceScatter::acquire_data(const MetaData& meta,
-                                                    DataPtr& data, Handle& info) {
+                                                    DataPtr& data, Handle& handle) {
     assert(!_get[meta.serial]);
     _set[meta.serial] = std::move(data);
     _get[meta.serial] = true;
     ++_received;
-    if (_received == info.cluster_size() + 1) {
+    if (_received == handle.cluster_size() + 1) {
         MetaData new_meta(_self->first);
         new_meta.stage = ClusterReduceScatter::reduce_data;
-        info.reduce_data(_self, new_meta, rule, _set);
+        handle.reduce_data(_self, new_meta, rule, _set);
     }
     return StatusFlag::Success;
 }
 
-StatusFlag StarCluster::ReduceScatter::scatter_data(DataPtr& data, Handle& info) {
+StatusFlag StarCluster::ReduceScatter::scatter_data(DataPtr& data, Handle& handle) {
     _set.clear();
-    MetaData meta(_self->first);
+    MetaData meta = create_meta();
     meta.stage = ClusterReduceScatter::scatter_data;
-    info.scatter_data(_self, meta, rule, info.cluster_size() + 1, data);
+    handle.scatter_data(_self, meta, rule, handle.cluster_size() + 1, data);
     return StatusFlag::Success;
 }
 
-StatusFlag StarCluster::ReduceScatter::send_data(DataSet& set, Handle& info) const {
-    assert(set.size() == info.cluster_size() + 1);
-    MetaData meta(_self->first);
+StatusFlag StarCluster::ReduceScatter::send_data(DataSet& set, Handle& handle) const {
+    assert(set.size() == handle.cluster_size() + 1);
+    MetaData meta = create_meta();
     meta.stage = ClusterReduceScatter::send_data;
-    info.store_data(rule, set[0]);
-    for (unsigned i = 0; i < info.cluster_size(); ++i) {
-        StatusFlag flag = info.send_message(info.identity_list[i], meta, std::move(set[i + 1]));
+    handle.store_data(rule, set[0]);
+    uint32_t serial = 1;
+    for (auto &id : handle.identities) {
+        StatusFlag flag = handle.send_progress_message(version, id, meta, std::move(set[serial]));
         TDCF_CHECK_SUCCESS(flag)
+        ++serial;
     }
     return StatusFlag::Success;
 }
 
-StarCluster::ReduceScatterAgent::ReduceScatterAgent(ProcessingRulesPtr rp, ProgressEventsMI iter) :
-    ReduceScatter(ProgressType::NodeRoot, std::move(rp)), _other(iter) {}
+StarCluster::ReduceScatterAgent::ReduceScatterAgent(uint32_t version, ProcessingRulesPtr rp, ProgressEventsMI iter) :
+    ReduceScatter(ProgressType::NodeRoot, version, std::move(rp)), _other(iter) {}
 
 StatusFlag StarCluster::ReduceScatterAgent::create(ProcessingRulesPtr rp, ProgressEventsMI other,
-                                                   Handle& info, EventProgressAgent **agent_ptr) {
-    MetaData meta(info.get_version(), OperationType::ReduceScatter);
-    meta.progress_type = ProgressType::NodeRoot;
-    auto [iter, success] = info.progress_events.emplace(
-        meta, std::make_unique<ReduceScatterAgent>(std::move(rp), other));
-    TDCF_CHECK_EXPR(success)
+                                                   Handle& handle, EventProgressAgent **agent_ptr) {
+    uint32_t version = handle.create_conversation_version();
+    auto iter = handle.create_progress(
+        std::make_unique<ScatterAgent>(version, std::move(rp), other));
 
     auto& self = static_cast<ReduceScatterAgent&>(*iter->second);
     *agent_ptr = &self;
     self._self = iter;
-    self._set.resize(info.cluster_size());
-    self._get.resize(info.cluster_size());
+    self._set.resize(handle.cluster_size());
+    self._get.resize(handle.cluster_size());
 
+    MetaData meta = self.create_meta();
     meta.stage = AgentReduceScatter::acquire_data1;
-    info.acquire_data(iter, meta, self.rule);
+    handle.acquire_data(iter, meta, self.rule);
 
     meta.stage = AgentReduceScatter::send_rule;
-    for (auto& id : info.identity_list) {
-        StatusFlag flag = info.send_message(id, meta, self.rule);
+    for (auto& id : handle.identities) {
+        StatusFlag flag = handle.start_progress_message(version, id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
     }
 
@@ -125,24 +123,24 @@ StatusFlag StarCluster::ReduceScatterAgent::create(ProcessingRulesPtr rp, Progre
 }
 
 StatusFlag StarCluster::ReduceScatterAgent::handle_event(const MetaData& meta,
-                                                         Variant& data, Handle& info) {
+                                                         Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::ReduceScatter);
     if (meta.stage == AgentReduceScatter::acquire_data1) {
-        return acquire_data(meta, std::get<DataPtr>(data), info);
+        return acquire_data(meta, std::get<DataPtr>(data), handle);
     }
     if (meta.stage == AgentReduceScatter::reduce_data) {
-        return reduce_data(std::get<DataPtr>(data), info);
+        return reduce_data(std::get<DataPtr>(data), handle);
     }
     if (meta.stage == AgentReduceScatter::acquire_data2) {
-        return scatter_data(std::get<DataPtr>(data), info);
+        return scatter_data(std::get<DataPtr>(data), handle);
     }
     if (meta.stage == AgentReduceScatter::scatter_data) {
-        return send_data(std::get<DataSet>(data), info);
+        return send_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == AgentReduceScatter::finish_ack) {
         ++_respond;
-        if (_respond == info.cluster_size()) {
-            return close(info);
+        if (_respond == handle.cluster_size()) {
+            return close(handle);
         }
         return StatusFlag::Success;
     }
@@ -150,21 +148,21 @@ StatusFlag StarCluster::ReduceScatterAgent::handle_event(const MetaData& meta,
 }
 
 StatusFlag StarCluster::ReduceScatterAgent::proxy_event(const MetaData& meta,
-                                                        Variant& data, Handle& info) {
-    return handle_event(meta, data, info);
+                                                        Variant& data, Handle& handle) {
+    return handle_event(meta, data, handle);
 }
 
-StatusFlag StarCluster::ReduceScatterAgent::reduce_data(DataPtr& data, Handle& info) {
+StatusFlag StarCluster::ReduceScatterAgent::reduce_data(DataPtr& data, Handle& handle) {
     _set.clear();
-    MetaData meta(_other->first);
+    MetaData meta= create_meta();
     meta.stage = AgentReduceScatter::send_data1;
-    info.processed_queue.emplace(_other, meta, std::static_pointer_cast<Serializable>(data));
+    handle.create_processor_event(_other, meta, std::static_pointer_cast<Serializable>(data));
     return StatusFlag::Success;
 }
 
-StatusFlag StarCluster::ReduceScatterAgent::close(Handle& info) {
-    MetaData meta(_other->first);
+StatusFlag StarCluster::ReduceScatterAgent::close(Handle& handle) const {
+    MetaData meta = create_meta();
     meta.stage = AgentReduceScatter::finish;
-    info.processed_queue.emplace(_other, meta, SerializablePtr());
+    handle.create_processor_event(_other, meta, SerializablePtr());
     return StatusFlag::EventEnd;
 }

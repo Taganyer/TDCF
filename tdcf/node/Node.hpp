@@ -29,7 +29,7 @@ namespace tdcf {
     protected:
         void end_agent();
 
-        virtual StatusFlag handle_message(Handle::MessageEvent& event);
+        virtual StatusFlag handle_message(CommunicatorEvent& event);
 
         StatusFlag handle_progress_task(Handle::ProgressTask& task);
 
@@ -46,8 +46,6 @@ namespace tdcf {
         bool _cluster_started = false;
 
         bool _cluster_closing = false;
-
-        unsigned _cluster_events = 0;
 
         Handle _handle;
 

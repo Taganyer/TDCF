@@ -13,18 +13,13 @@ namespace tdcf {
 
     class CommunicatorHandle {
     public:
-        struct MessageEvent;
+        explicit CommunicatorHandle(CommunicatorPtr ptr) : _communicator(std::move(ptr)) {};
 
-        explicit CommunicatorHandle(IdentityPtr self, CommunicatorPtr ptr) :
-            _self_id(std::move(self)), _communicator(std::move(ptr)) {};
+        void connect(const IdentityPtr& identity) const;
 
-        void connect(const IdentityPtr& identity);
+        void accept(const IdentityPtr& identity) const;
 
-        void accept(const IdentityPtr& identity);
-
-        void disconnect(uint32_t id);
-
-        void start_communicator_handle();
+        void disconnect(const IdentityPtr& id) const;
 
         uint32_t create_conversation_version();
 
@@ -32,35 +27,38 @@ namespace tdcf {
 
         StatusFlag get_communicator_events();
 
-        MessageEvent get_message();
+        bool get_message(CommunicatorEvent& message);
 
-        StatusFlag send_message(uint32_t version, uint32_t target,
+        StatusFlag send_message(const IdentityPtr& target, MetaData meta, SerializablePtr message);
+
+        StatusFlag start_progress_message(uint32_t version, const IdentityPtr& target,
+                                      MetaData meta, SerializablePtr message);
+
+        StatusFlag send_progress_message(uint32_t version, const IdentityPtr& target,
                                 MetaData meta, SerializablePtr message);
 
-        StatusFlag send_delay_message(uint32_t target);
+        StatusFlag send_delay_message(const IdentityPtr& target);
 
-        bool delayed_message(uint32_t target);
-
-        [[nodiscard]] uint32_t id_list_size() const;
-
-        [[nodiscard]] uint32_t communicator_events_size() const;
-
-        [[nodiscard]] uint32_t get_identity_serial(const IdentityPtr& identity) const;
+        bool delayed_message(const IdentityPtr& target);
 
     private:
-        IdentityPtr _self_id;
+        using Key = std::pair<uint32_t, IdentityPtr>;
+
+        struct Cmp {
+            bool operator()(const Key& lhs, const Key& rhs) const {
+                if (lhs.first != rhs.first) return lhs.first < rhs.first;
+                if (lhs.second && rhs.second) return lhs.second < rhs.second;
+                return !lhs.second;
+            };
+        };
 
         CommunicatorPtr _communicator;
 
-        using IdentityList = std::vector<IdentityPtr>;
-
-        IdentityList _id_list;
-
-        using TransverterMap = std::map<std::pair<uint32_t, uint32_t>, uint32_t>;
+        using TransverterMap = std::map<Key, uint32_t, Cmp>;
 
         TransverterMap _receive, _send;
 
-        using SendDelayMQ = std::map<uint32_t, std::queue<std::pair<MetaData, SerializablePtr>>>;
+        using SendDelayMQ = std::map<IdentityPtr, std::queue<std::pair<MetaData, SerializablePtr>>>;
 
         SendDelayMQ _delay_queue;
 
@@ -70,17 +68,15 @@ namespace tdcf {
 
         Version _version;
 
-        void send_transition(uint32_t version, uint32_t to, MetaData& meta);
+        StatusFlag send(const IdentityPtr& target, MetaData meta, SerializablePtr message);
 
-        uint32_t receive_transition(uint32_t from, const MetaData& meta);
+        void create_send_link(uint32_t version, const IdentityPtr& to);
 
-    public:
-        struct MessageEvent {
-            uint32_t from_id;
-            CommunicatorEvent::Type type;
-            MetaData meta;
-            SerializablePtr data;
-        };
+        uint32_t create_receive_link(uint32_t from_version, const IdentityPtr& from);
+
+        void send_transition(uint32_t version, const IdentityPtr& to, MetaData& meta) const;
+
+        bool receive_transition(const IdentityPtr& from, MetaData& meta) const;
 
     };
 

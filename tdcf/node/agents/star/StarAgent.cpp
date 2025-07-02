@@ -8,7 +8,7 @@
 
 using namespace tdcf;
 
-StatusFlag StarAgent::init(const MetaData& meta, Handle& info) {
+StatusFlag StarAgent::init(const MetaData& meta, Handle& handle) {
     assert(meta.stage == Star::start);
     return StatusFlag::Success;
 }
@@ -30,26 +30,26 @@ unsigned StarAgent::serialize_size() const {
 }
 
 StatusFlag StarAgent::create_progress(const MetaData& meta, ProcessingRulesPtr& rule,
-                                      Handle& info) {
+                                      Handle& handle) {
     switch (meta.operation_type) {
         case OperationType::Broadcast:
-            return Broadcast::create(meta, rule, info);
+            return Broadcast::create(meta, rule, handle);
         case OperationType::Scatter:
-            return Scatter::create(meta, rule, info);
+            return Scatter::create(meta, rule, handle);
         case OperationType::Reduce:
-            return Reduce::create(meta, rule, info);
+            return Reduce::create(meta, rule, handle);
         case OperationType::AllReduce:
-            return AllReduce::create(meta, rule, info);
+            return AllReduce::create(meta, rule, handle);
         case OperationType::ReduceScatter:
-            return ReduceScatter::create(meta, rule, info);
+            return ReduceScatter::create(meta, rule, handle);
         default:
             TDCF_RAISE_ERROR(error OperationType)
     }
 }
 
-StatusFlag StarAgent::end_agent(const MetaData& meta, Handle& info) {
+StatusFlag StarAgent::end_agent(const MetaData& meta, Handle& handle) {
     assert(meta.stage == Star::close);
-    assert(!info.delayed_message(info.root_identity()));
-    info.disconnect(info.root_identity());
+    assert(!handle.delayed_message(handle.root_identity()));
+    handle.disconnect(handle.root_identity());
     return StatusFlag::Success;
 }

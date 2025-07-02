@@ -14,8 +14,6 @@ void Cluster::start(unsigned cluster_size) {
     cluster_accept(cluster_size);
     if (_handle.root_identity()) {
         Node::start(0);
-    } else {
-        _handle.start_communicator_handle();
     }
     cluster_start();
     _handle.set_cluster_size(cluster_size);
@@ -27,14 +25,14 @@ StatusFlag Cluster::end_cluster() {
     _cluster_closing = true;
     if (_node_agent_started) {
         _handle.agent_factory = nullptr;
-        assert(_handle.progress_events.size() >= _cluster_events);
-        while (_cluster_events) {
+        assert(_handle.total_events() >= _handle.cluster_events());
+        while (_handle.cluster_events()) {
             StatusFlag flag = handle_a_loop();
             if (flag != StatusFlag::Success) return flag;
         }
     } else {
-        assert(_handle.progress_events.size() == _cluster_events);
-        while (!_handle.progress_events.empty()) {
+        assert(_handle.total_events() == _handle.cluster_events());
+        while (_handle.total_events()) {
             StatusFlag flag = handle_a_loop();
             if (flag != StatusFlag::Success) return flag;
         }
@@ -46,12 +44,12 @@ StatusFlag Cluster::end_cluster() {
     return StatusFlag::Success;
 }
 
-StatusFlag Cluster::handle_message(Handle::MessageEvent& event) {
-    if (_node_agent_started && event.from_id == _handle.root_serial()) {
+StatusFlag Cluster::handle_message(CommunicatorEvent& event) {
+    if (_node_agent_started && event.id == _handle.root_identity()) {
         return Node::handle_message(event);
     }
     if (!_cluster_started) return StatusFlag::ClusterOffline;
-    auto& [from_id, type, meta, data] = event;
+    auto& [type, from_id, meta, data] = event;
     StatusFlag flag = StatusFlag::Success;
     switch (type) {
         case CommunicatorEvent::ReceivedMessage:

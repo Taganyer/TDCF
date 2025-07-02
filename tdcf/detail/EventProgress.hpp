@@ -16,16 +16,31 @@ namespace tdcf {
     using Variant = std::variant<SerializablePtr, DataPtr, DataSet>;
 
     struct EventProgress {
-        explicit EventProgress(ProgressType type, ProcessingRulesPtr rule) :
-            type(type), rule(std::move(rule)) {};
+        explicit EventProgress(OperationType o_type, ProgressType p_type,
+                               uint32_t version, ProcessingRulesPtr rule) :
+            operation_type(o_type), progress_type(p_type),
+            version(version), rule(std::move(rule)) {};
 
         virtual ~EventProgress() = default;
 
-        virtual StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& info) = 0;
+        virtual StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) = 0;
 
-        virtual void handle_error(Handle& info) = 0;
+        [[nodiscard]] MetaData create_meta() const {
+            MetaData meta;
+            meta.version = version;
+            meta.operation_type = operation_type;
+            meta.progress_type = progress_type;
+            meta.serial = serial;
+            return meta;
+        };
 
-        ProgressType type;
+        OperationType operation_type;
+
+        ProgressType progress_type;
+
+        uint32_t version = 0;
+
+        uint32_t serial = 0;
 
         ProcessingRulesPtr rule;
 
@@ -33,7 +48,7 @@ namespace tdcf {
 
     using EventProgressPtr = std::unique_ptr<EventProgress>;
 
-    using ProgressEventsMap = std::unordered_map<MetaData, EventProgressPtr>;
+    using ProgressEventsMap = std::unordered_map<uint32_t, EventProgressPtr>;
 
     using ProgressEventsMI = ProgressEventsMap::iterator;
 
@@ -42,7 +57,7 @@ namespace tdcf {
 
         virtual ~EventProgressAgent() = default;
 
-        virtual StatusFlag proxy_event(const MetaData& meta, Variant& data, Handle& info) = 0;
+        virtual StatusFlag proxy_event(const MetaData& meta, Variant& data, Handle& handle) = 0;
 
     };
 
@@ -53,19 +68,19 @@ namespace tdcf {
         virtual ~ProcessorAgentFactory() = default;
 
         virtual StatusFlag broadcast(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
-                                     Handle& info, EventProgressAgent **agent_ptr) = 0;
+                                     Handle& handle, EventProgressAgent **agent_ptr) = 0;
 
         virtual StatusFlag scatter(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
-                                   Handle& info, EventProgressAgent **agent_ptr) = 0;
+                                   Handle& handle, EventProgressAgent **agent_ptr) = 0;
 
         virtual StatusFlag reduce(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
-                                  Handle& info, EventProgressAgent **agent_ptr) = 0;
+                                  Handle& handle, EventProgressAgent **agent_ptr) = 0;
 
         virtual StatusFlag all_reduce(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
-                                      Handle& info, EventProgressAgent **agent_ptr) = 0;
+                                      Handle& handle, EventProgressAgent **agent_ptr) = 0;
 
         virtual StatusFlag reduce_scatter(const ProcessingRulesPtr& rule, ProgressEventsMI iter,
-                                          Handle& info, EventProgressAgent **agent_ptr) = 0;
+                                          Handle& handle, EventProgressAgent **agent_ptr) = 0;
 
     };
 

@@ -6,6 +6,7 @@
 #include <memory>
 #include <queue>
 #include <tdcf/base/NoCopy.hpp>
+#include <tdcf/detail/Message.hpp>
 #include <tdcf/frame/Identity.hpp>
 
 namespace tdcf {

@@ -28,7 +28,6 @@ namespace tdcf {
             Acquire,
             Reduce,
             Scatter,
-            Error,
         };
 
         Type type = Null;
