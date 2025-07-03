@@ -22,7 +22,6 @@ install(DIRECTORY ${PROJECT_ROOT_DIR}/${PROJECT_NAME}/
         OPTIONAL
         FILES_MATCHING
         PATTERN "*.hpp"
-        REGEX "/src/" EXCLUDE
         PATTERN "CMakeFiles" EXCLUDE)
 
 # 安装目标，设置NAMESPACE为TinyBackend::${PROJECT_NAME}

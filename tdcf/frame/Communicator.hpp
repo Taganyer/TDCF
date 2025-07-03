@@ -41,7 +41,7 @@ namespace tdcf {
 
         virtual bool accept(const IdentityPtr& target);
 
-        virtual bool disconnect(const IdentityPtr& id) = 0;
+        virtual bool disconnect(const IdentityPtr& target) = 0;
 
         virtual OperationFlag send_message(const IdentityPtr& id, const Message& message,
                                            const SerializablePtr& data) = 0;

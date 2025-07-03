@@ -3,7 +3,7 @@
 //
 #pragma once
 
-#include <tdcf/frame/Data.hpp>
+#include <tdcf/detail/Serializable.hpp>
 
 namespace tdcf {
 

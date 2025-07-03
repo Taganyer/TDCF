@@ -13,11 +13,11 @@ StatusFlag StarAgent::init(const MetaData& meta, Handle& handle) {
     return StatusFlag::Success;
 }
 
-bool StarAgent::serialize(void *buffer, unsigned buffer_size) const {
+bool StarAgent::serialize(void *buffer, uint32_t buffer_size) const {
     return true;
 }
 
-bool StarAgent::deserialize(const void *buffer, unsigned buffer_size) {
+bool StarAgent::deserialize(const void *buffer, uint32_t buffer_size) {
     return true;
 }
 
@@ -25,7 +25,7 @@ SerializableType StarAgent::derived_type() const {
     return ClusterType::star;
 }
 
-unsigned StarAgent::serialize_size() const {
+uint32_t StarAgent::serialize_size() const {
     return 0;
 }
 

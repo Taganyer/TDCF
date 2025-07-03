@@ -11,9 +11,9 @@ namespace tdcf {
     public:
         static constexpr SerializableType BaseType = 1;
 
-        virtual bool operator==(const Identity& other) const = 0;
+        [[nodiscard]] virtual bool equal_to(const Identity& other) const = 0;
 
-        virtual bool operator<(const Identity& other) const = 0;
+        [[nodiscard]] virtual bool less_than(const Identity& other) const = 0;
 
         [[nodiscard]] SerializableType base_type() const final {
             return static_cast<SerializableType>(SerializableBaseTypes::Identity);
@@ -29,13 +29,13 @@ namespace tdcf {
 template<>
 struct std::less<tdcf::IdentityPtr> {
     size_t operator()(const tdcf::IdentityPtr& lhs, const tdcf::IdentityPtr& rhs) const {
-        return *lhs < *rhs;
+        return lhs->less_than(*rhs);
     };
 };
 
 template<>
 struct std::equal_to<tdcf::IdentityPtr> {
     size_t operator()(const tdcf::IdentityPtr& lhs, const tdcf::IdentityPtr& rhs) const {
-        return *lhs == *rhs;
+        return lhs->equal_to(*rhs);
     };
 };

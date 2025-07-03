@@ -12,13 +12,13 @@ namespace tdcf {
     public:
         StatusFlag init(const MetaData& meta, Handle& handle) override;
 
-        bool serialize(void *buffer, unsigned buffer_size) const override;
+        bool serialize(void *buffer, uint32_t buffer_size) const override;
 
-        bool deserialize(const void *buffer, unsigned buffer_size) override;
+        bool deserialize(const void *buffer, uint32_t buffer_size) override;
 
         [[nodiscard]] SerializableType derived_type() const override;
 
-        [[nodiscard]] unsigned serialize_size() const override;
+        [[nodiscard]] uint32_t serialize_size() const override;
 
     private:
         StatusFlag create_progress(uint32_t version, const MetaData& meta,

@@ -14,17 +14,17 @@ namespace tdcf {
 
         explicit Message(const MetaData &meta) : meta_data(meta) {};
 
-        [[nodiscard]] unsigned serialize_size() const final {
+        [[nodiscard]] uint32_t serialize_size() const final {
             return MetaData::serialize_size();
         };
 
-        bool serialize(void *buffer, unsigned buffer_size) const final {
+        bool serialize(void *buffer, uint32_t buffer_size) const final {
             if (buffer_size < MetaData::serialize_size()) return false;
             meta_data.serialize(buffer);
             return true;
         };
 
-        bool deserialize(const void *buffer, unsigned buffer_size) final {
+        bool deserialize(const void *buffer, uint32_t buffer_size) final {
             if (buffer_size < MetaData::serialize_size()) return false;
             meta_data.deserialize(buffer);
             return true;

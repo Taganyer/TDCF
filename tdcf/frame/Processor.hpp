@@ -7,6 +7,7 @@
 #include <variant>
 #include <vector>
 #include <tdcf/base/NoCopy.hpp>
+#include <tdcf/frame/Data.hpp>
 #include <tdcf/frame/ProcessingRules.hpp>
 
 namespace tdcf {
@@ -32,7 +33,7 @@ namespace tdcf {
 
         Type type = Null;
         ProcessorEventMark mark;
-        DataVariant result;
+        DataVariant result {};
 
     };
 
@@ -54,7 +55,7 @@ namespace tdcf {
                             const DataSet& target) = 0;
 
         virtual void scatter(ProcessorEventMark mark, const ProcessingRulesPtr& rule_ptr,
-                             unsigned scatter_size, const DataPtr& data_ptr) = 0;
+                             uint32_t scatter_size, const DataPtr& data_ptr) = 0;
 
         virtual OperationFlag get_events(EventQueue& queue) = 0;
 
