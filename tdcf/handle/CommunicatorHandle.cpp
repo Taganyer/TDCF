@@ -25,7 +25,8 @@ void CommunicatorHandle::disconnect(const IdentityPtr& id) const {
 }
 
 uint32_t CommunicatorHandle::create_conversation_version() {
-    uint32_t ret = _version++.version;
+    uint32_t ret = _version.version;
+    ++_version;
     return ret;
 }
 
@@ -149,7 +150,7 @@ void CommunicatorHandle::send_transition(uint32_t version,
 bool CommunicatorHandle::receive_transition(const IdentityPtr& from, MetaData& meta) const {
     Key key(meta.version, from);
     auto iter = _receive.find(key);
-    if (iter == _send.end()) return false;
+    if (iter == _receive.end()) return false;
     meta.version = iter->second;
     return true;
 }

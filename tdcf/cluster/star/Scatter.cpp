@@ -47,7 +47,6 @@ StatusFlag StarCluster::Scatter::handle_event(const MetaData& meta,
         ++_respond;
         if (_respond == handle.cluster_size()) {
             rule->finish_callback();
-            handle.close_conversation(version);
         }
         return StatusFlag::EventEnd;
     }

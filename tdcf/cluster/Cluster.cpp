@@ -45,11 +45,12 @@ StatusFlag Cluster::end_cluster() {
 }
 
 StatusFlag Cluster::handle_message(CommunicatorEvent& event) {
-    if (_node_agent_started && event.id == _handle.root_identity()) {
+    if (_node_agent_started && event.id->equal_to(*_handle.root_identity())) {
         return Node::handle_message(event);
     }
     if (!_cluster_started) return StatusFlag::ClusterOffline;
     auto& [type, from_id, meta, data] = event;
+    assert(meta.operation_type != OperationType::Close);
     StatusFlag flag = StatusFlag::Success;
     switch (type) {
         case CommunicatorEvent::ReceivedMessage:

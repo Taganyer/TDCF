@@ -16,24 +16,33 @@ using namespace test;
 using namespace tdcf;
 
 bool Communicator1::connect(const IdentityPtr& target) {
-    uint32_t id = static_cast<Identity1&>(target).id();
-    Key k { _id, id };
-    auto [iter, success] = _share->message.emplace(k, Value(receive_size));
+    Base::Lock l(_share->mutex);
+    uint32_t id = static_cast<Identity1&>(*target).id();
+    Key k1 { id, _id }, k2 { _id, id };
+    _share->connect.emplace(k1);
+    auto [iter, success] = _share->message.emplace(k2, Value(receive_size));
     assert(success);
-    _share->connect.emplace(id, _id);
+    _share->condition.wait(l, [this, k1] {
+        return _share->message.find(k1) != _share->message.end();
+    });
+    T_INFO << __FUNCTION__ << " " << _id << "----" << id << " success";
     return true;
 }
 
 bool Communicator1::accept(const IdentityPtr& target) {
-    uint32_t id = static_cast<Identity1&>(target).id();
+    Base::Lock l(_share->mutex);
+    uint32_t id = static_cast<Identity1&>(*target).id();
     Key k { _id, id };
     auto [iter, success] = _share->message.emplace(k, Value(receive_size));
     assert(success);
+    _share->condition.notify_all();
+    T_INFO << __FUNCTION__ << " " << _id << "----" << id << " success";
     return true;
 }
 
 bool Communicator1::disconnect(const IdentityPtr& target) {
-    uint32_t id = static_cast<Identity1&>(target).id();
+    Base::Lock l(_share->mutex);
+    uint32_t id = static_cast<Identity1&>(*target).id();
     Key k { _id, id };
     auto size = _share->message.erase(k);
     assert(size == 1);
@@ -48,32 +57,44 @@ bool Communicator1::disconnect(const IdentityPtr& target) {
 OperationFlag Communicator1::send_message(const IdentityPtr& target,
                                           const Message& message,
                                           const SerializablePtr& data) {
-    uint32_t id = static_cast<Identity1&>(target).id();
+    Base::Lock l(_share->mutex);
+    uint32_t id = static_cast<Identity1&>(*target).id();
     Key key(id, _id);
     auto iter = _share->message.find(key);
     assert(iter != _share->message.end());
-    auto size = message.serialize_size() +
-        (sizeof(SerializableType) + sizeof(uint32_t)) +
+
+    auto size = sizeof(uint8_t) + sizeof(uint32_t) +
+        message.serialize_size() +
         (data ? data->serialize_size() : 0);
     assert(size <= receive_size);
+
     if (iter->second.writable_len() < size) {
         assert(_delay[id] == 0);
         _delay[id] = size;
         return OperationFlag::FurtherWaiting;
     }
+
     std::string str(size, '\0');
     auto ptr1 = (uint8_t *) str.data();
-    ptr1[0] = (uint8_t) (data ? data->base_type() : 0);
+    *ptr1 = (uint8_t) (data ? data->base_type() : 0);
     auto ptr2 = (uint32_t *) (str.data() + 1);
-    ptr2[0] = data ? data->serialize_size() : 0;
+    *ptr2 = data ? data->serialize_size() : 0;
     message.serialize(str.data() + 1 + 4, size);
-    data->serialize(str.data() + 1 + 4 + message.serialize_size(), size);
+    if (data) {
+        data->serialize(str.data() + 1 + 4 + message.serialize_size(), size);
+    }
     uint32_t writen = iter->second.write(str.data(), str.size());
     assert(writen == size);
+    assert(iter->second.readable_len() >= size);
+    T_INFO << __FUNCTION__ << " " << _id << "----" << id << " "
+            << operation_type_name(message.meta_data.operation_type)
+            << " " << serializable_base_type_name(
+            data ? (SerializableBaseType) data->base_type() : SerializableBaseType::Null);
     return OperationFlag::Success;
 }
 
 OperationFlag Communicator1::get_events(EventQueue& queue) {
+    Base::Lock l(_share->mutex);
     uint32_t get = 0;
     get += get_messages(queue);
     get += check_delay(queue);
@@ -85,7 +106,7 @@ OperationFlag Communicator1::get_events(EventQueue& queue) {
 
 uint32_t Communicator1::get_messages(EventQueue& queue) {
     Key key(_id, 0);
-    auto iter = _share->message.find(key);
+    auto iter = _share->message.lower_bound(key);
     uint32_t get = 0;
     while (iter != _share->message.end() && iter->first.first == _id) {
         auto& buf = iter->second;
@@ -93,13 +114,14 @@ uint32_t Communicator1::get_messages(EventQueue& queue) {
         get += get_message(queue, buf, from);
         ++iter;
     }
+    // T_INFO << "Communicator1 " << _id << " get_messages: " << get;
     return get;
 }
 
 uint32_t Communicator1::get_message(EventQueue& queue, Base::RingBuffer& buf, IdentityPtr& from) {
     uint32_t get = 0;
     while (buf.readable_len() != 0) {
-        SerializableBaseTypes type = SerializableBaseTypes::Null;
+        SerializableBaseType type = SerializableBaseType::Null;
         auto read = buf.read(&type, 1);
         assert(read == 1);
 
@@ -108,8 +130,10 @@ uint32_t Communicator1::get_message(EventQueue& queue, Base::RingBuffer& buf, Id
         assert(read == 4);
 
         Message meta;
-        read = buf.read(&meta, meta.serialize_size());
+        std::string str(meta.serialize_size(), '\0');
+        read = buf.read(str.data(), str.size());
         assert(read == meta.serialize_size());
+        meta.deserialize(str.data(), str.size());
 
         CommunicatorEvent event { CommunicatorEvent::ReceivedMessage, from,
                                   meta.meta_data, get_data(type, size, meta, buf) };
@@ -119,43 +143,47 @@ uint32_t Communicator1::get_message(EventQueue& queue, Base::RingBuffer& buf, Id
     return get;
 }
 
-SerializablePtr Communicator1::get_data(SerializableBaseTypes type, uint32_t size,
+SerializablePtr Communicator1::get_data(SerializableBaseType type, uint32_t size,
                                         Message& meta, Base::RingBuffer& buf) {
     std::string str(size, '\0');
     auto read = buf.read(str.data(), size);
     assert(read == size);
     bool success = false;
     switch (type) {
-        case SerializableBaseTypes::Null:
+        case SerializableBaseType::Null:
             return nullptr;
-        case SerializableBaseTypes::Message:
+        case SerializableBaseType::Message: {
             auto message = std::make_shared<Message>();
             success = message->deserialize(str.data(), str.size());
             assert(success);
             return message;
-        case SerializableBaseTypes::Identity:
+        }
+        case SerializableBaseType::Identity: {
             auto identity = std::make_shared<Identity1>();
             success = identity->deserialize(str.data(), str.size());
             assert(success);
             return identity;
-        case SerializableBaseTypes::NodeAgent:
+        }
+        case SerializableBaseType::NodeAgent: {
             SerializablePtr ptr;
             auto s = NodeAgent::deserialize_NodeAgent(meta.meta_data, ptr, str.data(), str.size());
             assert(s == StatusFlag::Success);
             return ptr;
-        case SerializableBaseTypes::Data:
+        }
+        case SerializableBaseType::Data: {
             auto data = std::make_shared<Data1>();
             success = data->deserialize(str.data(), str.size());
             assert(success);
-            return data;
-        case SerializableBaseTypes::ProcessingRules:
+            return std::static_pointer_cast<Data>(data);
+        }
+        case SerializableBaseType::ProcessingRules: {
             auto rules = std::make_shared<ProcessingRules1>();
             success = rules->deserialize(str.data(), str.size());
             assert(success);
             return rules;
-        default:
-            TDCF_RAISE_ERROR(error type)
+        }
     }
+    TDCF_RAISE_ERROR(error type)
 }
 
 uint32_t Communicator1::check_delay(EventQueue& queue) {
@@ -164,7 +192,7 @@ uint32_t Communicator1::check_delay(EventQueue& queue) {
         Key k(id, _id);
         auto iter = _share->message.find(k);
         assert(iter != _share->message.end());
-        if (iter->second.writable_len() < size) continue;
+        if (size == 0 || iter->second.writable_len() < size) continue;
         CommunicatorEvent event {
             CommunicatorEvent::MessageSendable, std::make_shared<Identity1>(id),
             MetaData(), nullptr
@@ -173,6 +201,7 @@ uint32_t Communicator1::check_delay(EventQueue& queue) {
         size = 0;
         ++get;
     }
+    // T_INFO << "Communicator1 " << _id << " check_delay: " << get;
     return get;
 }
 
@@ -189,6 +218,7 @@ uint32_t Communicator1::check_connect(EventQueue& queue) {
         ++get;
         iter = _share->connect.erase(iter);
     }
+    // T_INFO << "Communicator1 " << _id << " check_connect: " << get;
     return get;
 }
 
@@ -205,5 +235,6 @@ uint32_t Communicator1::check_disconnect(EventQueue& queue) {
         ++get;
         ++iter;
     }
+    // T_INFO << "Communicator1 " << _id << " check_disconnect: " << get;
     return get;
 }

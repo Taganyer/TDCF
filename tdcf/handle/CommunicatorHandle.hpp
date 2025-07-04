@@ -47,7 +47,7 @@ namespace tdcf {
         struct Cmp {
             bool operator()(const Key& lhs, const Key& rhs) const {
                 if (lhs.first != rhs.first) return lhs.first < rhs.first;
-                if (lhs.second && rhs.second) return lhs.second < rhs.second;
+                if (lhs.second && rhs.second) return lhs.second->less_than(*rhs.second);
                 return !lhs.second;
             };
         };

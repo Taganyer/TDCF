@@ -3,6 +3,7 @@
 //
 #pragma once
 
+#include <cassert>
 #include <tdcf/handle/Handle.hpp>
 #include <tdcf/node/agents/NodeAgent.hpp>
 
@@ -11,8 +12,6 @@ namespace tdcf {
 
     class Node : NoCopy {
     public:
-        Node(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp);
-
         Node(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp, IdentityPtr root_id);
 
         virtual ~Node() { assert(!_node_agent_started); };

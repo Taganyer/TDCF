@@ -62,8 +62,9 @@ void StarCluster::cluster_start() {
     MetaData meta;
     meta.operation_type = OperationType::AgentCreate;
     meta.stage = Star::start;
+    meta.data1[0] = ClusterType::star;
     for (auto& id : _handle.identities) {
-        if (id == _handle.root_identity()) continue;
+        if (_handle.root_identity() && id->equal_to(*_handle.root_identity())) continue;
         StatusFlag flag = _handle.send_message(id, meta, create_node_data());
         TDCF_CHECK_SUCCESS(flag)
     }
@@ -100,7 +101,7 @@ StatusFlag StarCluster::handle_received_message(const IdentityPtr& from_id, cons
 }
 
 StatusFlag StarCluster::handle_disconnect_request(const IdentityPtr& from_id) {
-    assert(from_id != _handle.root_identity());
+    assert(!from_id->equal_to(*_handle.root_identity()));
     assert(!_handle.delayed_message(from_id));
     _handle.disconnect(from_id);
     _handle.identities.erase(from_id);

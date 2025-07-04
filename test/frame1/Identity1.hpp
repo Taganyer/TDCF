@@ -35,6 +35,7 @@ namespace test {
         };
 
         [[nodiscard]] bool equal_to(const Identity& other) const override {
+            uint32_t t = other.derived_type();
             assert(other.derived_type() == 1);
             auto& o = static_cast<const Identity1&>(other);
             return _id == o._id;

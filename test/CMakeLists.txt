@@ -36,9 +36,9 @@ file(GLOB_RECURSE SIMULATION_HEADER_LIST "${SIMULATION_PATH}/*.hpp")
 
 file(GLOB_RECURSE SIMULATION_SRC_LIST "${SIMULATION_PATH}/*.cpp")
 
-message(STATUS "simulation Header files: ${TDCF_HEADER_LIST}")
+message(STATUS "simulation Header files: ${SIMULATION_HEADER_LIST}")
 
-message(STATUS "simulation Source files: ${TDCF_SRC_LIST}")
+message(STATUS "simulation Source files: ${SIMULATION_SRC_LIST}")
 
 find_package(tinyBackend REQUIRED)
 
@@ -48,5 +48,7 @@ add_executable(${PROJECT_NAME} ${HEADER_LIST} ${SRC_LIST}
 
 target_include_directories(${PROJECT_NAME}
         PRIVATE ${ROOT_DIR}
-        PRIVATE tinyBackend::Base
 )
+
+target_link_libraries(${PROJECT_NAME}
+        PRIVATE tinyBackend::Base)

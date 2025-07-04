@@ -5,6 +5,7 @@
 
 #include <tdcf/detail/MetaData.hpp>
 #include <tdcf/frame/Identity.hpp>
+#include <tdcf/frame/ProcessingRules.hpp>
 
 namespace tdcf {
 
@@ -19,7 +20,7 @@ namespace tdcf {
                                                 const void *buffer, unsigned buffer_size);
 
         [[nodiscard]] SerializableType base_type() const final {
-            return static_cast<SerializableType>(SerializableBaseTypes::NodeAgent);
+            return static_cast<SerializableType>(SerializableBaseType::NodeAgent);
         };
 
         /// 不得向 root 发送回应信息。

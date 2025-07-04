@@ -3,6 +3,7 @@
 //
 #pragma once
 
+#include <iostream>
 #include <tinyBackend/Base/SystemLog.hpp>
 
 namespace test {
@@ -23,5 +24,14 @@ namespace test {
 #define T_ERROR ERROR(global_logger)
 
 #define T_FATAL FATAL(global_logger)
+
+    inline auto __no_use = [] {
+        Base::CurrentThread::set_global_terminal_function(
+            [] (Base::CurrentThread::ExceptionPtr) {
+                global_logger.flush();
+                std::cerr << "invoked terminal flush" << std::endl;
+            });
+        return 0;
+    };
 
 }

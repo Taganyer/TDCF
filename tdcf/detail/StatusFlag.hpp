@@ -3,6 +3,8 @@
 //
 #pragma once
 
+#include <tdcf/base/Marcos.hpp>
+
 namespace tdcf {
 
 #define STATUS_FLAG_ITEM(MOD) \
@@ -16,25 +18,17 @@ namespace tdcf {
     MOD(ProcessorGetEventsError), \
     MOD(ClusterOffline),
 
-#define ENUM_MOD(item) item
-
-#define NAME_MOD(item) #item
-
     enum class StatusFlag {
-        STATUS_FLAG_ITEM(ENUM_MOD)
+        STATUS_FLAG_ITEM(TDCF_ENUM_MOD)
     };
 
     constexpr const char* status_flag_name(StatusFlag status) {
         constexpr const char *item_names[] = {
-            STATUS_FLAG_ITEM(NAME_MOD)
+            STATUS_FLAG_ITEM(TDCF_NAME_MOD)
         };
         return item_names[static_cast<int>(status)];
     };
 
 #undef STATUS_FLAG_ITEM
-
-#undef ENUM_MOD
-
-#undef NAME_MOD
 
 }

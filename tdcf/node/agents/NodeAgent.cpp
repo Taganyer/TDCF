@@ -31,17 +31,27 @@ StatusFlag NodeAgent::handle_received_message(const IdentityPtr& from_id, const 
         return StatusFlag::ClusterOffline;
     }
     if (meta.link_mark == LinkMark::Create) {
-        assert(handle.root_identity() == from_id);
+        assert(from_id->equal_to(*handle.root_identity()));
         assert(!handle.check_progress(handle.find_progress(meta.version)));
-        assert(data->base_type() == (int) SerializableBaseTypes::ProcessingRules);
+        assert(data->base_type() == (int) SerializableBaseType::ProcessingRules);
         auto rule = std::dynamic_pointer_cast<ProcessingRules>(data);
         assert(rule);
         return create_progress(meta.version, meta, rule, handle);
     }
 
     auto iter = handle.find_progress(meta.version);
+    if (!handle.check_progress(iter)) {
+        uint32_t v = meta.version;
+        auto typ = data ? data->base_type() : 0;
+        ++v;
+    }
     TDCF_CHECK_EXPR(handle.check_progress(iter))
 
-    Variant variant(data);
+    Variant variant;
+    if (data->base_type() == (int) SerializableBaseType::Data) {
+        variant = std::dynamic_pointer_cast<Data>(data);
+    } else {
+        variant = std::move(data);
+    }
     return iter->second->handle_event(meta, variant, handle);
 }

@@ -9,7 +9,7 @@ namespace tdcf {
 
     using SerializableType = int;
 
-    enum class SerializableBaseTypes : uint8_t;
+    enum class SerializableBaseType : uint8_t;
 
     class Serializable {
     public:

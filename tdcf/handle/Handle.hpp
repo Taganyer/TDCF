@@ -44,8 +44,15 @@ namespace tdcf {
 
         ProgressEventsMap progress_events;
 
+        struct Cmp {
+            bool operator()(const IdentityPtr& lhs, const IdentityPtr& rhs) const {
+                if (lhs && rhs) return lhs->less_than(*rhs);
+                return !lhs;
+            };
+        };
+
     public:
-        using IdentityList = std::set<IdentityPtr>;
+        using IdentityList = std::set<IdentityPtr, Cmp>;
 
         using IdentityIter = IdentityList::iterator;
 

@@ -4,29 +4,54 @@
 #pragma once
 
 #include <cstdint>
+#include <tdcf/base/Marcos.hpp>
 
 namespace tdcf {
 
+#define OPERATION_TYPE_ITEM(MOD) \
+    MOD(Null), \
+    MOD(AgentCreate), \
+    MOD(Init), \
+    MOD(Close), \
+    MOD(Broadcast), \
+    MOD(Scatter), \
+    MOD(Reduce), \
+    MOD(AllReduce), \
+    MOD(ReduceScatter),
+
     enum class OperationType : uint8_t {
-        Null,
-        AgentCreate,
-        Init,
-        Close,
-        Broadcast,
-        Scatter,
-        Reduce,
-        AllReduce,
-        ReduceScatter,
+        OPERATION_TYPE_ITEM(TDCF_ENUM_MOD)
     };
 
-    enum class SerializableBaseTypes : uint8_t {
-        Null,
-        Message,
-        Identity,
-        NodeAgent,
-        Data,
-        ProcessingRules,
+    constexpr const char* operation_type_name(OperationType type) {
+        constexpr const char *item_names[] = {
+            OPERATION_TYPE_ITEM(TDCF_NAME_MOD)
+        };
+        return item_names[static_cast<int>(type)];
     };
+
+#undef OPERATION_TYPE_ITEM
+
+#define SERIALIZABLE_BASE_TYPE(MOD) \
+    MOD(Null), \
+    MOD(Message), \
+    MOD(Identity), \
+    MOD(NodeAgent), \
+    MOD(Data), \
+    MOD(ProcessingRules),
+
+    enum class SerializableBaseType : uint8_t {
+        SERIALIZABLE_BASE_TYPE(TDCF_ENUM_MOD)
+    };
+
+    constexpr const char* serializable_base_type_name(SerializableBaseType type) {
+        constexpr const char *item_names[] = {
+            SERIALIZABLE_BASE_TYPE(TDCF_NAME_MOD)
+        };
+        return item_names[static_cast<int>(type)];
+    };
+
+#undef SERIALIZABLE_BASE_TYPE
 
     enum class LinkMark : uint8_t {
         Null,

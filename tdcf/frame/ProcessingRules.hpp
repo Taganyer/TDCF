@@ -12,7 +12,7 @@ namespace tdcf {
         ProcessingRules() = default;
 
         [[nodiscard]] SerializableType base_type() const final {
-            return static_cast<SerializableType>(SerializableBaseTypes::ProcessingRules);
+            return static_cast<SerializableType>(SerializableBaseType::ProcessingRules);
         };
 
         /// 由 root 节点调用，

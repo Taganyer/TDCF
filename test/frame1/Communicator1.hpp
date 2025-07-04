@@ -7,6 +7,7 @@
 #include <set>
 #include <tdcf/frame/Communicator.hpp>
 #include <tinyBackend/Base/Buffer/RingBuffer.hpp>
+#include <tinyBackend/Base/Condition.hpp>
 
 
 namespace test {
@@ -19,6 +20,10 @@ namespace test {
         std::map<Key, Value> message;
 
         std::set<Key> connect, disconnect;
+
+        Base::Mutex mutex;
+
+        Base::Condition condition;
 
     };
 
@@ -54,7 +59,7 @@ namespace test {
 
         static uint32_t get_message(EventQueue& queue, Base::RingBuffer& buf, tdcf::IdentityPtr& from);
 
-        static tdcf::SerializablePtr get_data(tdcf::SerializableBaseTypes type, uint32_t size,
+        static tdcf::SerializablePtr get_data(tdcf::SerializableBaseType type, uint32_t size,
                                               tdcf::Message& meta, Base::RingBuffer& buf);
 
         uint32_t check_delay(EventQueue& queue);

@@ -31,7 +31,7 @@ namespace tdcf {
         };
 
         [[nodiscard]] SerializableType base_type() const final {
-            return static_cast<SerializableType>(SerializableBaseTypes::Message);
+            return static_cast<SerializableType>(SerializableBaseType::Message);
         };
 
         [[nodiscard]] SerializableType derived_type() const final {

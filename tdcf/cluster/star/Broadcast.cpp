@@ -42,7 +42,6 @@ StatusFlag StarCluster::Broadcast::handle_event(const MetaData& meta,
         ++_respond;
         if (_respond == handle.cluster_size()) {
             rule->finish_callback();
-            handle.close_conversation(version);
             return StatusFlag::EventEnd;
         }
         return StatusFlag::Success;
@@ -52,6 +51,7 @@ StatusFlag StarCluster::Broadcast::handle_event(const MetaData& meta,
 
 StatusFlag StarCluster::Broadcast::send_data(DataPtr& data, Handle& handle) const {
     MetaData meta = create_meta();
+    meta.stage = ClusterBroadcast::send_data;
     assert(handle.cluster_size() == handle.identities.size());
     for (auto& id : handle.identities) {
         meta.serial = _sent;
@@ -112,6 +112,5 @@ StatusFlag StarCluster::BroadcastAgent::close(Handle& handle) const {
     MetaData meta = create_meta();
     meta.stage = AgentBroadcast::finish;
     handle.create_processor_event(_other, meta, nullptr);
-    handle.close_conversation(version);
     return StatusFlag::EventEnd;
 }

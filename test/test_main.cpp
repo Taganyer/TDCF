@@ -1,6 +1,6 @@
-#include <iostream>
+#include <test/test.hpp>
 
 int main() {
-    std::cout << "Hello, World!" << std::endl;
+    test::correctness_test();
     return 0;
 }

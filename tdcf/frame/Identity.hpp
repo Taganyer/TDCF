@@ -9,14 +9,12 @@ namespace tdcf {
 
     class Identity : public Serializable {
     public:
-        static constexpr SerializableType BaseType = 1;
-
         [[nodiscard]] virtual bool equal_to(const Identity& other) const = 0;
 
         [[nodiscard]] virtual bool less_than(const Identity& other) const = 0;
 
         [[nodiscard]] SerializableType base_type() const final {
-            return static_cast<SerializableType>(SerializableBaseTypes::Identity);
+            return static_cast<SerializableType>(SerializableBaseType::Identity);
         };
 
     };

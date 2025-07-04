@@ -30,3 +30,7 @@
 
 /// 该函数可能会抛出错误
 #define TDCF_THROW
+
+#define TDCF_ENUM_MOD(item) item
+
+#define TDCF_NAME_MOD(item) #item

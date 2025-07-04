@@ -7,9 +7,6 @@
 
 using namespace tdcf;
 
-Node::Node(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp) :
-    _handle(std::move(ip), std::move(cp), std::move(pp)) {}
-
 Node::Node(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp, IdentityPtr root_id) :
     _handle(std::move(ip), std::move(cp), std::move(pp), std::move(root_id)) {}
 
@@ -36,7 +33,7 @@ MetaData Node::get_agent() {
     TDCF_CHECK_EXPR(success)
 
     auto& [type, from_id, meta, agent] = message;
-    assert(from_id == _handle.root_identity());
+    assert(from_id->equal_to(*_handle.root_identity()));
     assert(meta.operation_type == OperationType::AgentCreate);
     _agent = std::dynamic_pointer_cast<NodeAgent>(agent);
     TDCF_CHECK_EXPR(_agent);

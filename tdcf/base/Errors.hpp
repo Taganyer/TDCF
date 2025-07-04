@@ -17,7 +17,7 @@ if (unlikely(!(expr))) { \
 }
 
 #define TDCF_CHECK_TYPE(expr, expect_type) \
-if (StatusFlag status = (expr); unlikely(status == (expect_type))) { \
+if (StatusFlag status = (expr); unlikely(status != (expect_type))) { \
     std::stringstream ss; \
     ss << "tdcf error in " << TDCF_FUN_NAME ; \
     ss << " { " << #expr << " }\n"; \

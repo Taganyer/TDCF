@@ -37,9 +37,9 @@ namespace tdcf {
 
         virtual ~Communicator() = default;
 
-        virtual bool connect(const IdentityPtr& target);
+        virtual bool connect(const IdentityPtr& target) = 0;
 
-        virtual bool accept(const IdentityPtr& target);
+        virtual bool accept(const IdentityPtr& target) = 0;
 
         virtual bool disconnect(const IdentityPtr& target) = 0;
 

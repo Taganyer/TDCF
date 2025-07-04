@@ -13,7 +13,7 @@ namespace tdcf {
         Cluster(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp, IdentityPtr root_id) :
             Node(std::move(ip), std::move(cp), std::move(pp), std::move(root_id)) {};
 
-        ~Cluster() override { if (_cluster_started) end_cluster(); };
+        ~Cluster() override { assert(!_cluster_started); };
 
         void start(unsigned cluster_size) final;
 
