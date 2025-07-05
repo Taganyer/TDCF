@@ -49,7 +49,7 @@ StatusFlag StarCluster::Reduce::handle_event(const MetaData& meta,
 StatusFlag StarCluster::Reduce::acquire_data(DataPtr& data, Handle& handle) {
     _set.push_back(std::move(data));
     if (_set.size() < handle.cluster_size() + 1) return StatusFlag::Success;
-    MetaData meta(_self->first);
+    MetaData meta = create_meta();
     meta.stage = ClusterReduce::reduce_data;
     handle.reduce_data(_self, meta, rule, _set);
     return StatusFlag::Success;

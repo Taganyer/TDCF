@@ -40,15 +40,15 @@ StatusFlag StarCluster::Scatter::handle_event(const MetaData& meta,
     }
     if (meta.stage == ClusterScatter::scatter_data) {
         assert(_sent == 0);
-        return send_data(0, std::get<DataSet>(data), handle);
+        return send_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == ClusterScatter::finish_ack) {
-        assert(meta.progress_type == ProgressType::Node);
         ++_respond;
         if (_respond == handle.cluster_size()) {
             rule->finish_callback();
+            return StatusFlag::EventEnd;
         }
-        return StatusFlag::EventEnd;
+        return StatusFlag::Success;
     }
     TDCF_RAISE_ERROR(meta.stage error type)
 }
@@ -56,20 +56,20 @@ StatusFlag StarCluster::Scatter::handle_event(const MetaData& meta,
 StatusFlag StarCluster::Scatter::scatter_data(DataPtr& data, Handle& handle) const {
     MetaData meta = create_meta();
     meta.stage = ClusterScatter::scatter_data;
-    handle.scatter_data(_self, meta, rule, handle.cluster_size(), data);
+    handle.scatter_data(_self, meta, rule, handle.cluster_size() + 1, data);
     return StatusFlag::Success;
 }
 
-StatusFlag StarCluster::Scatter::send_data(unsigned offset,
-                                           DataSet& set, Handle& handle) {
-    TDCF_CHECK_EXPR(set.size() == handle.cluster_size());
+StatusFlag StarCluster::Scatter::send_data(DataSet& set, Handle& handle) {
+    TDCF_CHECK_EXPR(set.size() == handle.cluster_size() + 1);
     MetaData meta = create_meta();
     meta.stage = ClusterScatter::send_data;
 
     assert(handle.cluster_size() == handle.identities.size());
+    handle.store_data(rule, set[0]);
     for (auto& id : handle.identities) {
-        meta.serial = _sent++;
-        StatusFlag flag = handle.send_progress_message(version, id, meta, std::move(set[_sent + offset]));
+        meta.serial = ++_sent;
+        StatusFlag flag = handle.send_progress_message(version, id, meta, std::move(set[_sent]));
         TDCF_CHECK_SUCCESS(flag)
     }
     return StatusFlag::Success;
@@ -104,8 +104,7 @@ StatusFlag StarCluster::ScatterAgent::handle_event(const MetaData& meta,
     if (meta.stage == AgentScatter::get_data) {
         assert(_sent == 0);
         auto& set = std::get<DataSet>(data);
-        handle.store_data(rule, set.front());
-        return send_data(1, set, handle);
+        return send_data(set, handle);
     }
     if (meta.stage == AgentScatter::finish_ack) {
         ++_respond;

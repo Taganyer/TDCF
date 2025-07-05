@@ -10,19 +10,22 @@
 #include <test/frame1/Data1.hpp>
 #include <test/frame1/Identity1.hpp>
 #include <test/frame1/ProcessingRules1.hpp>
+#include <tinyBackend/Base/Time/TimeInterval.hpp>
 
 using namespace test;
 
 using namespace tdcf;
 
+using namespace Base;
+
 bool Communicator1::connect(const IdentityPtr& target) {
-    Base::Lock l(_share->mutex);
+    Lock l(_share->mutex);
     uint32_t id = static_cast<Identity1&>(*target).id();
     Key k1 { id, _id }, k2 { _id, id };
     _share->connect.emplace(k1);
     auto [iter, success] = _share->message.emplace(k2, Value(receive_size));
     assert(success);
-    _share->condition.wait(l, [this, k1] {
+    _share->conditions[_id].wait(l, [this, k1] {
         return _share->message.find(k1) != _share->message.end();
     });
     T_INFO << __FUNCTION__ << " " << _id << "----" << id << " success";
@@ -30,18 +33,18 @@ bool Communicator1::connect(const IdentityPtr& target) {
 }
 
 bool Communicator1::accept(const IdentityPtr& target) {
-    Base::Lock l(_share->mutex);
+    Lock l(_share->mutex);
     uint32_t id = static_cast<Identity1&>(*target).id();
     Key k { _id, id };
     auto [iter, success] = _share->message.emplace(k, Value(receive_size));
     assert(success);
-    _share->condition.notify_all();
+    _share->conditions[id].notify_one();
     T_INFO << __FUNCTION__ << " " << _id << "----" << id << " success";
     return true;
 }
 
 bool Communicator1::disconnect(const IdentityPtr& target) {
-    Base::Lock l(_share->mutex);
+    Lock l(_share->mutex);
     uint32_t id = static_cast<Identity1&>(*target).id();
     Key k { _id, id };
     auto size = _share->message.erase(k);
@@ -57,8 +60,9 @@ bool Communicator1::disconnect(const IdentityPtr& target) {
 OperationFlag Communicator1::send_message(const IdentityPtr& target,
                                           const Message& message,
                                           const SerializablePtr& data) {
-    Base::Lock l(_share->mutex);
+    Lock l(_share->mutex);
     uint32_t id = static_cast<Identity1&>(*target).id();
+    assert(_id != id);
     Key key(id, _id);
     auto iter = _share->message.find(key);
     assert(iter != _share->message.end());
@@ -90,17 +94,22 @@ OperationFlag Communicator1::send_message(const IdentityPtr& target,
             << operation_type_name(message.meta_data.operation_type)
             << " " << serializable_base_type_name(
             data ? (SerializableBaseType) data->base_type() : SerializableBaseType::Null);
+
+    _share->conditions[id].notify_one();
     return OperationFlag::Success;
 }
 
 OperationFlag Communicator1::get_events(EventQueue& queue) {
-    Base::Lock l(_share->mutex);
-    uint32_t get = 0;
-    get += get_messages(queue);
-    get += check_delay(queue);
-    get += check_connect(queue);
-    get += check_disconnect(queue);
-    if (get == 0) return OperationFlag::FurtherWaiting;
+    Lock l(_share->mutex);
+    bool success = _share->conditions[_id].wait_for(l, 500_ms, [this, &queue] {
+        uint32_t get = 0;
+        get += get_messages(queue);
+        get += check_delay(queue);
+        get += check_connect(queue);
+        get += check_disconnect(queue);
+        return get != 0;
+    });
+    if (!success) return OperationFlag::FurtherWaiting;
     return OperationFlag::Success;
 }
 
@@ -111,14 +120,18 @@ uint32_t Communicator1::get_messages(EventQueue& queue) {
     while (iter != _share->message.end() && iter->first.first == _id) {
         auto& buf = iter->second;
         IdentityPtr from = std::make_shared<Identity1>(iter->first.second);
-        get += get_message(queue, buf, from);
+        uint32_t t = get_message(queue, buf, from);
+        if (t) {
+            T_INFO << _id << " get " << t << " messages from " << iter->first.second;
+        }
+        get += t;
         ++iter;
     }
     // T_INFO << "Communicator1 " << _id << " get_messages: " << get;
     return get;
 }
 
-uint32_t Communicator1::get_message(EventQueue& queue, Base::RingBuffer& buf, IdentityPtr& from) {
+uint32_t Communicator1::get_message(EventQueue& queue, RingBuffer& buf, IdentityPtr& from) {
     uint32_t get = 0;
     while (buf.readable_len() != 0) {
         SerializableBaseType type = SerializableBaseType::Null;
@@ -144,7 +157,7 @@ uint32_t Communicator1::get_message(EventQueue& queue, Base::RingBuffer& buf, Id
 }
 
 SerializablePtr Communicator1::get_data(SerializableBaseType type, uint32_t size,
-                                        Message& meta, Base::RingBuffer& buf) {
+                                        Message& meta, RingBuffer& buf) {
     std::string str(size, '\0');
     auto read = buf.read(str.data(), size);
     assert(read == size);

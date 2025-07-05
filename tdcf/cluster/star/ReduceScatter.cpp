@@ -13,21 +13,21 @@ StarCluster::ReduceScatter::ReduceScatter(ProgressType type, uint32_t version, P
 StatusFlag StarCluster::ReduceScatter::create(ProcessingRulesPtr rp, Handle& handle) {
     uint32_t version = handle.create_conversation_version();
     auto iter = handle.create_progress(
-        std::make_unique<AllReduce>(ProgressType::Root, version, std::move(rp)));
+        std::make_unique<ReduceScatter>(ProgressType::Root, version, std::move(rp)));
 
     auto& self = static_cast<ReduceScatter&>(*iter->second);
     self._self = iter;
-    self._set.resize(handle.cluster_size());
-    self._get.resize(handle.cluster_size());
+    self._set.resize(handle.cluster_size() + 1);
+    self._get.resize(handle.cluster_size() + 1);
 
     MetaData meta = self.create_meta();
     meta.stage = ClusterReduceScatter::acquire_data;
     handle.acquire_data(iter, meta, self.rule);
 
     meta.stage = ClusterReduceScatter::send_rule;
-    uint32_t serial = 1;
+    uint32_t serial = 0;
     for (auto& id : handle.identities) {
-        meta.serial = serial++;
+        meta.serial = ++serial;
         StatusFlag flag = handle.start_progress_message(version, id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
     }
@@ -65,7 +65,7 @@ StatusFlag StarCluster::ReduceScatter::acquire_data(const MetaData& meta,
     _get[meta.serial] = true;
     ++_received;
     if (_received == handle.cluster_size() + 1) {
-        MetaData new_meta(_self->first);
+        MetaData new_meta = create_meta();
         new_meta.stage = ClusterReduceScatter::reduce_data;
         handle.reduce_data(_self, new_meta, rule, _set);
     }
@@ -101,20 +101,22 @@ StatusFlag StarCluster::ReduceScatterAgent::create(ProcessingRulesPtr rp, Progre
                                                    Handle& handle, EventProgressAgent **agent_ptr) {
     uint32_t version = handle.create_conversation_version();
     auto iter = handle.create_progress(
-        std::make_unique<ScatterAgent>(version, std::move(rp), other));
+        std::make_unique<ReduceScatterAgent>(version, std::move(rp), other));
 
     auto& self = static_cast<ReduceScatterAgent&>(*iter->second);
     *agent_ptr = &self;
     self._self = iter;
-    self._set.resize(handle.cluster_size());
-    self._get.resize(handle.cluster_size());
+    self._set.resize(handle.cluster_size() + 1);
+    self._get.resize(handle.cluster_size() + 1);
 
     MetaData meta = self.create_meta();
     meta.stage = AgentReduceScatter::acquire_data1;
     handle.acquire_data(iter, meta, self.rule);
 
     meta.stage = AgentReduceScatter::send_rule;
+    uint32_t serial = 0;
     for (auto& id : handle.identities) {
+        meta.serial = ++serial;
         StatusFlag flag = handle.start_progress_message(version, id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
     }

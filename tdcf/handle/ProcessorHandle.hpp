@@ -69,8 +69,7 @@ namespace tdcf {
 
             ProgressTask(ProgressEventsMI iter, const MetaData& meta, DataVariant data);
 
-            ProgressTask(ProgressEventsMI iter, const MetaData& meta, SerializablePtr ptr) :
-                iter(iter), meta(meta), result(std::move(ptr)) {};
+            ProgressTask(ProgressEventsMI iter, const MetaData& meta, SerializablePtr ptr);
 
         };
 

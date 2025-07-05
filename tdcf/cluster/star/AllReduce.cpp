@@ -17,17 +17,17 @@ StatusFlag StarCluster::AllReduce::create(ProcessingRulesPtr rp, Handle& handle)
 
     auto& self = static_cast<AllReduce&>(*iter->second);
     self._self = iter;
-    self._set.resize(handle.cluster_size());
-    self._get.resize(handle.cluster_size());
+    self._set.resize(handle.cluster_size() + 1);
+    self._get.resize(handle.cluster_size() + 1);
 
     MetaData meta = self.create_meta();
     meta.stage = ClusterAllReduce::acquire_data;
     handle.acquire_data(iter, meta, self.rule);
 
     meta.stage = ClusterAllReduce::send_rule;
-    unsigned serial = 1;
+    uint32_t serial = 0;
     for (auto& id : handle.identities) {
-        meta.serial = serial++;
+        meta.serial = ++serial;
         StatusFlag flag = handle.start_progress_message(version, id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
     }
@@ -93,15 +93,17 @@ StatusFlag StarCluster::AllReduceAgent::create(ProcessingRulesPtr rp, ProgressEv
     auto& self = static_cast<AllReduceAgent&>(*iter->second);
     *agent_ptr = &self;
     self._self = iter;
-    self._set.resize(handle.cluster_size());
-    self._get.resize(handle.cluster_size());
+    self._set.resize(handle.cluster_size() + 1);
+    self._get.resize(handle.cluster_size() + 1);
 
     MetaData meta = self.create_meta();
     meta.stage = AgentAllReduce::acquire_data1;
     handle.acquire_data(iter, meta, self.rule);
 
     meta.stage = AgentAllReduce::send_rule;
+    uint32_t serial = 0;
     for (auto& id : handle.identities) {
+        meta.serial = ++serial;
         StatusFlag flag = handle.start_progress_message(version, id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
     }
@@ -122,8 +124,8 @@ StatusFlag StarCluster::AllReduceAgent::handle_event(const MetaData& meta,
         return send_data(std::get<DataPtr>(data), handle);
     }
     if (meta.stage == AgentAllReduce::finish_ack) {
-        ++_received;
-        if (_received == handle.cluster_size()) {
+        ++_respond;
+        if (_respond == handle.cluster_size()) {
             return close(handle);
         }
         return StatusFlag::Success;

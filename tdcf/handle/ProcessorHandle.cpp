@@ -75,6 +75,16 @@ ProcessorHandle::ProgressTask::ProgressTask(ProgressEventsMI iter,
     }
 }
 
+ProcessorHandle::ProgressTask::ProgressTask(ProgressEventsMI iter,
+                                            const MetaData& meta, SerializablePtr ptr) :
+    iter(iter), meta(meta) {
+    if (ptr && ptr->base_type() == (int) SerializableBaseType::Data) {
+        result = std::static_pointer_cast<Data>(ptr);
+    } else {
+        result = std::move(ptr);
+    }
+}
+
 bool ProcessorHandle::get_task(ProgressTask& task) {
     while (!_data_queue.empty()) {
         auto [type, mark, result] = std::move(_data_queue.front());

@@ -30,7 +30,7 @@ void Processor1::reduce(ProcessorEventMark mark, const ProcessingRulesPtr& rule_
     auto& rule = static_cast<ProcessingRules1&>(*rule_ptr);
     auto data = std::make_shared<Data1>(_id);
     for (auto& d : target) {
-        auto d1 = static_cast<Data1&>(*d);
+        auto& d1 = static_cast<Data1&>(*d);
         assert(!d1.data.empty());
         data->data.insert(data->data.end(), d1.data.begin(), d1.data.end());
     }
@@ -43,13 +43,7 @@ void Processor1::reduce(ProcessorEventMark mark, const ProcessingRulesPtr& rule_
 void Processor1::scatter(ProcessorEventMark mark, const ProcessingRulesPtr& rule_ptr,
                          uint32_t scatter_size, const DataPtr& data_ptr) {
     auto& rule = static_cast<ProcessingRules1&>(*rule_ptr);
-    auto& data = static_cast<Data1&>(*data_ptr);
-    DataSet set(scatter_size);
-    for (uint32_t i = 0; i < scatter_size; ++i) {
-        auto ptr = std::make_shared<Data1>(_id);
-        ptr->data = data.data;
-        set[i] = std::move(ptr);
-    }
+    DataSet set(scatter_size, data_ptr);
     T_INFO << "Processor " << _id << " scatter event " << rule.id()
             << " scatter size " << scatter_size;
     _store.emplace(ProcessorEvent { ProcessorEvent::Reduce, mark, std::move(set) });

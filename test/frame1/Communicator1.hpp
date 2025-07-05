@@ -23,7 +23,7 @@ namespace test {
 
         Base::Mutex mutex;
 
-        Base::Condition condition;
+        std::map<uint32_t, Base::Condition> conditions;
 
     };
 

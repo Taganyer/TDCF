@@ -6,11 +6,14 @@
 #include <tdcf/detail/MetaData.hpp>
 #include <tdcf/frame/ProcessingRules.hpp>
 #include <test/Log.hpp>
+#include <utility>
 
 namespace test {
 
     class ProcessingRules1 : public tdcf::ProcessingRules {
     public:
+        using CallBack = std::function<void()>;
+
         ProcessingRules1() = default;
 
         ProcessingRules1(uint32_t id, tdcf::OperationType type) : _id(id), _operation(type) {};
@@ -37,6 +40,10 @@ namespace test {
             return true;
         };
 
+        void set_callback(CallBack fun) {
+            _finish_callback = std::move(fun);
+        };
+
         [[nodiscard]] tdcf::SerializableType derived_type() const override {
             return 1;
         };
@@ -48,12 +55,15 @@ namespace test {
         void finish_callback() override {
             T_INFO << _id << ": " << __FUNCTION__ << " operation: "
                     << tdcf::operation_type_name(_operation);
+            if (_finish_callback) _finish_callback();
         };
 
     private:
         uint32_t _id = -1;
 
         tdcf::OperationType _operation = tdcf::OperationType::Null;
+
+        CallBack _finish_callback = nullptr;
 
     };
 

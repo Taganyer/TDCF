@@ -28,14 +28,14 @@ MetaData Node::get_agent() {
     } while (flag == StatusFlag::CommunicatorGetEventsFurtherWaiting);
     TDCF_CHECK_SUCCESS(flag)
 
-    CommunicatorEvent message;
+    Handle::MessageEvent message;
     bool success = _handle.get_message(message);
     TDCF_CHECK_EXPR(success)
 
     auto& [type, from_id, meta, agent] = message;
     assert(from_id->equal_to(*_handle.root_identity()));
     assert(meta.operation_type == OperationType::AgentCreate);
-    _agent = std::dynamic_pointer_cast<NodeAgent>(agent);
+    _agent = std::dynamic_pointer_cast<NodeAgent>(std::get<SerializablePtr>(agent));
     TDCF_CHECK_EXPR(_agent);
     return meta;
 }
@@ -46,12 +46,12 @@ void Node::end_agent() {
     _agent = nullptr;
 }
 
-StatusFlag Node::handle_message(CommunicatorEvent& event) {
-    auto& [type, from_id, meta, data] = event;
+StatusFlag Node::handle_message(Handle::MessageEvent& event) {
+    auto& [type, from_id, meta, variant] = event;
     StatusFlag flag;
     switch (type) {
         case CommunicatorEvent::ReceivedMessage:
-            flag = _agent->handle_received_message(from_id, meta, data, _handle);
+            flag = _agent->handle_received_message(from_id, meta, variant, _handle);
             break;
         case CommunicatorEvent::MessageSendable:
             flag = _handle.send_delay_message(from_id);
@@ -78,7 +78,7 @@ StatusFlag Node::active_processor_events() {
 
 StatusFlag Node::handle_communicator_events() {
     StatusFlag flag = StatusFlag::Success;
-    CommunicatorEvent message;
+    Handle::MessageEvent message;
     while (flag == StatusFlag::Success && _handle.get_message(message)) {
         flag = handle_message(message);
         if (flag == StatusFlag::EventEnd) {
@@ -87,7 +87,6 @@ StatusFlag Node::handle_communicator_events() {
             flag = StatusFlag::Success;
         } else if (unlikely(flag == StatusFlag::ClusterOffline)) {
             end_agent();
-            flag = StatusFlag::Success;
         }
     }
     return flag;

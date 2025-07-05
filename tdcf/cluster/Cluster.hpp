@@ -39,12 +39,12 @@ namespace tdcf {
         virtual void cluster_end() = 0;
 
         virtual StatusFlag handle_received_message(const IdentityPtr& from_id, const MetaData& meta,
-                                                   SerializablePtr& data) = 0;
+                                                   Variant& variant) = 0;
 
         virtual StatusFlag handle_disconnect_request(const IdentityPtr& from_id) = 0;
 
     private:
-        StatusFlag handle_message(CommunicatorEvent& event) final;
+        StatusFlag handle_message(Handle::MessageEvent& event) final;
 
     };
 

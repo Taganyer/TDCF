@@ -4,8 +4,7 @@
 
 #include <tdcf/base/Errors.hpp>
 #include <tdcf/cluster/Cluster.hpp>
-
-#include "tdcf/handle/CommunicatorHandle.hpp"
+#include <tdcf/handle/CommunicatorHandle.hpp>
 
 using namespace tdcf;
 
@@ -44,17 +43,17 @@ StatusFlag Cluster::end_cluster() {
     return StatusFlag::Success;
 }
 
-StatusFlag Cluster::handle_message(CommunicatorEvent& event) {
+StatusFlag Cluster::handle_message(Handle::MessageEvent& event) {
     if (_node_agent_started && event.id->equal_to(*_handle.root_identity())) {
         return Node::handle_message(event);
     }
     if (!_cluster_started) return StatusFlag::ClusterOffline;
-    auto& [type, from_id, meta, data] = event;
+    auto& [type, from_id, meta, variant] = event;
     assert(meta.operation_type != OperationType::Close);
     StatusFlag flag = StatusFlag::Success;
     switch (type) {
         case CommunicatorEvent::ReceivedMessage:
-            flag = handle_received_message(from_id, meta, data);
+            flag = handle_received_message(from_id, meta, variant);
             break;
         case CommunicatorEvent::MessageSendable:
             flag = _handle.send_delay_message(from_id);

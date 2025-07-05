@@ -37,7 +37,7 @@ StatusFlag StarAgent::Reduce::create(uint32_t version, const MetaData& meta,
 
 StatusFlag StarAgent::Reduce::handle_event(const MetaData& meta,
                                            Variant& data, Handle& handle) {
-    assert(meta.operation_type == OperationType::Scatter);
+    assert(meta.operation_type == OperationType::Reduce);
     if (!_agent) {
         assert(meta.stage == NodeAgentReduce::acquire_data);
         return close(std::get<DataPtr>(data), handle);

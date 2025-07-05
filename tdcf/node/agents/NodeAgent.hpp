@@ -4,6 +4,7 @@
 #pragma once
 
 #include <tdcf/detail/MetaData.hpp>
+#include <tdcf/detail/EventProgress.hpp>
 #include <tdcf/frame/Identity.hpp>
 #include <tdcf/frame/ProcessingRules.hpp>
 
@@ -27,7 +28,7 @@ namespace tdcf {
         virtual StatusFlag init(const MetaData& meta, Handle& handle) = 0;
 
         StatusFlag handle_received_message(const IdentityPtr& from_id, const MetaData& meta,
-                                           SerializablePtr& data, Handle& handle);
+                                           Variant& variant, Handle& handle);
 
     protected:
         virtual StatusFlag create_progress(uint32_t version, const MetaData& meta,

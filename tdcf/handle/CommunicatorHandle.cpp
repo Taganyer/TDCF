@@ -53,7 +53,7 @@ StatusFlag CommunicatorHandle::get_communicator_events() {
     TDCF_RAISE_ERROR(unknown type)
 }
 
-bool CommunicatorHandle::get_message(CommunicatorEvent& message) {
+bool CommunicatorHandle::get_message(MessageEvent& message) {
     while (!_receive_queue.empty()) {
         auto [type, id, meta, data] = std::move(_receive_queue.front());
         _receive_queue.pop();
@@ -104,6 +104,7 @@ StatusFlag CommunicatorHandle::send_delay_message(const IdentityPtr& target) {
 }
 
 bool CommunicatorHandle::delayed_message(const IdentityPtr& target) {
+    if (!target) return false;
     auto& q = _delay_queue[target];
     return !q.empty();
 }
@@ -153,4 +154,14 @@ bool CommunicatorHandle::receive_transition(const IdentityPtr& from, MetaData& m
     if (iter == _receive.end()) return false;
     meta.version = iter->second;
     return true;
+}
+
+CommunicatorHandle::MessageEvent::MessageEvent(CommunicatorEvent::Type type, IdentityPtr id,
+                                               const MetaData& meta, SerializablePtr data) :
+    type(type), id(std::move(id)), meta(meta) {
+    if (data && data->base_type() == (int) SerializableBaseType::Data) {
+        variant = std::dynamic_pointer_cast<Data>(data);
+    } else {
+        variant = std::move(data);
+    }
 }

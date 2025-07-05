@@ -26,7 +26,7 @@ namespace tdcf {
         static SerializablePtr create_node_data();
 
         StatusFlag handle_received_message(const IdentityPtr& from_id, const MetaData& meta,
-                                           SerializablePtr& data) override;
+                                           Variant& variant) override;
 
         StatusFlag handle_disconnect_request(const IdentityPtr& from_id) override;
 
@@ -80,7 +80,7 @@ namespace tdcf {
         protected:
             StatusFlag scatter_data(DataPtr& data, Handle& handle) const;
 
-            StatusFlag send_data(unsigned offset, DataSet& set, Handle& handle);
+            StatusFlag send_data(DataSet& set, Handle& handle);
 
             ProgressEventsMI _self;
 

@@ -5,6 +5,7 @@
 
 #include <map>
 #include <tdcf/base/Version.hpp>
+#include <tdcf/detail/EventProgress.hpp>
 #include <tdcf/detail/MetaData.hpp>
 #include <tdcf/detail/StatusFlag.hpp>
 #include <tdcf/frame/Communicator.hpp>
@@ -13,6 +14,8 @@ namespace tdcf {
 
     class CommunicatorHandle {
     public:
+        struct MessageEvent;
+
         explicit CommunicatorHandle(CommunicatorPtr ptr) : _communicator(std::move(ptr)) {};
 
         void connect(const IdentityPtr& identity) const;
@@ -27,15 +30,15 @@ namespace tdcf {
 
         StatusFlag get_communicator_events();
 
-        bool get_message(CommunicatorEvent& message);
+        bool get_message(MessageEvent& message);
 
         StatusFlag send_message(const IdentityPtr& target, MetaData meta, SerializablePtr message);
 
         StatusFlag start_progress_message(uint32_t version, const IdentityPtr& target,
-                                      MetaData meta, SerializablePtr message);
+                                          MetaData meta, SerializablePtr message);
 
         StatusFlag send_progress_message(uint32_t version, const IdentityPtr& target,
-                                MetaData meta, SerializablePtr message);
+                                         MetaData meta, SerializablePtr message);
 
         StatusFlag send_delay_message(const IdentityPtr& target);
 
@@ -78,6 +81,18 @@ namespace tdcf {
 
         bool receive_transition(const IdentityPtr& from, MetaData& meta) const;
 
+    public:
+        struct MessageEvent {
+            CommunicatorEvent::Type type = CommunicatorEvent::Null;
+            IdentityPtr id;
+            MetaData meta;
+            Variant variant;
+
+            MessageEvent() = default;
+
+            MessageEvent(CommunicatorEvent::Type type, IdentityPtr id,
+                         const MetaData& meta, SerializablePtr data);
+        };
     };
 
 }

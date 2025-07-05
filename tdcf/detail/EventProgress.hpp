@@ -4,6 +4,8 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
+#include <tdcf/detail/StatusFlag.hpp>
 #include <tdcf/frame/Data.hpp>
 #include <tdcf/frame/Processor.hpp>
 

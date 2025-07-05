@@ -28,7 +28,7 @@ namespace tdcf {
     protected:
         void end_agent();
 
-        virtual StatusFlag handle_message(CommunicatorEvent& event);
+        virtual StatusFlag handle_message(Handle::MessageEvent& event);
 
         StatusFlag handle_progress_task(Handle::ProgressTask& task);
 

@@ -42,7 +42,7 @@ void StarCluster::cluster_accept(unsigned cluster_size) {
     for (unsigned i = 0; i < cluster_size;) {
         StatusFlag flag = active_communicator_events();
         TDCF_CHECK_EXPR(flag != StatusFlag::CommunicatorGetEventsError)
-        CommunicatorEvent event;
+        Handle::MessageEvent event;
         while (i < cluster_size && _handle.get_message(event)) {
             auto& [type, from_id, meta, data] = event;
             if (type == CommunicatorEvent::ConnectRequest) {
@@ -91,17 +91,15 @@ SerializablePtr StarCluster::create_node_data() {
 }
 
 StatusFlag StarCluster::handle_received_message(const IdentityPtr& from_id, const MetaData& meta,
-                                                SerializablePtr& data) {
+                                                Variant& variant) {
     auto iter = _handle.find_progress(meta.version);
     TDCF_CHECK_EXPR(_handle.check_progress(iter))
-
     auto& [m, progress] = *iter;
-    Variant variant(std::move(data));
     return progress->handle_event(meta, variant, _handle);
 }
 
 StatusFlag StarCluster::handle_disconnect_request(const IdentityPtr& from_id) {
-    assert(!from_id->equal_to(*_handle.root_identity()));
+    assert(!_handle.root_identity() || !from_id->equal_to(*_handle.root_identity()));
     assert(!_handle.delayed_message(from_id));
     _handle.disconnect(from_id);
     _handle.identities.erase(from_id);
