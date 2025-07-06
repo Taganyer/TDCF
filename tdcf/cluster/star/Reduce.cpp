@@ -3,7 +3,7 @@
 //
 
 #include <tdcf/base/Errors.hpp>
-#include <tdcf/cluster/StarCluster.hpp>
+#include <tdcf/cluster/star/StarCluster.hpp>
 
 using namespace tdcf;
 
@@ -17,14 +17,14 @@ StatusFlag StarCluster::Reduce::create(ProcessingRulesPtr rp, Handle& handle) {
 
     auto& self = static_cast<Reduce&>(*iter->second);
     self._self = iter;
-    self._set.reserve(handle.cluster_size() + 1);
+    self._set.reserve(handle.cluster_data<IdentityList>().size() + 1);
 
     MetaData meta = self.create_meta();
     meta.stage = ClusterReduce::acquire_data;
     handle.acquire_data(iter, meta, self.rule);
 
     meta.stage = ClusterReduce::send_rule;
-    for (auto& id : handle.identities) {
+    for (auto& id : handle.cluster_data<IdentityList>()) {
         StatusFlag flag = handle.start_progress_message(version, id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
     }
@@ -48,7 +48,7 @@ StatusFlag StarCluster::Reduce::handle_event(const MetaData& meta,
 
 StatusFlag StarCluster::Reduce::acquire_data(DataPtr& data, Handle& handle) {
     _set.push_back(std::move(data));
-    if (_set.size() < handle.cluster_size() + 1) return StatusFlag::Success;
+    if (_set.size() < handle.cluster_data<IdentityList>().size() + 1) return StatusFlag::Success;
     MetaData meta = create_meta();
     meta.stage = ClusterReduce::reduce_data;
     handle.reduce_data(_self, meta, rule, _set);
@@ -73,7 +73,7 @@ StatusFlag StarCluster::ReduceAgent::create(ProcessingRulesPtr rp, ProgressEvent
     handle.acquire_data(iter, meta, self.rule);
 
     meta.stage = AgentReduce::send_rule;
-    for (auto& id : handle.identities) {
+    for (auto& id : handle.cluster_data<IdentityList>()) {
         StatusFlag flag = handle.start_progress_message(version, id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
     }

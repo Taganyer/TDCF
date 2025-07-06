@@ -3,19 +3,21 @@
 //
 #pragma once
 
+#include <set>
 #include <tdcf/node/Node.hpp>
-#include <utility>
 
 namespace tdcf {
 
     class Cluster : public Node {
     public:
-        Cluster(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp, IdentityPtr root_id) :
-            Node(std::move(ip), std::move(cp), std::move(pp), std::move(root_id)) {};
+        /// 不要使用透明比较器std::less<>，使用 std::less<IdentityPtr>
+        using IdentitySet = std::set<IdentityPtr>;
 
-        ~Cluster() override { assert(!_cluster_started); };
+        Cluster(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp);
 
-        void start(unsigned cluster_size) final;
+        ~Cluster() override;
+
+        void start_cluster(const IdentitySet& child_nodes, bool as_child_node);
 
         StatusFlag end_cluster();
 
@@ -32,11 +34,13 @@ namespace tdcf {
         [[nodiscard]] bool cluster_started() const { return _cluster_started; };
 
     protected:
-        virtual void cluster_accept(unsigned cluster_size) = 0;
+        virtual void cluster_connect_children(const IdentitySet& child_nodes) = 0;
 
         virtual void cluster_start() = 0;
 
         virtual void cluster_end() = 0;
+
+        virtual bool come_from_children(const IdentityPtr& from_id) = 0;
 
         virtual StatusFlag handle_received_message(const IdentityPtr& from_id, const MetaData& meta,
                                                    Variant& variant) = 0;
@@ -58,4 +62,5 @@ namespace tdcf {
     StatusFlag all_reduce(ProcessingRulesPtr rule_ptr) override; \
     \
     StatusFlag reduce_scatter(ProcessingRulesPtr rule_ptr) override;
+
 }

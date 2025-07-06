@@ -35,7 +35,7 @@ namespace test {
 
         bool connect(const tdcf::IdentityPtr& target) override;
 
-        bool accept(const tdcf::IdentityPtr& target) override;
+        tdcf::IdentityPtr accept() override;
 
         bool disconnect(const tdcf::IdentityPtr& target) override;
 
@@ -64,7 +64,7 @@ namespace test {
 
         uint32_t check_delay(EventQueue& queue);
 
-        uint32_t check_connect(EventQueue& queue);
+        uint32_t check_connect(Base::Lock<Base::Mutex>& l);
 
         uint32_t check_disconnect(EventQueue& queue);
 

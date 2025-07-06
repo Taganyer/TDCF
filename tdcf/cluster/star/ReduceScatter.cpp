@@ -3,7 +3,7 @@
 //
 
 #include <tdcf/base/Errors.hpp>
-#include <tdcf/cluster/StarCluster.hpp>
+#include <tdcf/cluster/star/StarCluster.hpp>
 
 using namespace tdcf;
 
@@ -17,8 +17,8 @@ StatusFlag StarCluster::ReduceScatter::create(ProcessingRulesPtr rp, Handle& han
 
     auto& self = static_cast<ReduceScatter&>(*iter->second);
     self._self = iter;
-    self._set.resize(handle.cluster_size() + 1);
-    self._get.resize(handle.cluster_size() + 1);
+    self._set.resize(handle.cluster_data<IdentityList>().size() + 1);
+    self._get.resize(handle.cluster_data<IdentityList>().size() + 1);
 
     MetaData meta = self.create_meta();
     meta.stage = ClusterReduceScatter::acquire_data;
@@ -26,7 +26,7 @@ StatusFlag StarCluster::ReduceScatter::create(ProcessingRulesPtr rp, Handle& han
 
     meta.stage = ClusterReduceScatter::send_rule;
     uint32_t serial = 0;
-    for (auto& id : handle.identities) {
+    for (auto& id : handle.cluster_data<IdentityList>()) {
         meta.serial = ++serial;
         StatusFlag flag = handle.start_progress_message(version, id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
@@ -49,7 +49,7 @@ StatusFlag StarCluster::ReduceScatter::handle_event(const MetaData& meta,
     }
     if (meta.stage == ClusterReduceScatter::finish_ack) {
         ++_respond;
-        if (_respond == handle.cluster_size()) {
+        if (_respond == handle.cluster_data<IdentityList>().size()) {
             rule->finish_callback();
             return StatusFlag::EventEnd;
         }
@@ -64,7 +64,7 @@ StatusFlag StarCluster::ReduceScatter::acquire_data(const MetaData& meta,
     _set[meta.serial] = std::move(data);
     _get[meta.serial] = true;
     ++_received;
-    if (_received == handle.cluster_size() + 1) {
+    if (_received == handle.cluster_data<IdentityList>().size() + 1) {
         MetaData new_meta = create_meta();
         new_meta.stage = ClusterReduceScatter::reduce_data;
         handle.reduce_data(_self, new_meta, rule, _set);
@@ -76,17 +76,17 @@ StatusFlag StarCluster::ReduceScatter::scatter_data(DataPtr& data, Handle& handl
     _set.clear();
     MetaData meta = create_meta();
     meta.stage = ClusterReduceScatter::scatter_data;
-    handle.scatter_data(_self, meta, rule, handle.cluster_size() + 1, data);
+    handle.scatter_data(_self, meta, rule, handle.cluster_data<IdentityList>().size() + 1, data);
     return StatusFlag::Success;
 }
 
 StatusFlag StarCluster::ReduceScatter::send_data(DataSet& set, Handle& handle) const {
-    assert(set.size() == handle.cluster_size() + 1);
+    assert(set.size() == handle.cluster_data<IdentityList>().size() + 1);
     MetaData meta = create_meta();
     meta.stage = ClusterReduceScatter::send_data;
     handle.store_data(rule, set[0]);
     uint32_t serial = 1;
-    for (auto &id : handle.identities) {
+    for (auto &id : handle.cluster_data<IdentityList>()) {
         StatusFlag flag = handle.send_progress_message(version, id, meta, std::move(set[serial]));
         TDCF_CHECK_SUCCESS(flag)
         ++serial;
@@ -106,8 +106,8 @@ StatusFlag StarCluster::ReduceScatterAgent::create(ProcessingRulesPtr rp, Progre
     auto& self = static_cast<ReduceScatterAgent&>(*iter->second);
     *agent_ptr = &self;
     self._self = iter;
-    self._set.resize(handle.cluster_size() + 1);
-    self._get.resize(handle.cluster_size() + 1);
+    self._set.resize(handle.cluster_data<IdentityList>().size() + 1);
+    self._get.resize(handle.cluster_data<IdentityList>().size() + 1);
 
     MetaData meta = self.create_meta();
     meta.stage = AgentReduceScatter::acquire_data1;
@@ -115,7 +115,7 @@ StatusFlag StarCluster::ReduceScatterAgent::create(ProcessingRulesPtr rp, Progre
 
     meta.stage = AgentReduceScatter::send_rule;
     uint32_t serial = 0;
-    for (auto& id : handle.identities) {
+    for (auto& id : handle.cluster_data<IdentityList>()) {
         meta.serial = ++serial;
         StatusFlag flag = handle.start_progress_message(version, id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
@@ -141,7 +141,7 @@ StatusFlag StarCluster::ReduceScatterAgent::handle_event(const MetaData& meta,
     }
     if (meta.stage == AgentReduceScatter::finish_ack) {
         ++_respond;
-        if (_respond == handle.cluster_size()) {
+        if (_respond == handle.cluster_data<IdentityList>().size()) {
             return close(handle);
         }
         return StatusFlag::Success;

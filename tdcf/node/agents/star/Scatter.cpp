@@ -54,13 +54,13 @@ StatusFlag StarAgent::Scatter::handle_event(const MetaData& meta, Variant& data,
 StatusFlag StarAgent::Scatter::scatter_data(DataPtr& data, Handle& handle) const {
     MetaData meta = create_meta();
     meta.stage = NodeAgentScatter::scatter_data;
-    handle.scatter_data(_self, meta, rule, handle.cluster_size() + 1, data);
+    handle.scatter_data(_self, meta, rule, handle.cluster_data<IdentityList>().size() + 1, data);
     return StatusFlag::Success;
 }
 
 StatusFlag StarAgent::Scatter::agent_store(Variant& data, Handle& handle) const {
     auto& set = std::get<DataSet>(data);
-    assert(set.size() == handle.cluster_size() + 1);
+    assert(set.size() == handle.cluster_data<IdentityList>().size() + 1);
 
     MetaData meta = create_meta();
     meta.stage = NodeAgentScatter::send_data;
@@ -70,8 +70,8 @@ StatusFlag StarAgent::Scatter::agent_store(Variant& data, Handle& handle) const 
 StatusFlag StarAgent::Scatter::close(Handle& handle) const {
     MetaData meta = create_meta();
     meta.stage = NodeAgentScatter::finish;
-    assert(handle.root_identity());
-    StatusFlag flag = handle.send_progress_message(version, handle.root_identity(), meta, nullptr);
+    assert(handle.has_agent_data() && handle.agent_data<IdentityPtr>());
+    StatusFlag flag = handle.send_progress_message(version, handle.agent_data<IdentityPtr>(), meta, nullptr);
     if (flag != StatusFlag::Success) return flag;
     return StatusFlag::EventEnd;
 }

@@ -3,7 +3,7 @@
 //
 
 #include <tdcf/base/Errors.hpp>
-#include <tdcf/cluster/StarCluster.hpp>
+#include <tdcf/cluster/star/StarCluster.hpp>
 
 using namespace tdcf;
 
@@ -23,7 +23,7 @@ StatusFlag StarCluster::Broadcast::create(ProcessingRulesPtr rp, Handle& handle)
     handle.acquire_data(iter, meta, self.rule);
 
     meta.stage = ClusterBroadcast::send_rule;
-    for (auto& id : handle.identities) {
+    for (auto& id : handle.cluster_data<IdentityList>()) {
         StatusFlag flag = handle.start_progress_message(version, id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
     }
@@ -40,7 +40,7 @@ StatusFlag StarCluster::Broadcast::handle_event(const MetaData& meta,
     }
     if (meta.stage == ClusterBroadcast::finish_ack) {
         ++_respond;
-        if (_respond == handle.cluster_size()) {
+        if (_respond == handle.cluster_data<IdentityList>().size()) {
             rule->finish_callback();
             return StatusFlag::EventEnd;
         }
@@ -52,8 +52,7 @@ StatusFlag StarCluster::Broadcast::handle_event(const MetaData& meta,
 StatusFlag StarCluster::Broadcast::send_data(DataPtr& data, Handle& handle) const {
     MetaData meta = create_meta();
     meta.stage = ClusterBroadcast::send_data;
-    assert(handle.cluster_size() == handle.identities.size());
-    for (auto& id : handle.identities) {
+    for (auto& id : handle.cluster_data<IdentityList>()) {
         meta.serial = _sent;
         StatusFlag flag = handle.send_progress_message(version, id, meta, data);
         TDCF_CHECK_SUCCESS(flag)
@@ -77,7 +76,7 @@ StatusFlag StarCluster::BroadcastAgent::create(ProcessingRulesPtr rp, ProgressEv
 
     MetaData meta = self.create_meta();
     meta.stage = ClusterBroadcast::send_rule;
-    for (auto& id : handle.identities) {
+    for (auto& id : handle.cluster_data<IdentityList>()) {
         StatusFlag flag = handle.start_progress_message(version, id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
     }
@@ -95,7 +94,7 @@ StatusFlag StarCluster::BroadcastAgent::handle_event(const MetaData& meta,
     }
     if (meta.stage == AgentBroadcast::finish_ack) {
         ++_respond;
-        if (_respond == handle.cluster_size()) {
+        if (_respond == handle.cluster_data<IdentityList>().size()) {
             return close(handle);
         }
         return StatusFlag::Success;

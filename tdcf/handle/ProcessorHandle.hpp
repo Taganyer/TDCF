@@ -15,7 +15,7 @@ namespace tdcf {
     public:
         struct ProgressTask;
 
-        explicit ProcessorHandle(ProcessorPtr ptr) : _processor(std::move(ptr)) {};
+        explicit ProcessorHandle(ProcessorPtr ptr);
 
         void acquire_data(ProgressEventsMI iter, const MetaData& meta,
                           const ProcessingRulesPtr& rule_ptr);

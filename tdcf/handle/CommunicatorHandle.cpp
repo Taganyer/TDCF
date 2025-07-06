@@ -9,14 +9,20 @@
 
 using namespace tdcf;
 
+CommunicatorHandle::CommunicatorHandle(CommunicatorPtr ptr) :
+    _communicator(std::move(ptr)) {
+    TDCF_CHECK_EXPR(_communicator)
+}
+
 void CommunicatorHandle::connect(const IdentityPtr& identity) const {
     bool success = _communicator->connect(identity);
     TDCF_CHECK_EXPR(success)
 }
 
-void CommunicatorHandle::accept(const IdentityPtr& identity) const {
-    bool success = _communicator->accept(identity);
-    TDCF_CHECK_EXPR(success)
+IdentityPtr CommunicatorHandle::accept() const {
+    auto id = _communicator->accept();
+    TDCF_CHECK_EXPR(id)
+    return id;
 }
 
 void CommunicatorHandle::disconnect(const IdentityPtr& id) const {

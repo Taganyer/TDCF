@@ -7,6 +7,10 @@
 
 using namespace tdcf;
 
+ProcessorHandle::ProcessorHandle(ProcessorPtr ptr) : _processor(std::move(ptr)) {
+    TDCF_CHECK_EXPR(_processor)
+}
+
 void ProcessorHandle::acquire_data(ProgressEventsMI iter, const MetaData& meta,
                                    const ProcessingRulesPtr& rule_ptr) {
     ProcessorEventMark mark = get_mark(iter);

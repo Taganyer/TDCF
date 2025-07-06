@@ -8,8 +8,9 @@
 
 using namespace tdcf;
 
-StatusFlag StarAgent::init(const MetaData& meta, Handle& handle) {
+StatusFlag StarAgent::init(const IdentityPtr& from_id, const MetaData& meta, Handle& handle) {
     assert(meta.stage == Star::start);
+    handle.create_agent_data<IdentityPtr>(from_id);
     return StatusFlag::Success;
 }
 
@@ -49,7 +50,7 @@ StatusFlag StarAgent::create_progress(uint32_t version, const MetaData& meta,
 
 StatusFlag StarAgent::end_agent(const MetaData& meta, Handle& handle) {
     assert(meta.stage == Star::close);
-    assert(!handle.delayed_message(handle.root_identity()));
-    handle.disconnect(handle.root_identity());
+    assert(!handle.delayed_message(handle.agent_data<IdentityPtr>()));
+    handle.disconnect(handle.agent_data<IdentityPtr>());
     return StatusFlag::Success;
 }

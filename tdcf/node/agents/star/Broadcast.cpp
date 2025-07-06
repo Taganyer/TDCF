@@ -58,8 +58,8 @@ StatusFlag StarAgent::Broadcast::agent_store(Variant& data, Handle& handle) cons
 StatusFlag StarAgent::Broadcast::close(Handle& handle) const {
     MetaData meta = create_meta();
     meta.stage = NodeAgentBroadcast::finish;
-    assert(handle.root_identity());
-    StatusFlag flag = handle.send_progress_message(version, handle.root_identity(), meta, nullptr);
+    assert(handle.has_agent_data() && handle.agent_data<IdentityPtr>());
+    StatusFlag flag = handle.send_progress_message(version, handle.agent_data<IdentityPtr>(), meta, nullptr);
     if (flag != StatusFlag::Success) return flag;
     return StatusFlag::EventEnd;
 }

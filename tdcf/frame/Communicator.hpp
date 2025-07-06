@@ -18,7 +18,6 @@ namespace tdcf {
             Null,
             MessageSendable,
             ReceivedMessage,
-            ConnectRequest,
             DisconnectRequest,
         };
 
@@ -39,7 +38,7 @@ namespace tdcf {
 
         virtual bool connect(const IdentityPtr& target) = 0;
 
-        virtual bool accept(const IdentityPtr& target) = 0;
+        virtual IdentityPtr accept() = 0;
 
         virtual bool disconnect(const IdentityPtr& target) = 0;
 

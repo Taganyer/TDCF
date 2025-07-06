@@ -10,7 +10,8 @@ namespace tdcf {
 
     class StarAgent : public NodeAgent {
     public:
-        StatusFlag init(const MetaData& meta, Handle& handle) override;
+        StatusFlag init(const IdentityPtr& from_id, const MetaData& meta,
+                        Handle& handle) override;
 
         bool serialize(void *buffer, uint32_t buffer_size) const override;
 
@@ -21,6 +22,8 @@ namespace tdcf {
         [[nodiscard]] uint32_t serialize_size() const override;
 
     private:
+        using IdentityList = std::vector<IdentityPtr>;
+
         StatusFlag create_progress(uint32_t version, const MetaData& meta,
                                    ProcessingRulesPtr& rule, Handle& handle) override;
 

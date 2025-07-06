@@ -3,7 +3,7 @@
 //
 
 #include <tdcf/base/Errors.hpp>
-#include <tdcf/cluster/StarCluster.hpp>
+#include <tdcf/cluster/star/StarCluster.hpp>
 
 using namespace tdcf;
 
@@ -17,8 +17,8 @@ StatusFlag StarCluster::AllReduce::create(ProcessingRulesPtr rp, Handle& handle)
 
     auto& self = static_cast<AllReduce&>(*iter->second);
     self._self = iter;
-    self._set.resize(handle.cluster_size() + 1);
-    self._get.resize(handle.cluster_size() + 1);
+    self._set.resize(handle.cluster_data<IdentityList>().size() + 1);
+    self._get.resize(handle.cluster_data<IdentityList>().size() + 1);
 
     MetaData meta = self.create_meta();
     meta.stage = ClusterAllReduce::acquire_data;
@@ -26,7 +26,7 @@ StatusFlag StarCluster::AllReduce::create(ProcessingRulesPtr rp, Handle& handle)
 
     meta.stage = ClusterAllReduce::send_rule;
     uint32_t serial = 0;
-    for (auto& id : handle.identities) {
+    for (auto& id : handle.cluster_data<IdentityList>()) {
         meta.serial = ++serial;
         StatusFlag flag = handle.start_progress_message(version, id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
@@ -46,7 +46,7 @@ StatusFlag StarCluster::AllReduce::handle_event(const MetaData& meta,
     }
     if (meta.stage == ClusterAllReduce::finish_ack) {
         ++_respond;
-        if (_respond == handle.cluster_size()) {
+        if (_respond == handle.cluster_data<IdentityList>().size()) {
             rule->finish_callback();
             return StatusFlag::EventEnd;
         }
@@ -61,7 +61,7 @@ StatusFlag StarCluster::AllReduce::acquire_data(const MetaData& meta,
     _set[meta.serial] = std::move(data);
     _get[meta.serial] = true;
     ++_received;
-    if (_received == handle.cluster_size() + 1) {
+    if (_received == handle.cluster_data<IdentityList>().size() + 1) {
         MetaData new_meta = create_meta();
         new_meta.stage = ClusterAllReduce::reduce_data;
         handle.reduce_data(_self, new_meta, rule, _set);
@@ -74,7 +74,7 @@ StatusFlag StarCluster::AllReduce::send_data(DataPtr& data, Handle& handle) {
     MetaData meta = create_meta();
     meta.stage = ClusterAllReduce::send_data;
     handle.store_data(rule, data);
-    for (auto& id : handle.identities) {
+    for (auto& id : handle.cluster_data<IdentityList>()) {
         StatusFlag flag = handle.send_progress_message(version, id, meta, data);
         TDCF_CHECK_SUCCESS(flag)
     }
@@ -93,8 +93,8 @@ StatusFlag StarCluster::AllReduceAgent::create(ProcessingRulesPtr rp, ProgressEv
     auto& self = static_cast<AllReduceAgent&>(*iter->second);
     *agent_ptr = &self;
     self._self = iter;
-    self._set.resize(handle.cluster_size() + 1);
-    self._get.resize(handle.cluster_size() + 1);
+    self._set.resize(handle.cluster_data<IdentityList>().size() + 1);
+    self._get.resize(handle.cluster_data<IdentityList>().size() + 1);
 
     MetaData meta = self.create_meta();
     meta.stage = AgentAllReduce::acquire_data1;
@@ -102,7 +102,7 @@ StatusFlag StarCluster::AllReduceAgent::create(ProcessingRulesPtr rp, ProgressEv
 
     meta.stage = AgentAllReduce::send_rule;
     uint32_t serial = 0;
-    for (auto& id : handle.identities) {
+    for (auto& id : handle.cluster_data<IdentityList>()) {
         meta.serial = ++serial;
         StatusFlag flag = handle.start_progress_message(version, id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
@@ -125,7 +125,7 @@ StatusFlag StarCluster::AllReduceAgent::handle_event(const MetaData& meta,
     }
     if (meta.stage == AgentAllReduce::finish_ack) {
         ++_respond;
-        if (_respond == handle.cluster_size()) {
+        if (_respond == handle.cluster_data<IdentityList>().size()) {
             return close(handle);
         }
         return StatusFlag::Success;

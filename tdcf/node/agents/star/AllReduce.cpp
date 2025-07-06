@@ -54,7 +54,7 @@ StatusFlag StarAgent::AllReduce::handle_event(const MetaData& meta,
 StatusFlag StarAgent::AllReduce::acquire_data1(DataPtr& data, Handle& handle) const {
     MetaData meta = create_meta();
     meta.stage = NodeAgentAllReduce::send_data1;
-    StatusFlag flag = handle.send_progress_message(version, handle.root_identity(), meta, data);
+    StatusFlag flag = handle.send_progress_message(version, handle.agent_data<IdentityPtr>(), meta, data);
     return flag;
 }
 
@@ -77,7 +77,7 @@ StatusFlag StarAgent::AllReduce::acquire_data2(DataPtr& data, Handle& handle) co
 StatusFlag StarAgent::AllReduce::close(Handle& handle) const {
     MetaData meta = create_meta();
     meta.stage = NodeAgentAllReduce::finish;
-    StatusFlag flag = handle.send_progress_message(version, handle.root_identity(), meta, nullptr);
+    StatusFlag flag = handle.send_progress_message(version, handle.agent_data<IdentityPtr>(), meta, nullptr);
     TDCF_CHECK_SUCCESS(flag)
     return StatusFlag::EventEnd;
 }

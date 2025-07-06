@@ -4,24 +4,27 @@
 
 #include <tdcf/base/Errors.hpp>
 #include <tdcf/node/Node.hpp>
+#include <tdcf/cluster/Cluster.hpp>
 
 using namespace tdcf;
 
-Node::Node(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp, IdentityPtr root_id) :
-    _handle(std::move(ip), std::move(cp), std::move(pp), std::move(root_id)) {}
+Node::Node(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp) :
+    _handle(std::move(ip), std::move(cp), std::move(pp)) {}
 
-void Node::start(unsigned) {
+Node::~Node()  { assert(!_node_agent_started); }
+
+void Node::start_node() {
+    TDCF_CHECK_EXPR(!dynamic_cast<Cluster*>(this) || _cluster_staring);
     TDCF_CHECK_EXPR(!_node_agent_started)
-    _handle.connect(_handle.root_identity());
-
-    MetaData meta = get_agent();
-    _handle.agent_factory = nullptr;
-    StatusFlag flag = _agent->init(meta, _handle);
+    auto id = _handle.accept();
+    MetaData meta = get_agent(id);
+    if (!_cluster_started) _handle.agent_factory = nullptr;
+    StatusFlag flag = _agent->init(id, meta, _handle);
     TDCF_CHECK_SUCCESS(flag)
     _node_agent_started = true;
 }
 
-MetaData Node::get_agent() {
+MetaData Node::get_agent(const IdentityPtr& from_id) {
     StatusFlag flag;
     do {
         flag = _handle.get_communicator_events();
@@ -32,8 +35,8 @@ MetaData Node::get_agent() {
     bool success = _handle.get_message(message);
     TDCF_CHECK_EXPR(success)
 
-    auto& [type, from_id, meta, agent] = message;
-    assert(from_id->equal_to(*_handle.root_identity()));
+    auto& [type, from, meta, agent] = message;
+    assert(from->equal_to(*from_id));
     assert(meta.operation_type == OperationType::AgentCreate);
     _agent = std::dynamic_pointer_cast<NodeAgent>(std::get<SerializablePtr>(agent));
     TDCF_CHECK_EXPR(_agent);

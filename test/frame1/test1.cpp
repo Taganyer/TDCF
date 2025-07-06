@@ -2,7 +2,7 @@
 // Created by taganyer on 25-7-4.
 //
 #include <iostream>
-#include <tdcf/cluster/StarCluster.hpp>
+#include <tdcf/cluster/star/StarCluster.hpp>
 #include <test/test.hpp>
 #include <test/frame1/Communicator1.hpp>
 #include <test/frame1/Data1.hpp>
@@ -18,12 +18,11 @@ using namespace tdcf;
 
 using namespace std;
 
-static StarCluster create_star_cluster(uint32_t id, CommShare& share, uint32_t root_id = -1) {
+static StarCluster create_star_cluster(uint32_t id, CommShare& share) {
     auto self = std::make_shared<Identity1>(id);
     auto comm = std::make_shared<Communicator1>(id, share);
     auto proc = std::make_shared<Processor1>(id);
-    IdentityPtr root = root_id == -1 ? nullptr : std::make_shared<Identity1>(root_id);
-    return { std::move(self), std::move(comm), std::move(proc), std::move(root) };
+    return { std::move(self), std::move(comm), std::move(proc) };
 }
 
 static Node create_node(uint32_t id, CommShare& share, uint32_t root_id) {
@@ -31,7 +30,7 @@ static Node create_node(uint32_t id, CommShare& share, uint32_t root_id) {
     auto comm = std::make_shared<Communicator1>(id, share);
     auto proc = std::make_shared<Processor1>(id);
     auto root = std::make_shared<Identity1>(root_id);
-    return { std::move(self), std::move(comm), std::move(proc), std::move(root) };
+    return { std::move(self), std::move(comm), std::move(proc) };
 }
 
 static StatusFlag creat_task(uint32_t& serial, uint32_t& tasks_size,
@@ -63,9 +62,9 @@ static StatusFlag creat_task(uint32_t& serial, uint32_t& tasks_size,
     return flag;
 }
 
-static void root(uint32_t id, CommShare& share) {
+static void root(uint32_t id, CommShare& share, Cluster::IdentitySet& cluster) {
     StarCluster root = create_star_cluster(id, share);
-    root.start(2);
+    root.start_cluster(cluster, false);
     T_DEBUG << __FUNCTION__ << " [" << id << "] started";
 
     uint32_t tasks_size = 0;
@@ -90,9 +89,9 @@ static void root(uint32_t id, CommShare& share) {
     cerr << __FUNCTION__ << " [" << id << "] end: " << status_flag_name(flag) << endl;
 }
 
-static void node_root(uint32_t id, CommShare& share, uint32_t root_id) {
-    StarCluster node_root = create_star_cluster(id, share, root_id);
-    node_root.start(2);
+static void node_root(uint32_t id, uint32_t root_id, CommShare& share, Cluster::IdentitySet& cluster) {
+    StarCluster node_root = create_star_cluster(id, share);
+    node_root.start_cluster(cluster, true);
     T_DEBUG << __FUNCTION__ << " " << root_id << "+" << id << " started";
 
     uint32_t tasks_size = 0;
@@ -125,7 +124,7 @@ static void node_root(uint32_t id, CommShare& share, uint32_t root_id) {
 
 static void pure_node(uint32_t id, CommShare& share, uint32_t root_id) {
     Node node1 = create_node(id, share, root_id);
-    node1.start(0);
+    node1.start_node();
     T_DEBUG << __FUNCTION__ << " " << root_id << "-" << id << " started";
 
     StatusFlag flag = StatusFlag::Success;
@@ -143,29 +142,37 @@ void test::correctness_test() {
     uint32_t serial = 0;
     CommShare share;
 
+    Cluster::IdentitySet cluster1, cluster2;
+
     uint32_t root_id = ++serial;
-    Base::Thread root_t([root_id, &share] {
-        root(root_id, share);
-    });
-
-    ++serial;
-    Base::Thread node1_t([serial, &share, root_id] {
-        pure_node(serial, share, root_id);
-    });
-
+    uint32_t node1_id = ++serial;
+    cluster1.insert(std::make_shared<Identity1>(node1_id));
     uint32_t root1_id = ++serial;
-    Base::Thread root1_t([root1_id, &share, root_id] {
-        node_root(root1_id, share, root_id);
+    cluster1.insert(std::make_shared<Identity1>(root1_id));
+
+    uint32_t node11_id = ++serial;
+    cluster2.insert(std::make_shared<Identity1>(node11_id));
+    uint32_t node12_id = ++serial;
+    cluster2.insert(std::make_shared<Identity1>(node12_id));
+
+    Base::Thread root_t([root_id, &share, &cluster1] {
+        root(root_id, share, cluster1);
     });
 
-    ++serial;
-    Base::Thread node11_t([serial, &share, root1_id] {
-        pure_node(serial, share, root1_id);
+    Base::Thread node1_t([node1_id, &share, root_id] {
+        pure_node(node1_id, share, root_id);
     });
 
-    ++serial;
-    Base::Thread node12_t([serial, &share, root1_id] {
-        pure_node(serial, share, root1_id);
+    Base::Thread root1_t([root1_id, root_id, &share, &cluster2] {
+        node_root(root1_id, root_id, share, cluster2);
+    });
+
+    Base::Thread node11_t([node11_id, &share, root1_id] {
+        pure_node(node11_id, share, root1_id);
+    });
+
+    Base::Thread node12_t([node12_id, &share, root1_id] {
+        pure_node(node12_id, share, root1_id);
     });
 
     root_t.start();

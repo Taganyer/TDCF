@@ -9,15 +9,19 @@ namespace tdcf {
 
     class StarCluster : public Cluster {
     public:
-        StarCluster(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp, IdentityPtr root_id) :
-            Cluster(std::move(ip), std::move(cp), std::move(pp), std::move(root_id)) {};
+        StarCluster(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp) :
+            Cluster(std::move(ip), std::move(cp), std::move(pp)) {};
 
         ClusterFunOverride
 
     private:
         ProcessorAgentFactoryInherit(StarAgentFactory)
 
-        void cluster_accept(unsigned cluster_size) override;
+        using IdentityList = std::vector<IdentityPtr>;
+
+        void cluster_connect_children(const IdentitySet& child_nodes) override;
+
+        bool come_from_children(const IdentityPtr& from_id) override;
 
         void cluster_start() override;
 
@@ -29,8 +33,6 @@ namespace tdcf {
                                            Variant& variant) override;
 
         StatusFlag handle_disconnect_request(const IdentityPtr& from_id) override;
-
-        using ProcessedData = Handle::ProgressTask;
 
 
         class Broadcast : public EventProgress {

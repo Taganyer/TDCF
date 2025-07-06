@@ -24,8 +24,8 @@ namespace tdcf {
             return static_cast<SerializableType>(SerializableBaseType::NodeAgent);
         };
 
-        /// 不得向 root 发送回应信息。
-        virtual StatusFlag init(const MetaData& meta, Handle& handle) = 0;
+        virtual StatusFlag init(const IdentityPtr& from_id, const MetaData& meta,
+                                Handle& handle) = 0;
 
         StatusFlag handle_received_message(const IdentityPtr& from_id, const MetaData& meta,
                                            Variant& variant, Handle& handle);

@@ -16,11 +16,11 @@ namespace tdcf {
     public:
         struct MessageEvent;
 
-        explicit CommunicatorHandle(CommunicatorPtr ptr) : _communicator(std::move(ptr)) {};
+        explicit CommunicatorHandle(CommunicatorPtr ptr);
 
         void connect(const IdentityPtr& identity) const;
 
-        void accept(const IdentityPtr& identity) const;
+        [[nodiscard]] IdentityPtr accept() const;
 
         void disconnect(const IdentityPtr& id) const;
 

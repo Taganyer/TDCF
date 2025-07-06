@@ -32,7 +32,7 @@ StatusFlag NodeAgent::handle_received_message(const IdentityPtr& from_id, const 
         return StatusFlag::ClusterOffline;
     }
     if (meta.link_mark == LinkMark::Create) {
-        assert(from_id->equal_to(*handle.root_identity()));
+        assert(from_id->equal_to(*handle.agent_data<IdentityPtr>()));
         assert(!handle.check_progress(handle.find_progress(meta.version)));
 
         auto& data_ptr = std::get<SerializablePtr>(variant);

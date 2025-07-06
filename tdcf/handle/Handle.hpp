@@ -3,7 +3,6 @@
 //
 #pragma once
 
-#include <set>
 #include <tdcf/handle/CommunicatorHandle.hpp>
 #include <tdcf/handle/ProcessorHandle.hpp>
 
@@ -11,23 +10,15 @@ namespace tdcf {
 
     class Handle : public CommunicatorHandle, public ProcessorHandle {
     public:
-        Handle(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp, IdentityPtr cluster) :
-            CommunicatorHandle(std::move(cp)),
-            ProcessorHandle(std::move(pp)),
-            _self_id(std::move(ip)), _root_id(std::move(cluster)) {};
+        Handle(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp, IdentityPtr cluster);
 
-        Handle(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp):
-            CommunicatorHandle(std::move(cp)),
-            ProcessorHandle(std::move(pp)),
-            _self_id(std::move(ip)) {};
+        Handle(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp);
 
-        void set_cluster_size(uint32_t size) { _cluster_size = size; };
+        void set_superior_identity(IdentityPtr superior_identity) {
+            _superior_id = std::move(superior_identity);
+        };
 
-        const IdentityPtr& _self_identity() { return _self_id; };
-
-        const IdentityPtr& root_identity() const { return _root_id; };
-
-        uint32_t cluster_size() const { return _cluster_size; };
+        const IdentityPtr& self_identity() { return _self_id; };
 
         uint32_t cluster_events() const { return _cluster_events; };
 
@@ -36,29 +27,18 @@ namespace tdcf {
     private:
         IdentityPtr _self_id;
 
-        IdentityPtr _root_id;
-
-        uint32_t _cluster_size = 0;
+        IdentityPtr _superior_id;
 
         uint32_t _cluster_events = 0;
 
         ProgressEventsMap progress_events;
 
-        struct Cmp {
-            bool operator()(const IdentityPtr& lhs, const IdentityPtr& rhs) const {
-                if (lhs && rhs) return lhs->less_than(*rhs);
-                return !lhs;
-            };
-        };
+        std::shared_ptr<void> _agent_extra_data = nullptr;
+
+        std::shared_ptr<void> _cluster_extra_data = nullptr;
 
     public:
-        using IdentityList = std::set<IdentityPtr, Cmp>;
-
-        using IdentityIter = IdentityList::iterator;
-
         ProcessorAgentFactoryPtr agent_factory;
-
-        IdentityList identities;
 
         ProgressEventsMI create_progress(EventProgressPtr&& progress);
 
@@ -70,6 +50,30 @@ namespace tdcf {
 
         bool check_progress(ProgressEventsMI iter) {
             return iter != progress_events.end();
+        };
+
+        template <typename Class, typename... Args>
+        void create_agent_data(Args&&... args) {
+            _agent_extra_data = std::make_shared<Class>(std::forward<Args>(args)...);
+        };
+
+        template <typename Class, typename... Args>
+        void create_cluster_data(Args&&... args) {
+            _cluster_extra_data = std::make_shared<Class>(std::forward<Args>(args)...);
+        };
+
+        bool has_agent_data() const { return _agent_extra_data != nullptr; };
+
+        bool has_cluster_data() const { return _cluster_extra_data != nullptr; };
+
+        template <typename T>
+        T& agent_data() {
+            return *static_cast<T *>(_agent_extra_data.get());
+        };
+
+        template <typename T>
+        T& cluster_data() {
+            return *static_cast<T *>(_cluster_extra_data.get());
         };
 
     };

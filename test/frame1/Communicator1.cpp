@@ -25,6 +25,7 @@ bool Communicator1::connect(const IdentityPtr& target) {
     _share->connect.emplace(k1);
     auto [iter, success] = _share->message.emplace(k2, Value(receive_size));
     assert(success);
+    _share->conditions[id].notify_one();
     _share->conditions[_id].wait(l, [this, k1] {
         return _share->message.find(k1) != _share->message.end();
     });
@@ -32,15 +33,15 @@ bool Communicator1::connect(const IdentityPtr& target) {
     return true;
 }
 
-bool Communicator1::accept(const IdentityPtr& target) {
+IdentityPtr Communicator1::accept() {
     Lock l(_share->mutex);
-    uint32_t id = static_cast<Identity1&>(*target).id();
+    uint32_t id = check_connect(l);
     Key k { _id, id };
     auto [iter, success] = _share->message.emplace(k, Value(receive_size));
     assert(success);
     _share->conditions[id].notify_one();
     T_INFO << __FUNCTION__ << " " << _id << "----" << id << " success";
-    return true;
+    return std::make_shared<Identity1>(id);
 }
 
 bool Communicator1::disconnect(const IdentityPtr& target) {
@@ -105,7 +106,6 @@ OperationFlag Communicator1::get_events(EventQueue& queue) {
         uint32_t get = 0;
         get += get_messages(queue);
         get += check_delay(queue);
-        get += check_connect(queue);
         get += check_disconnect(queue);
         return get != 0;
     });
@@ -218,20 +218,18 @@ uint32_t Communicator1::check_delay(EventQueue& queue) {
     return get;
 }
 
-uint32_t Communicator1::check_connect(EventQueue& queue) {
+uint32_t Communicator1::check_connect(Lock<Mutex>& l) {
     uint32_t get = 0;
-    Key key(_id, 0);
-    auto iter = _share->connect.lower_bound(key);
-    while (iter != _share->connect.end() && iter->first == _id) {
-        CommunicatorEvent event {
-            CommunicatorEvent::ConnectRequest, std::make_shared<Identity1>(iter->second),
-            MetaData(), nullptr
-        };
-        queue.emplace(std::move(event));
-        ++get;
-        iter = _share->connect.erase(iter);
-    }
-    // T_INFO << "Communicator1 " << _id << " check_connect: " << get;
+    _share->conditions[_id].wait(l, [this, &get] {
+        Key key(_id, 0);
+        auto iter = _share->connect.lower_bound(key);
+        if (iter != _share->connect.end() && iter->first == _id) {
+            get = iter->second;
+            _share->connect.erase(iter);
+            return true;
+        }
+        return false;
+    });
     return get;
 }
 

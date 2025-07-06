@@ -51,7 +51,7 @@ StatusFlag StarAgent::Reduce::handle_event(const MetaData& meta,
 StatusFlag StarAgent::Reduce::close(DataPtr& data, Handle& handle) const {
     MetaData meta = create_meta();
     meta.stage = NodeAgentReduce::send_data;
-    StatusFlag flag = handle.send_progress_message(version, handle.root_identity(), meta, data);
+    StatusFlag flag = handle.send_progress_message(version, handle.agent_data<IdentityPtr>(), meta, data);
     TDCF_CHECK_SUCCESS(flag)
     return StatusFlag::EventEnd;
 }

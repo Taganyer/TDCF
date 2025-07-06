@@ -4,7 +4,7 @@
 
 #include <algorithm>
 #include <tdcf/base/Errors.hpp>
-#include <tdcf/cluster/StarCluster.hpp>
+#include <tdcf/cluster/star/StarCluster.hpp>
 #include <tdcf/node/agents/star/StarAgent.hpp>
 
 using namespace tdcf;
@@ -38,24 +38,20 @@ StarFunAll(all_reduce, AllReduce, AllReduceAgent)
 
 StarFunAll(reduce_scatter, ReduceScatter, ReduceScatterAgent)
 
-void StarCluster::cluster_accept(unsigned cluster_size) {
-    for (unsigned i = 0; i < cluster_size;) {
-        StatusFlag flag = active_communicator_events();
-        TDCF_CHECK_EXPR(flag != StatusFlag::CommunicatorGetEventsError)
-        Handle::MessageEvent event;
-        while (i < cluster_size && _handle.get_message(event)) {
-            auto& [type, from_id, meta, data] = event;
-            if (type == CommunicatorEvent::ConnectRequest) {
-                _handle.accept(from_id);
-                auto [iter, success] = _handle.identities.emplace(from_id);
-                assert(success);
-                ++i;
-            } else {
-                TDCF_RAISE_ERROR(type == CommunicatorEvent::ConnectRequest ||
-                    type == CommunicatorEvent::MessageSendable);
-            }
-        }
+void StarCluster::cluster_connect_children(const IdentitySet& child_nodes) {
+
+    TDCF_CHECK_EXPR(child_nodes.find(nullptr) == child_nodes.end())
+    TDCF_CHECK_EXPR(child_nodes.find(_handle.self_identity()) == child_nodes.end())
+
+    for (auto& id : child_nodes) {
+        _handle.connect(id);
     }
+    _handle.create_cluster_data<IdentityList>(child_nodes.begin(), child_nodes.end());
+}
+
+bool StarCluster::come_from_children(const IdentityPtr& from_id) {
+    if (!_node_agent_started) return true;
+    return !from_id->equal_to(*_handle.agent_data<IdentityPtr>());
 }
 
 void StarCluster::cluster_start() {
@@ -63,8 +59,7 @@ void StarCluster::cluster_start() {
     meta.operation_type = OperationType::AgentCreate;
     meta.stage = Star::start;
     meta.data1[0] = ClusterType::star;
-    for (auto& id : _handle.identities) {
-        if (_handle.root_identity() && id->equal_to(*_handle.root_identity())) continue;
+    for (auto& id : _handle.cluster_data<IdentityList>()) {
         StatusFlag flag = _handle.send_message(id, meta, create_node_data());
         TDCF_CHECK_SUCCESS(flag)
     }
@@ -76,11 +71,11 @@ void StarCluster::cluster_end() {
     meta.operation_type = OperationType::Close;
     meta.stage = Star::close;
     StatusFlag flag = StatusFlag::Success;
-    for (const auto& id : _handle.identities) {
+    for (auto& id : _handle.cluster_data<IdentityList>()) {
         flag = _handle.send_message(id, meta, nullptr);
         TDCF_CHECK_SUCCESS(flag)
     }
-    while (!_handle.identities.empty()) {
+    while (!_handle.cluster_data<IdentityList>().empty()) {
         flag = handle_a_loop();
         TDCF_CHECK_SUCCESS(flag)
     }
@@ -99,9 +94,14 @@ StatusFlag StarCluster::handle_received_message(const IdentityPtr& from_id, cons
 }
 
 StatusFlag StarCluster::handle_disconnect_request(const IdentityPtr& from_id) {
-    assert(!_handle.root_identity() || !from_id->equal_to(*_handle.root_identity()));
+    assert(!_handle.has_agent_data() || !from_id->equal_to(*_handle.agent_data<IdentityPtr>()));
     assert(!_handle.delayed_message(from_id));
     _handle.disconnect(from_id);
-    _handle.identities.erase(from_id);
+    auto& id_list = _handle.cluster_data<IdentityList>();
+    auto iter = std::lower_bound(id_list.begin(), id_list.end(), from_id,
+                                 std::less<IdentityPtr>());
+    assert(iter != id_list.end());
+    assert((*iter)->equal_to(*from_id));
+    _handle.cluster_data<IdentityList>().erase(iter);
     return StatusFlag::Success;
 }

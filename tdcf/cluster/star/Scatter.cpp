@@ -3,7 +3,7 @@
 //
 
 #include <tdcf/base/Errors.hpp>
-#include <tdcf/cluster/StarCluster.hpp>
+#include <tdcf/cluster/star/StarCluster.hpp>
 
 using namespace tdcf;
 
@@ -23,7 +23,7 @@ StatusFlag StarCluster::Scatter::create(ProcessingRulesPtr rp, Handle& handle) {
     handle.acquire_data(iter, meta, self.rule);
 
     meta.stage = ClusterScatter::send_rule;
-    for (auto& id : handle.identities) {
+    for (auto& id : handle.cluster_data<IdentityList>()) {
         StatusFlag flag = handle.start_progress_message(version, id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
     }
@@ -44,7 +44,7 @@ StatusFlag StarCluster::Scatter::handle_event(const MetaData& meta,
     }
     if (meta.stage == ClusterScatter::finish_ack) {
         ++_respond;
-        if (_respond == handle.cluster_size()) {
+        if (_respond == handle.cluster_data<IdentityList>().size()) {
             rule->finish_callback();
             return StatusFlag::EventEnd;
         }
@@ -56,18 +56,17 @@ StatusFlag StarCluster::Scatter::handle_event(const MetaData& meta,
 StatusFlag StarCluster::Scatter::scatter_data(DataPtr& data, Handle& handle) const {
     MetaData meta = create_meta();
     meta.stage = ClusterScatter::scatter_data;
-    handle.scatter_data(_self, meta, rule, handle.cluster_size() + 1, data);
+    handle.scatter_data(_self, meta, rule, handle.cluster_data<IdentityList>().size() + 1, data);
     return StatusFlag::Success;
 }
 
 StatusFlag StarCluster::Scatter::send_data(DataSet& set, Handle& handle) {
-    TDCF_CHECK_EXPR(set.size() == handle.cluster_size() + 1);
+    TDCF_CHECK_EXPR(set.size() == handle.cluster_data<IdentityList>().size() + 1);
     MetaData meta = create_meta();
     meta.stage = ClusterScatter::send_data;
-
-    assert(handle.cluster_size() == handle.identities.size());
+    
     handle.store_data(rule, set[0]);
-    for (auto& id : handle.identities) {
+    for (auto& id : handle.cluster_data<IdentityList>()) {
         meta.serial = ++_sent;
         StatusFlag flag = handle.send_progress_message(version, id, meta, std::move(set[_sent]));
         TDCF_CHECK_SUCCESS(flag)
@@ -90,7 +89,7 @@ StatusFlag StarCluster::ScatterAgent::create(ProcessingRulesPtr rp, ProgressEven
 
     MetaData meta = self.create_meta();
     meta.stage = AgentScatter::send_rule;
-    for (auto& id : handle.identities) {
+    for (auto& id : handle.cluster_data<IdentityList>()) {
         StatusFlag flag = handle.start_progress_message(version, id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
     }
@@ -108,7 +107,7 @@ StatusFlag StarCluster::ScatterAgent::handle_event(const MetaData& meta,
     }
     if (meta.stage == AgentScatter::finish_ack) {
         ++_respond;
-        if (_respond == handle.cluster_size()) {
+        if (_respond == handle.cluster_data<IdentityList>().size()) {
             return close(handle);
         }
         return StatusFlag::Success;

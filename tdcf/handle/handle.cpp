@@ -8,6 +8,16 @@
 using namespace tdcf;
 
 
+Handle::Handle(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp, IdentityPtr cluster) :
+            CommunicatorHandle(std::move(cp)),
+            ProcessorHandle(std::move(pp)),
+            _self_id(std::move(ip)), _superior_id(std::move(cluster)) {
+    TDCF_CHECK_EXPR(_self_id)
+}
+
+Handle::Handle(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp) :
+            Handle(std::move(ip), std::move(cp), std::move(pp), nullptr) {}
+
 ProgressEventsMI Handle::create_progress(EventProgressPtr&& progress) {
     uint32_t version = progress->version;
     ProgressType type = progress->progress_type;

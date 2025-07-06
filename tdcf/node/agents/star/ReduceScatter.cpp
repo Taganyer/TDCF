@@ -54,7 +54,8 @@ StatusFlag StarAgent::ReduceScatter::handle_event(const MetaData& meta,
 StatusFlag StarAgent::ReduceScatter::acquire_data1(DataPtr& data, Handle& handle) const {
     MetaData meta = create_meta();
     meta.stage = NodeAgentReduceScatter::send_data1;
-    StatusFlag flag = handle.send_progress_message(version, handle.root_identity(), meta, std::move(data));
+    StatusFlag flag = handle.send_progress_message(version, handle.agent_data<IdentityPtr>(),
+                                                   meta, std::move(data));
     return flag;
 }
 
@@ -77,7 +78,7 @@ StatusFlag StarAgent::ReduceScatter::acquire_data2(DataPtr& data, Handle& handle
 StatusFlag StarAgent::ReduceScatter::close(Handle& handle) const {
     MetaData meta = create_meta();
     meta.stage = NodeAgentReduceScatter::finish;
-    StatusFlag flag = handle.send_progress_message(version, handle.root_identity(), meta, nullptr);
+    StatusFlag flag = handle.send_progress_message(version, handle.agent_data<IdentityPtr>(), meta, nullptr);
     TDCF_CHECK_SUCCESS(flag)
     return StatusFlag::EventEnd;
 }
