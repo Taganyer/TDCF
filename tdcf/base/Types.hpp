@@ -77,9 +77,18 @@ namespace tdcf {
     struct ClusterType {
         static constexpr StageNum star = 1;
 
+        static constexpr StageNum ring = 2;
+
     };
 
     struct Star {
+        static constexpr StageNum start = 1;
+
+        static constexpr StageNum close = 2;
+
+    };
+
+    struct Ring {
         static constexpr StageNum start = 1;
 
         static constexpr StageNum close = 2;

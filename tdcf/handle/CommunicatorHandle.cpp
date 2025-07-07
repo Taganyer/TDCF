@@ -26,6 +26,7 @@ IdentityPtr CommunicatorHandle::accept() const {
 }
 
 void CommunicatorHandle::disconnect(const IdentityPtr& id) const {
+    TDCF_CHECK_EXPR(!delayed_message(id))
     bool success = _communicator->disconnect(id);
     TDCF_CHECK_EXPR(success)
 }
@@ -109,20 +110,23 @@ StatusFlag CommunicatorHandle::send_delay_message(const IdentityPtr& target) {
     return StatusFlag::Success;
 }
 
-bool CommunicatorHandle::delayed_message(const IdentityPtr& target) {
+bool CommunicatorHandle::delayed_message(const IdentityPtr& target) const {
     if (!target) return false;
-    auto& q = _delay_queue[target];
+    auto iter = _delay_queue.find(target);
+    if (iter == _delay_queue.end()) return false;
+    auto& q = iter->second;
     return !q.empty();
 }
 
 StatusFlag CommunicatorHandle::send(const IdentityPtr& target,
                                     MetaData meta, SerializablePtr message) {
-    if (_delay_queue[target].empty()) {
+    auto& q = _delay_queue[target];
+    if (q.empty()) {
         OperationFlag flag = _communicator->send_message(target, Message(meta), message);
         if (flag == OperationFlag::Success) return StatusFlag::Success;
         if (flag == OperationFlag::Error) return StatusFlag::CommunicatorSendMessageError;
     }
-    _delay_queue[target].emplace(meta, std::move(message));
+    q.emplace(meta, std::move(message));
     return StatusFlag::Success;
 }
 

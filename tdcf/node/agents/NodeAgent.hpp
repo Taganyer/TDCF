@@ -24,17 +24,23 @@ namespace tdcf {
             return static_cast<SerializableType>(SerializableBaseType::NodeAgent);
         };
 
-        virtual StatusFlag init(const IdentityPtr& from_id, const MetaData& meta,
-                                Handle& handle) = 0;
+        virtual void init(const IdentityPtr& from_id, const MetaData& meta,
+                          Handle& handle) = 0;
+
+        bool serialize(void *buffer, uint32_t buffer_size) const override;
+
+        bool deserialize(const void *buffer, uint32_t buffer_size) override;
+
+        [[nodiscard]] uint32_t serialize_size() const override;
 
         StatusFlag handle_received_message(const IdentityPtr& from_id, const MetaData& meta,
                                            Variant& variant, Handle& handle);
 
+        virtual StatusFlag handle_disconnect(const IdentityPtr& id, Handle& handle) = 0;
+
     protected:
         virtual StatusFlag create_progress(uint32_t version, const MetaData& meta,
                                            ProcessingRulesPtr& rule, Handle& handle) = 0;
-
-        virtual StatusFlag end_agent(const MetaData& meta, Handle& handle) = 0;
 
     };
 

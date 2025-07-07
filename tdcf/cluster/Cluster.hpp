@@ -10,8 +10,7 @@ namespace tdcf {
 
     class Cluster : public Node {
     public:
-        /// 不要使用透明比较器std::less<>，使用 std::less<IdentityPtr>
-        using IdentitySet = std::set<IdentityPtr>;
+        using IdentitySet = std::set<IdentityPtr, IdentityPtrLess>;
 
         Cluster(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp);
 
@@ -43,7 +42,7 @@ namespace tdcf {
         virtual bool come_from_children(const IdentityPtr& from_id) = 0;
 
         virtual StatusFlag handle_received_message(const IdentityPtr& from_id, const MetaData& meta,
-                                                   Variant& variant) = 0;
+                                                   Variant& variant);
 
         virtual StatusFlag handle_disconnect_request(const IdentityPtr& from_id) = 0;
 

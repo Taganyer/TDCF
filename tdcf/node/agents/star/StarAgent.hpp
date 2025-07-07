@@ -10,24 +10,18 @@ namespace tdcf {
 
     class StarAgent : public NodeAgent {
     public:
-        StatusFlag init(const IdentityPtr& from_id, const MetaData& meta,
-                        Handle& handle) override;
-
-        bool serialize(void *buffer, uint32_t buffer_size) const override;
-
-        bool deserialize(const void *buffer, uint32_t buffer_size) override;
+        void init(const IdentityPtr& from_id, const MetaData& meta,
+                  Handle& handle) override;
 
         [[nodiscard]] SerializableType derived_type() const override;
-
-        [[nodiscard]] uint32_t serialize_size() const override;
 
     private:
         using IdentityList = std::vector<IdentityPtr>;
 
+        StatusFlag handle_disconnect(const IdentityPtr& id, Handle& handle) override;
+
         StatusFlag create_progress(uint32_t version, const MetaData& meta,
                                    ProcessingRulesPtr& rule, Handle& handle) override;
-
-        StatusFlag end_agent(const MetaData& meta, Handle& handle) override;
 
         class Broadcast : public EventProgress {
         public:

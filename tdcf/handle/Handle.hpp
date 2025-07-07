@@ -62,6 +62,14 @@ namespace tdcf {
             _cluster_extra_data = std::make_shared<Class>(std::forward<Args>(args)...);
         };
 
+        void destroy_agent_data() {
+            _agent_extra_data = nullptr;
+        };
+
+        void destroy_cluster_data() {
+            _cluster_extra_data = nullptr;
+        };
+
         bool has_agent_data() const { return _agent_extra_data != nullptr; };
 
         bool has_cluster_data() const { return _cluster_extra_data != nullptr; };

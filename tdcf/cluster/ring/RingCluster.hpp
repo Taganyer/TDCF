@@ -14,6 +14,14 @@ namespace tdcf {
 
         ClusterFunOverride
 
+        struct RingClusterData {
+            IdentityPtr send;
+            IdentityPtr receive;
+
+            RingClusterData(IdentityPtr send, IdentityPtr receive) :
+                send(std::move(send)), receive(std::move(receive)) {};
+        };
+
     private:
         ProcessorAgentFactoryInherit(RingAgentFactory)
 
@@ -23,13 +31,11 @@ namespace tdcf {
 
         void cluster_end() override;
 
+        bool come_from_children(const IdentityPtr& from_id) override;
+
         static SerializablePtr create_node_data();
 
-        StatusFlag handle_received_message(const IdentityPtr& from_id, const MetaData& meta,
-                                           Variant& variant) override;
-
         StatusFlag handle_disconnect_request(const IdentityPtr& from_id) override;
-
 
     };
 

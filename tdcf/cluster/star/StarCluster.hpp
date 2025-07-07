@@ -21,16 +21,13 @@ namespace tdcf {
 
         void cluster_connect_children(const IdentitySet& child_nodes) override;
 
-        bool come_from_children(const IdentityPtr& from_id) override;
-
         void cluster_start() override;
 
         void cluster_end() override;
 
-        static SerializablePtr create_node_data();
+        bool come_from_children(const IdentityPtr& from_id) override;
 
-        StatusFlag handle_received_message(const IdentityPtr& from_id, const MetaData& meta,
-                                           Variant& variant) override;
+        static SerializablePtr create_node_data();
 
         StatusFlag handle_disconnect_request(const IdentityPtr& from_id) override;
 

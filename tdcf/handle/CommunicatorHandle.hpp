@@ -4,6 +4,7 @@
 #pragma once
 
 #include <map>
+#include <set>
 #include <tdcf/base/Version.hpp>
 #include <tdcf/detail/EventProgress.hpp>
 #include <tdcf/detail/MetaData.hpp>
@@ -42,7 +43,7 @@ namespace tdcf {
 
         StatusFlag send_delay_message(const IdentityPtr& target);
 
-        bool delayed_message(const IdentityPtr& target);
+        [[nodiscard]] bool delayed_message(const IdentityPtr& target) const;
 
     private:
         using Key = std::pair<uint32_t, IdentityPtr>;
@@ -61,7 +62,8 @@ namespace tdcf {
 
         TransverterMap _receive, _send;
 
-        using SendDelayMQ = std::map<IdentityPtr, std::queue<std::pair<MetaData, SerializablePtr>>>;
+        using SendDelayMQ = std::map<IdentityPtr, std::queue<std::pair<MetaData, SerializablePtr>>,
+                                     IdentityPtrLess>;
 
         SendDelayMQ _delay_queue;
 

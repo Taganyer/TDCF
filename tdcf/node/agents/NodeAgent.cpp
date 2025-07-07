@@ -22,15 +22,20 @@ StatusFlag NodeAgent::deserialize_NodeAgent(const MetaData& meta, SerializablePt
     TDCF_RAISE_ERROR(error NodeAgent type)
 }
 
+bool NodeAgent::serialize(void *buffer, uint32_t buffer_size) const {
+    return true;
+}
+
+bool NodeAgent::deserialize(const void *buffer, uint32_t buffer_size) {
+    return true;
+}
+
+uint32_t NodeAgent::serialize_size() const {
+    return 0;
+}
+
 StatusFlag NodeAgent::handle_received_message(const IdentityPtr& from_id, const MetaData& meta,
                                               Variant& variant, Handle& handle) {
-    if (meta.operation_type == OperationType::Close) {
-        auto& data_ptr = std::get<SerializablePtr>(variant);
-        assert(!data_ptr);
-        StatusFlag flag = end_agent(meta, handle);
-        TDCF_CHECK_SUCCESS(flag);
-        return StatusFlag::ClusterOffline;
-    }
     if (meta.link_mark == LinkMark::Create) {
         assert(from_id->equal_to(*handle.agent_data<IdentityPtr>()));
         assert(!handle.check_progress(handle.find_progress(meta.version)));

@@ -19,8 +19,7 @@ void Node::start_node() {
     auto id = _handle.accept();
     MetaData meta = get_agent(id);
     if (!_cluster_started) _handle.agent_factory = nullptr;
-    StatusFlag flag = _agent->init(id, meta, _handle);
-    TDCF_CHECK_SUCCESS(flag)
+    _agent->init(id, meta, _handle);
     _node_agent_started = true;
 }
 
@@ -47,6 +46,7 @@ void Node::end_agent() {
     assert(_handle.total_events() - _handle.cluster_events() == 0);
     _node_agent_started = false;
     _agent = nullptr;
+    _handle.destroy_agent_data();
 }
 
 StatusFlag Node::handle_message(Handle::MessageEvent& event) {
@@ -58,6 +58,9 @@ StatusFlag Node::handle_message(Handle::MessageEvent& event) {
             break;
         case CommunicatorEvent::MessageSendable:
             flag = _handle.send_delay_message(from_id);
+            break;
+        case CommunicatorEvent::DisconnectRequest:
+            flag = _agent->handle_disconnect(from_id, _handle);
             break;
         default:
             TDCF_RAISE_ERROR("Recieved wrong event type");
@@ -81,11 +84,11 @@ StatusFlag Node::active_processor_events() {
 
 StatusFlag Node::handle_communicator_events() {
     StatusFlag flag = StatusFlag::Success;
-    Handle::MessageEvent message;
-    while (flag == StatusFlag::Success && _handle.get_message(message)) {
-        flag = handle_message(message);
+    Handle::MessageEvent event;
+    while (flag == StatusFlag::Success && _handle.get_message(event)) {
+        flag = handle_message(event);
         if (flag == StatusFlag::EventEnd) {
-            auto iter = _handle.find_progress(message.meta.version);
+            auto iter = _handle.find_progress(event.meta.version);
             _handle.destroy_progress(iter);
             flag = StatusFlag::Success;
         } else if (unlikely(flag == StatusFlag::ClusterOffline)) {

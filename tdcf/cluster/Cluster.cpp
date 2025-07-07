@@ -36,9 +36,18 @@ StatusFlag Cluster::end_cluster() {
         if (flag != StatusFlag::Success) return flag;
     }
     cluster_end();
+    _handle.destroy_cluster_data();
     _cluster_closing = false;
     _cluster_started = false;
     return StatusFlag::Success;
+}
+
+StatusFlag Cluster::handle_received_message(const IdentityPtr& from_id, const MetaData& meta,
+                                                Variant& variant) {
+    auto iter = _handle.find_progress(meta.version);
+    TDCF_CHECK_EXPR(_handle.check_progress(iter))
+    auto& [m, progress] = *iter;
+    return progress->handle_event(meta, variant, _handle);
 }
 
 StatusFlag Cluster::handle_message(Handle::MessageEvent& event) {

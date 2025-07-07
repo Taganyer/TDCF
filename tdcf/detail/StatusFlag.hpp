@@ -16,7 +16,8 @@ namespace tdcf {
     MOD(CommunicatorGetEventsError), \
     MOD(ProcessorGetEventsFurtherWaiting), \
     MOD(ProcessorGetEventsError), \
-    MOD(ClusterOffline),
+    MOD(ClusterOffline), \
+    MOD(ClusterOfflineFutherWaitting)
 
     enum class StatusFlag {
         STATUS_FLAG_ITEM(TDCF_ENUM_MOD)
