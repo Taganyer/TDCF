@@ -10,7 +10,7 @@ using namespace tdcf;
 
 void RingAgent::init(const IdentityPtr& from_id, const MetaData& meta, Handle& handle) {
     assert(meta.stage == Ring::start);
-    handle.create_agent_data<RingAgentData>(nullptr, from_id);
+    handle.create_agent_data<RingAgentData>(nullptr, from_id, meta.serial);
 
     uint32_t serial = meta.serial;
     while (serial) {
@@ -30,7 +30,7 @@ SerializableType RingAgent::derived_type() const {
 }
 
 StatusFlag RingAgent::handle_disconnect(const IdentityPtr& id, Handle& handle) {
-    auto& [send, receive] = handle.agent_data<RingAgentData>();
+    auto& [send, receive, serial] = handle.agent_data<RingAgentData>();
     assert(receive->equal_to(*id));
     handle.disconnect(receive);
     handle.disconnect(send);
@@ -38,7 +38,7 @@ StatusFlag RingAgent::handle_disconnect(const IdentityPtr& id, Handle& handle) {
 }
 
 void RingAgent::connect_handle(Handle::MessageEvent& event, Handle& handle) {
-    auto& [send, receive] = handle.agent_data<RingAgentData>();
+    auto& [send, receive, serial] = handle.agent_data<RingAgentData>();
     auto& [type, from, meta, variant] = event;
     assert(meta.operation_type == OperationType::Init);
     assert(receive->equal_to(*from));
@@ -60,8 +60,8 @@ void RingAgent::connect_handle(Handle::MessageEvent& event, Handle& handle) {
 StatusFlag RingAgent::create_progress(uint32_t version, const MetaData& meta,
                                       ProcessingRulesPtr& rule, Handle& handle) {
     switch (meta.operation_type) {
-        // case OperationType::Broadcast:
-        //     return Broadcast::create(version, meta, rule, handle);
+        case OperationType::Broadcast:
+            return Broadcast::create(version, meta, rule, handle);
         // case OperationType::Scatter:
         //     return Scatter::create(version, meta, rule, handle);
         // case OperationType::Reduce:

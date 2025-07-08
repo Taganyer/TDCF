@@ -95,7 +95,7 @@ namespace tdcf {
 
     };
 
-    struct ClusterBroadcast {
+    struct C_Broadcast {
         static constexpr StageNum acquire_data = 1;
 
         static constexpr StageNum send_rule = 2;
@@ -106,31 +106,29 @@ namespace tdcf {
 
     };
 
-    struct NodeAgentBroadcast {
-        static constexpr StageNum get_rule = ClusterBroadcast::send_rule;
+    struct N_Broadcast {
+        static constexpr StageNum get_rule = C_Broadcast::send_rule;
 
-        static constexpr StageNum send_rule = 5;
+        static constexpr StageNum get_data = C_Broadcast::send_data;
 
-        static constexpr StageNum get_data = ClusterBroadcast::send_data;
+        static constexpr StageNum send_data = 5;
 
-        static constexpr StageNum send_data = 6;
+        static constexpr StageNum finish_ack = 6;
 
-        static constexpr StageNum finish_ack = 7;
-
-        static constexpr StageNum finish = ClusterBroadcast::finish_ack;
+        static constexpr StageNum finish = C_Broadcast::finish_ack;
 
     };
 
-    struct AgentBroadcast {
-        static constexpr StageNum get_data = NodeAgentBroadcast::send_data;
+    struct A_Broadcast {
+        static constexpr StageNum get_data = N_Broadcast::send_data;
 
-        static constexpr StageNum finish_ack = ClusterBroadcast::finish_ack;
+        static constexpr StageNum finish_ack = C_Broadcast::finish_ack;
 
-        static constexpr StageNum finish = NodeAgentBroadcast::finish_ack;
+        static constexpr StageNum finish = N_Broadcast::finish_ack;
 
     };
 
-    struct ClusterScatter {
+    struct C_Scatter {
         static constexpr StageNum acquire_data = 1;
 
         static constexpr StageNum send_rule = 2;
@@ -143,35 +141,37 @@ namespace tdcf {
 
     };
 
-    struct NodeAgentScatter {
-        static constexpr StageNum get_rule = ClusterScatter::send_rule;
+    struct N_Scatter {
+        static constexpr StageNum get_rule = C_Scatter::send_rule;
 
         static constexpr StageNum send_rule = 6;
 
-        static constexpr StageNum get_data = ClusterScatter::send_data;
+        static constexpr StageNum get_data = C_Scatter::send_data;
 
-        static constexpr StageNum scatter_data = 7;
+        static constexpr StageNum send_data = 7;
 
-        static constexpr StageNum send_data = 8;
+        static constexpr StageNum finish_ack = 8;
 
-        static constexpr StageNum finish_ack = 9;
-
-        static constexpr StageNum finish = ClusterScatter::finish_ack;
+        static constexpr StageNum finish = C_Scatter::finish_ack;
 
     };
 
-    struct AgentScatter {
-        static constexpr StageNum send_rule = ClusterScatter::send_rule;
+    struct A_Scatter {
+        static constexpr StageNum send_rule = C_Scatter::send_rule;
 
-        static constexpr StageNum get_data = NodeAgentScatter::send_data;
+        static constexpr StageNum get_data = N_Scatter::send_data;
 
-        static constexpr StageNum finish_ack = ClusterScatter::finish_ack;
+        static constexpr StageNum scatter_data = C_Scatter::scatter_data;
 
-        static constexpr StageNum finish = NodeAgentScatter::finish_ack;
+        static constexpr StageNum send_data = C_Scatter::send_data;
+
+        static constexpr StageNum finish_ack = C_Scatter::finish_ack;
+
+        static constexpr StageNum finish = N_Scatter::finish_ack;
 
     };
 
-    struct ClusterReduce {
+    struct C_Reduce {
         static constexpr StageNum acquire_data = 1;
 
         static constexpr StageNum send_rule = 2;
@@ -180,27 +180,27 @@ namespace tdcf {
 
     };
 
-    struct NodeAgentReduce {
-        static constexpr StageNum get_rule = ClusterReduce::send_rule;
+    struct N_Reduce {
+        static constexpr StageNum get_rule = C_Reduce::send_rule;
 
         static constexpr StageNum send_rule = 4;
 
         static constexpr StageNum acquire_data = 5;
 
-        static constexpr StageNum reduce_data = 6;
+        static constexpr StageNum reduce_data = C_Reduce::reduce_data;
 
-        static constexpr StageNum send_data = ClusterReduce::acquire_data;
+        static constexpr StageNum send_data = C_Reduce::acquire_data;
 
     };
 
-    struct AgentReduce {
-        static constexpr StageNum send_rule = ClusterReduce::send_rule;
+    struct A_Reduce {
+        static constexpr StageNum send_rule = C_Reduce::send_rule;
 
-        static constexpr StageNum acquire_data = ClusterReduce::acquire_data;
+        static constexpr StageNum acquire_data = C_Reduce::acquire_data;
 
-        static constexpr StageNum reduce_data = ClusterReduce::reduce_data;
+        static constexpr StageNum reduce_data = C_Reduce::reduce_data;
 
-        static constexpr StageNum send_data = NodeAgentReduce::acquire_data;
+        static constexpr StageNum send_data = N_Reduce::acquire_data;
 
     };
 

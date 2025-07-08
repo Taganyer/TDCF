@@ -19,12 +19,12 @@ StatusFlag StarCluster::Scatter::create(ProcessingRulesPtr rp, Handle& handle) {
     self._self = iter;
 
     MetaData meta = self.create_meta();
-    meta.stage = ClusterScatter::acquire_data;
+    meta.stage = C_Scatter::acquire_data;
     handle.acquire_data(iter, meta, self.rule);
 
-    meta.stage = ClusterScatter::send_rule;
+    meta.stage = C_Scatter::send_rule;
     for (auto& id : handle.cluster_data<IdentityList>()) {
-        StatusFlag flag = handle.start_progress_message(version, id, meta, self.rule);
+        StatusFlag flag = handle.send_progress_message(version, id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
     }
 
@@ -34,15 +34,15 @@ StatusFlag StarCluster::Scatter::create(ProcessingRulesPtr rp, Handle& handle) {
 StatusFlag StarCluster::Scatter::handle_event(const MetaData& meta,
                                               Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Scatter);
-    if (meta.stage == ClusterScatter::acquire_data) {
+    if (meta.stage == C_Scatter::acquire_data) {
         assert(_sent == 0);
         return scatter_data(std::get<DataPtr>(data), handle);
     }
-    if (meta.stage == ClusterScatter::scatter_data) {
+    if (meta.stage == C_Scatter::scatter_data) {
         assert(_sent == 0);
         return send_data(std::get<DataSet>(data), handle);
     }
-    if (meta.stage == ClusterScatter::finish_ack) {
+    if (meta.stage == C_Scatter::finish_ack) {
         ++_respond;
         if (_respond == handle.cluster_data<IdentityList>().size()) {
             rule->finish_callback();
@@ -55,17 +55,18 @@ StatusFlag StarCluster::Scatter::handle_event(const MetaData& meta,
 
 StatusFlag StarCluster::Scatter::scatter_data(DataPtr& data, Handle& handle) const {
     MetaData meta = create_meta();
-    meta.stage = ClusterScatter::scatter_data;
+    meta.stage = C_Scatter::scatter_data;
     handle.scatter_data(_self, meta, rule, handle.cluster_data<IdentityList>().size() + 1, data);
     return StatusFlag::Success;
 }
 
 StatusFlag StarCluster::Scatter::send_data(DataSet& set, Handle& handle) {
     TDCF_CHECK_EXPR(set.size() == handle.cluster_data<IdentityList>().size() + 1);
-    MetaData meta = create_meta();
-    meta.stage = ClusterScatter::send_data;
-    
+
     handle.store_data(rule, set[0]);
+
+    MetaData meta = create_meta();
+    meta.stage = C_Scatter::send_data;
     for (auto& id : handle.cluster_data<IdentityList>()) {
         meta.serial = ++_sent;
         StatusFlag flag = handle.send_progress_message(version, id, meta, std::move(set[_sent]));
@@ -88,9 +89,9 @@ StatusFlag StarCluster::ScatterAgent::create(ProcessingRulesPtr rp, ProgressEven
     self._self = iter;
 
     MetaData meta = self.create_meta();
-    meta.stage = AgentScatter::send_rule;
+    meta.stage = A_Scatter::send_rule;
     for (auto& id : handle.cluster_data<IdentityList>()) {
-        StatusFlag flag = handle.start_progress_message(version, id, meta, self.rule);
+        StatusFlag flag = handle.send_progress_message(version, id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
     }
 
@@ -100,12 +101,15 @@ StatusFlag StarCluster::ScatterAgent::create(ProcessingRulesPtr rp, ProgressEven
 StatusFlag StarCluster::ScatterAgent::handle_event(const MetaData& meta,
                                                    Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Scatter);
-    if (meta.stage == AgentScatter::get_data) {
+    if (meta.stage == A_Scatter::get_data) {
         assert(_sent == 0);
-        auto& set = std::get<DataSet>(data);
-        return send_data(set, handle);
+        return scatter_data(std::get<DataPtr>(data), handle);
     }
-    if (meta.stage == AgentScatter::finish_ack) {
+    if (meta.stage == A_Scatter::scatter_data) {
+        assert(_sent == 0);
+        return send_data(std::get<DataSet>(data), handle);
+    }
+    if (meta.stage == A_Scatter::finish_ack) {
         ++_respond;
         if (_respond == handle.cluster_data<IdentityList>().size()) {
             return close(handle);
@@ -122,7 +126,7 @@ StatusFlag StarCluster::ScatterAgent::proxy_event(const MetaData& meta,
 
 StatusFlag StarCluster::ScatterAgent::close(Handle& handle) const {
     MetaData meta = create_meta();
-    meta.stage = AgentScatter::finish;
+    meta.stage = A_Scatter::finish;
     handle.create_processor_event(_other, meta, nullptr);
     return StatusFlag::EventEnd;
 }

@@ -49,8 +49,6 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         private:
-            StatusFlag scatter_data(DataPtr& data, Handle& handle) const;
-
             StatusFlag agent_store(Variant& data, Handle& handle) const;
 
             StatusFlag close(Handle& handle) const;

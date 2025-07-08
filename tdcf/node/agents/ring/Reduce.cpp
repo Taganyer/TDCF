@@ -1,26 +1,38 @@
 //
-// Created by taganyer on 25-6-21.
+// Created by taganyer on 25-7-8.
 //
 
 #include <tdcf/base/Errors.hpp>
-#include <tdcf/handle/Handle.hpp>
-#include <tdcf/node/agents/star/StarAgent.hpp>
+#include <tdcf/node/agents/ring/RingAgent.hpp>
 
 using namespace tdcf;
 
-StarAgent::Reduce::Reduce(uint32_t version, ProcessingRulesPtr rp) :
+RingAgent::Reduce::Reduce(uint32_t version, ProcessingRulesPtr rp) :
     EventProgress(OperationType::Reduce, ProgressType::NodeRoot, version, std::move(rp)) {}
 
-StatusFlag StarAgent::Reduce::create(uint32_t version, const MetaData& meta,
+StatusFlag RingAgent::Reduce::create(uint32_t version, const MetaData& meta,
                                      ProcessingRulesPtr rp, Handle& handle) {
     assert(meta.operation_type == OperationType::Reduce);
     assert(meta.stage == N_Reduce::get_rule);
 
+    auto& [send, receive, serial] = handle.cluster_data<RingAgentData>();
+
     auto iter = handle.create_progress(std::make_unique<Reduce>(version, std::move(rp)));
 
     auto& self = static_cast<Reduce&>(*iter->second);
+    self._self = iter;
 
     MetaData new_meta = self.create_meta();
+    if (serial != 1) {
+        new_meta.stage = C_Reduce::send_rule;
+        StatusFlag flag = StatusFlag::Success;
+        flag = handle.send_progress_message(version, send, new_meta, self.rule);
+        if (flag != StatusFlag::Success) {
+            handle.destroy_progress(iter);
+            return flag;
+        }
+    }
+
     if (!handle.agent_factory) {
         new_meta.stage = N_Reduce::acquire_data;
         handle.acquire_data(iter, new_meta, self.rule);
@@ -36,19 +48,33 @@ StatusFlag StarAgent::Reduce::create(uint32_t version, const MetaData& meta,
     return StatusFlag::Success;
 }
 
-StatusFlag StarAgent::Reduce::handle_event(const MetaData& meta,
+StatusFlag RingAgent::Reduce::handle_event(const MetaData& meta,
                                            Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Reduce);
     if (meta.stage == N_Reduce::acquire_data) {
+        return acquire_data(std::get<DataPtr>(data), handle);
+    }
+    if (meta.stage == N_Reduce::reduce_data) {
         return close(std::get<DataPtr>(data), handle);
     }
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag StarAgent::Reduce::close(DataPtr& data, Handle& handle) const {
+StatusFlag RingAgent::Reduce::acquire_data(DataPtr& data, Handle& handle) {
+    _set.emplace_back(std::move(data));
+    if (_set.size() > 1) {
+        MetaData meta = create_meta();
+        meta.stage = N_Reduce::reduce_data;
+        handle.reduce_data(_self, meta, rule, _set);
+    }
+    return StatusFlag::Success;
+}
+
+StatusFlag RingAgent::Reduce::close(DataPtr& data, Handle& handle) const {
+    auto& [send, receive, serial] = handle.cluster_data<RingAgentData>();
     MetaData meta = create_meta();
     meta.stage = N_Reduce::send_data;
-    StatusFlag flag = handle.send_progress_message(version, handle.agent_data<IdentityPtr>(), meta, data);
+    StatusFlag flag = handle.send_progress_message(version, send, meta, data);
     TDCF_CHECK_SUCCESS(flag)
     return StatusFlag::EventEnd;
 }

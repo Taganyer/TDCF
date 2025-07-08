@@ -28,7 +28,7 @@ StatusFlag StarCluster::ReduceScatter::create(ProcessingRulesPtr rp, Handle& han
     uint32_t serial = 0;
     for (auto& id : handle.cluster_data<IdentityList>()) {
         meta.serial = ++serial;
-        StatusFlag flag = handle.start_progress_message(version, id, meta, self.rule);
+        StatusFlag flag = handle.send_progress_message(version, id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
     }
 
@@ -117,7 +117,7 @@ StatusFlag StarCluster::ReduceScatterAgent::create(ProcessingRulesPtr rp, Progre
     uint32_t serial = 0;
     for (auto& id : handle.cluster_data<IdentityList>()) {
         meta.serial = ++serial;
-        StatusFlag flag = handle.start_progress_message(version, id, meta, self.rule);
+        StatusFlag flag = handle.send_progress_message(version, id, meta, self.rule);
         TDCF_CHECK_SUCCESS(flag)
     }
 

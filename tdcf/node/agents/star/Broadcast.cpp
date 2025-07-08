@@ -14,7 +14,7 @@ StarAgent::Broadcast::Broadcast(uint32_t version, ProcessingRulesPtr rp) :
 StatusFlag StarAgent::Broadcast::create(uint32_t version, const MetaData& meta,
                                         ProcessingRulesPtr rp, Handle& handle) {
     assert(meta.operation_type == OperationType::Broadcast);
-    assert(meta.stage == NodeAgentBroadcast::get_rule);
+    assert(meta.stage == N_Broadcast::get_rule);
 
     auto iter = handle.create_progress(std::make_unique<Broadcast>(version, std::move(rp)));
 
@@ -35,15 +35,15 @@ StatusFlag StarAgent::Broadcast::handle_event(const MetaData& meta,
                                               Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Broadcast);
     if (!_agent) {
-        assert(meta.stage == NodeAgentBroadcast::get_data);
+        assert(meta.stage == N_Broadcast::get_data);
         handle.store_data(rule, std::get<DataPtr>(data));
         return close(handle);
     }
-    if (meta.stage == NodeAgentBroadcast::get_data) {
+    if (meta.stage == N_Broadcast::get_data) {
         return agent_store(data, handle);
     }
     /// 此时 _agent 指向的对象已销毁。
-    if (meta.stage == NodeAgentBroadcast::finish_ack) {
+    if (meta.stage == N_Broadcast::finish_ack) {
         return close(handle);
     }
     TDCF_RAISE_ERROR(meta.stage error type)
@@ -51,15 +51,15 @@ StatusFlag StarAgent::Broadcast::handle_event(const MetaData& meta,
 
 StatusFlag StarAgent::Broadcast::agent_store(Variant& data, Handle& handle) const {
     MetaData meta = create_meta();
-    meta.stage = NodeAgentBroadcast::send_data;
+    meta.stage = N_Broadcast::send_data;
     return _agent->proxy_event(meta, data, handle);
 }
 
 StatusFlag StarAgent::Broadcast::close(Handle& handle) const {
     MetaData meta = create_meta();
-    meta.stage = NodeAgentBroadcast::finish;
+    meta.stage = N_Broadcast::finish;
     assert(handle.has_agent_data() && handle.agent_data<IdentityPtr>());
     StatusFlag flag = handle.send_progress_message(version, handle.agent_data<IdentityPtr>(), meta, nullptr);
-    if (flag != StatusFlag::Success) return flag;
+    TDCF_CHECK_SUCCESS(flag)
     return StatusFlag::EventEnd;
 }

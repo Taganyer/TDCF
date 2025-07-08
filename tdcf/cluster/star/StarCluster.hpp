@@ -43,8 +43,6 @@ namespace tdcf {
         protected:
             StatusFlag send_data(DataPtr& data, Handle& handle) const;
 
-            ProgressEventsMI _self;
-
             unsigned _sent = 0, _respond = 0;
 
         };

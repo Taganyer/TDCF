@@ -14,6 +14,10 @@ CommunicatorHandle::CommunicatorHandle(CommunicatorPtr ptr) :
     TDCF_CHECK_EXPR(_communicator)
 }
 
+CommunicatorHandle::~CommunicatorHandle() {
+    assert(_receive.empty() && _send.empty());
+}
+
 void CommunicatorHandle::connect(const IdentityPtr& identity) const {
     bool success = _communicator->connect(identity);
     TDCF_CHECK_EXPR(success)
@@ -82,19 +86,9 @@ StatusFlag CommunicatorHandle::send_message(const IdentityPtr& target,
     return flag;
 }
 
-StatusFlag CommunicatorHandle::start_progress_message(uint32_t version, const IdentityPtr& target,
-                                                      MetaData meta, SerializablePtr message) {
-    create_send_link(version, target);
-    meta.version = version;
-    meta.link_mark = LinkMark::Create;
-    StatusFlag flag = send(target, meta, std::move(message));
-    return flag;
-}
-
 StatusFlag CommunicatorHandle::send_progress_message(uint32_t version, const IdentityPtr& target,
                                                      MetaData meta, SerializablePtr message) {
     send_transition(version, target, meta);
-    meta.link_mark = LinkMark::Info;
     StatusFlag flag = send(target, meta, std::move(message));
     return flag;
 }
@@ -132,7 +126,6 @@ StatusFlag CommunicatorHandle::send(const IdentityPtr& target,
 
 void CommunicatorHandle::create_send_link(uint32_t version, const IdentityPtr& to) {
     Key key(version, to);
-    assert(_send.find(key) == _send.end());
     auto [i, success] = _send.emplace(key, version);
     assert(success);
     auto [ii, ss] = _receive.emplace(key, version);
@@ -150,12 +143,17 @@ uint32_t CommunicatorHandle::create_receive_link(uint32_t from_version, const Id
     return version;
 }
 
-void CommunicatorHandle::send_transition(uint32_t version,
-                                         const IdentityPtr& to, MetaData& meta) const {
+void CommunicatorHandle::send_transition(uint32_t version, const IdentityPtr& to, MetaData& meta) {
     Key key(version, to);
     auto iter = _send.find(key);
-    TDCF_CHECK_EXPR(iter != _send.end())
-    meta.version = iter->second;
+    if (iter != _send.end()) {
+        meta.version = iter->second;
+        meta.link_mark = LinkMark::Info;
+    } else {
+        create_send_link(version, to);
+        meta.version = version;
+        meta.link_mark = LinkMark::Create;
+    }
 }
 
 bool CommunicatorHandle::receive_transition(const IdentityPtr& from, MetaData& meta) const {

@@ -17,9 +17,10 @@ namespace tdcf {
         struct RingClusterData {
             IdentityPtr send;
             IdentityPtr receive;
+            uint32_t cluster_size;
 
-            RingClusterData(IdentityPtr send, IdentityPtr receive) :
-                send(std::move(send)), receive(std::move(receive)) {};
+            RingClusterData(IdentityPtr send, IdentityPtr receive, uint32_t cluster_size) :
+                send(std::move(send)), receive(std::move(receive)), cluster_size(cluster_size) {};
         };
 
     private:
@@ -36,6 +37,127 @@ namespace tdcf {
         static SerializablePtr create_node_data();
 
         StatusFlag handle_disconnect_request(const IdentityPtr& from_id) override;
+
+        class Broadcast : public EventProgress {
+        public:
+            explicit Broadcast(ProgressType type, uint32_t version, ProcessingRulesPtr rp);
+
+            static StatusFlag create(ProcessingRulesPtr rp, Handle& handle);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
+
+        protected:
+            StatusFlag send_data(DataPtr& data, Handle& handle) const;
+
+        };
+
+        class BroadcastAgent : public Broadcast, public EventProgressAgent {
+        public:
+            BroadcastAgent(uint32_t version, ProcessingRulesPtr rp, ProgressEventsMI iter);
+
+            static StatusFlag create(ProcessingRulesPtr rp, ProgressEventsMI other,
+                                     Handle& handle, EventProgressAgent **agent_ptr);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
+
+
+            StatusFlag proxy_event(const MetaData& meta, Variant& data, Handle& handle) override;
+
+        private:
+            StatusFlag close(Handle& handle) const;
+
+            ProgressEventsMI _other;
+
+        };
+
+        class Scatter : public EventProgress {
+        public:
+            explicit Scatter(ProgressType type, uint32_t version, ProcessingRulesPtr rp);
+
+            static StatusFlag create(ProcessingRulesPtr rp, Handle& handle);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
+
+        protected:
+            StatusFlag scatter_data(DataPtr& data, Handle& handle) const;
+
+            StatusFlag send_data(DataSet& set, Handle& handle) const;
+
+            ProgressEventsMI _self;
+
+        };
+
+        class ScatterAgent : public Scatter, public EventProgressAgent {
+        public:
+            ScatterAgent(uint32_t version, ProcessingRulesPtr rp, ProgressEventsMI iter);
+
+            static StatusFlag create(ProcessingRulesPtr rp, ProgressEventsMI other,
+                                     Handle& handle, EventProgressAgent **agent_ptr);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
+
+
+            StatusFlag proxy_event(const MetaData& meta, Variant& data, Handle& handle) override;
+
+        private:
+            StatusFlag close(Handle& handle) const;
+
+            ProgressEventsMI _other;
+
+        };
+
+        class Reduce : public EventProgress {
+        public:
+            explicit Reduce(ProgressType type, uint32_t version, ProcessingRulesPtr rp);
+
+            static StatusFlag create(ProcessingRulesPtr rp, Handle& handle);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
+
+        protected:
+            StatusFlag acquire_data(DataPtr& data, Handle& handle) const;
+
+            bool get = false;
+
+        };
+
+        class ReduceAgent : public Reduce, public EventProgressAgent {
+        public:
+            ReduceAgent(uint32_t version, ProcessingRulesPtr rp, ProgressEventsMI iter);
+
+            static StatusFlag create(ProcessingRulesPtr rp, ProgressEventsMI other,
+                                     Handle& handle, EventProgressAgent **agent_ptr);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
+
+
+            StatusFlag proxy_event(const MetaData& meta, Variant& data, Handle& handle) override;
+
+        private:
+            StatusFlag close(DataPtr& data, Handle& handle) const;
+
+            ProgressEventsMI _other;
+
+        };
+
+        class AllReduce : public EventProgress {
+        public:
+            explicit AllReduce(ProgressType type, uint32_t version, ProcessingRulesPtr rp);
+
+            static StatusFlag create(ProcessingRulesPtr rp, Handle& handle);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
+
+        protected:
+            StatusFlag acquire_data(const MetaData& meta, DataPtr& data, Handle& handle);
+
+            StatusFlag send_data(DataPtr& data, Handle& handle);
+
+            ProgressEventsMI _self;
+
+            bool get = false;
+
+        };
 
     };
 

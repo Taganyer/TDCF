@@ -19,6 +19,8 @@ namespace tdcf {
 
         explicit CommunicatorHandle(CommunicatorPtr ptr);
 
+        ~CommunicatorHandle();
+
         void connect(const IdentityPtr& identity) const;
 
         [[nodiscard]] IdentityPtr accept() const;
@@ -34,9 +36,6 @@ namespace tdcf {
         bool get_message(MessageEvent& message);
 
         StatusFlag send_message(const IdentityPtr& target, MetaData meta, SerializablePtr message);
-
-        StatusFlag start_progress_message(uint32_t version, const IdentityPtr& target,
-                                          MetaData meta, SerializablePtr message);
 
         StatusFlag send_progress_message(uint32_t version, const IdentityPtr& target,
                                          MetaData meta, SerializablePtr message);
@@ -79,7 +78,7 @@ namespace tdcf {
 
         uint32_t create_receive_link(uint32_t from_version, const IdentityPtr& from);
 
-        void send_transition(uint32_t version, const IdentityPtr& to, MetaData& meta) const;
+        void send_transition(uint32_t version, const IdentityPtr& to, MetaData& meta);
 
         bool receive_transition(const IdentityPtr& from, MetaData& meta) const;
 
