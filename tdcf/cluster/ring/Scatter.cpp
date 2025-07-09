@@ -3,9 +3,12 @@
 //
 
 #include <tdcf/base/Errors.hpp>
+#include <tdcf/base/types/Ring.hpp>
 #include <tdcf/cluster/ring/RingCluster.hpp>
 
 using namespace tdcf;
+
+using namespace tdcf::ring;
 
 RingCluster::Scatter::Scatter(ProgressType type, uint32_t version, ProcessingRulesPtr rp) :
     EventProgress(OperationType::Scatter, type, version, std::move(rp)) {}
@@ -15,7 +18,7 @@ StatusFlag RingCluster::Scatter::create(ProcessingRulesPtr rp, Handle& handle) {
     auto iter = handle.create_progress(
         std::make_unique<Scatter>(ProgressType::Root, version, std::move(rp)));
 
-    auto& [send, receive, cluster_size] = handle.agent_data<RingClusterData>();
+    auto& [send, receive, cluster_size] = handle.cluster_data<RingClusterData>();
     auto& self = static_cast<Scatter&>(*iter->second);
     self.serial = cluster_size;
     self._self = iter;
@@ -47,7 +50,7 @@ StatusFlag RingCluster::Scatter::handle_event(const MetaData& meta, Variant& dat
 }
 
 StatusFlag RingCluster::Scatter::scatter_data(DataPtr& data, Handle& handle) const {
-    auto& [send, receive, cluster_size] = handle.agent_data<RingClusterData>();
+    auto& [send, receive, cluster_size] = handle.cluster_data<RingClusterData>();
     MetaData meta = create_meta();
     meta.stage = C_Scatter::scatter_data;
     handle.scatter_data(_self, meta, rule, cluster_size + 1, data);
@@ -55,7 +58,7 @@ StatusFlag RingCluster::Scatter::scatter_data(DataPtr& data, Handle& handle) con
 }
 
 StatusFlag RingCluster::Scatter::send_data(DataSet& set, Handle& handle) const {
-    auto& [send, receive, cluster_size] = handle.agent_data<RingClusterData>();
+    auto& [send, receive, cluster_size] = handle.cluster_data<RingClusterData>();
     TDCF_CHECK_EXPR(set.size() == cluster_size + 1);
 
     handle.store_data(rule, set[0]);
@@ -66,5 +69,60 @@ StatusFlag RingCluster::Scatter::send_data(DataSet& set, Handle& handle) const {
         StatusFlag flag = handle.send_progress_message(version, send, meta, set[i]);
         TDCF_CHECK_SUCCESS(flag)
     }
+
+    meta.stage = C_Scatter::finish;
+    handle.send_progress_message(version, send, meta, nullptr);
+
     return StatusFlag::Success;
+}
+
+
+RingCluster::ScatterAgent::ScatterAgent(uint32_t version, ProcessingRulesPtr rp, ProgressEventsMI iter) :
+    Scatter(ProgressType::NodeRoot, version, std::move(rp)), _other(iter) {}
+
+StatusFlag RingCluster::ScatterAgent::create(ProcessingRulesPtr rp, ProgressEventsMI other,
+                                             Handle& handle, EventProgressAgent **agent_ptr) {
+    uint32_t version = handle.create_conversation_version();
+    auto iter = handle.create_progress(
+        std::make_unique<ScatterAgent>(version, std::move(rp), other));
+
+    auto& [send, receive, cluster_size] = handle.cluster_data<RingClusterData>();
+    auto& self = static_cast<ScatterAgent&>(*iter->second);
+    *agent_ptr = &self;
+    self.serial = cluster_size;
+    self._self = iter;
+
+    MetaData meta = self.create_meta();
+    meta.stage = A_Scatter::send_rule;
+    StatusFlag flag = handle.send_progress_message(version, send, meta, self.rule);
+    TDCF_CHECK_SUCCESS(flag)
+
+    return StatusFlag::Success;
+}
+
+StatusFlag RingCluster::ScatterAgent::handle_event(const MetaData& meta,
+                                                   Variant& data, Handle& handle) {
+    assert(meta.operation_type == OperationType::Scatter);
+    if (meta.stage == Public_Scatter::agent_receive) {
+        return scatter_data(std::get<DataPtr>(data), handle);
+    }
+    if (meta.stage == A_Scatter::scatter_data) {
+        return send_data(std::get<DataSet>(data), handle);
+    }
+    if (meta.stage == A_Scatter::finish_ack) {
+        return close(handle);
+    }
+    TDCF_RAISE_ERROR(meta.stage error type)
+}
+
+StatusFlag RingCluster::ScatterAgent::proxy_event(const MetaData& meta,
+                                                  Variant& data, Handle& handle) {
+    return handle_event(meta, data, handle);
+}
+
+StatusFlag RingCluster::ScatterAgent::close(Handle& handle) const {
+    MetaData meta = create_meta();
+    meta.stage = Public_Scatter::agent_finish;
+    handle.create_processor_event(_other, meta, nullptr);
+    return StatusFlag::EventEnd;
 }

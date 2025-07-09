@@ -3,10 +3,13 @@
 //
 
 #include <tdcf/base/Errors.hpp>
+#include <tdcf/base/types/Star.hpp>
 #include <tdcf/handle/Handle.hpp>
 #include <tdcf/node/agents/star/StarAgent.hpp>
 
 using namespace tdcf;
+
+using namespace tdcf::star;
 
 StarAgent::AllReduce::AllReduce(uint32_t version, ProcessingRulesPtr rp) :
     EventProgress(OperationType::AllReduce, ProgressType::NodeRoot, version, std::move(rp)) {}
@@ -14,7 +17,7 @@ StarAgent::AllReduce::AllReduce(uint32_t version, ProcessingRulesPtr rp) :
 StatusFlag StarAgent::AllReduce::create(uint32_t version, const MetaData& meta,
                                         ProcessingRulesPtr rp, Handle& handle) {
     assert(meta.operation_type == OperationType::AllReduce);
-    assert(meta.stage == NodeAgentAllReduce::get_rule);
+    assert(meta.stage == N_AllReduce::get_rule);
 
     auto iter = handle.create_progress(std::make_unique<AllReduce>(version, std::move(rp)));
 
@@ -23,7 +26,7 @@ StatusFlag StarAgent::AllReduce::create(uint32_t version, const MetaData& meta,
 
     MetaData new_meta = self.create_meta();
     if (!handle.agent_factory) {
-        new_meta.stage = NodeAgentAllReduce::acquire_data1;
+        new_meta.stage = Public_AllReduce::node_acquire;
         handle.acquire_data(iter, new_meta, self.rule);
         return StatusFlag::Success;
     }
@@ -39,13 +42,13 @@ StatusFlag StarAgent::AllReduce::create(uint32_t version, const MetaData& meta,
 StatusFlag StarAgent::AllReduce::handle_event(const MetaData& meta,
                                               Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::AllReduce);
-    if (meta.stage == NodeAgentAllReduce::acquire_data1) {
+    if (meta.stage == Public_AllReduce::node_acquire) {
         return acquire_data1(std::get<DataPtr>(data), handle);
     }
-    if (meta.stage == NodeAgentAllReduce::acquire_data2) {
+    if (meta.stage == N_AllReduce::acquire_data2) {
         return acquire_data2(std::get<DataPtr>(data), handle);
     }
-    if (meta.stage == NodeAgentAllReduce::finish_ack) {
+    if (meta.stage == Public_AllReduce::node_finish_ack) {
         return close(handle);
     }
     TDCF_RAISE_ERROR(meta.stage error type)
@@ -53,9 +56,10 @@ StatusFlag StarAgent::AllReduce::handle_event(const MetaData& meta,
 
 StatusFlag StarAgent::AllReduce::acquire_data1(DataPtr& data, Handle& handle) const {
     MetaData meta = create_meta();
-    meta.stage = NodeAgentAllReduce::send_data1;
+    meta.stage = N_AllReduce::send_data1;
     StatusFlag flag = handle.send_progress_message(version, handle.agent_data<IdentityPtr>(), meta, data);
-    return flag;
+    TDCF_CHECK_SUCCESS(flag)
+    return StatusFlag::Success;
 }
 
 StatusFlag StarAgent::AllReduce::acquire_data2(DataPtr& data, Handle& handle) const {
@@ -64,19 +68,16 @@ StatusFlag StarAgent::AllReduce::acquire_data2(DataPtr& data, Handle& handle) co
         return close(handle);
     }
     MetaData meta = create_meta();
-    meta.stage = NodeAgentAllReduce::send_data2;
+    meta.stage = Public_AllReduce::node_store;
     Variant variant(std::move(data));
     StatusFlag flag = _agent->proxy_event(meta, variant, handle);
-    if (flag != StatusFlag::Success) {
-        close(handle);
-        return flag;
-    }
+    TDCF_CHECK_SUCCESS(flag)
     return StatusFlag::Success;
 }
 
 StatusFlag StarAgent::AllReduce::close(Handle& handle) const {
     MetaData meta = create_meta();
-    meta.stage = NodeAgentAllReduce::finish;
+    meta.stage = N_AllReduce::finish;
     StatusFlag flag = handle.send_progress_message(version, handle.agent_data<IdentityPtr>(), meta, nullptr);
     TDCF_CHECK_SUCCESS(flag)
     return StatusFlag::EventEnd;

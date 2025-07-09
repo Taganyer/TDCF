@@ -3,10 +3,13 @@
 //
 
 #include <tdcf/base/Errors.hpp>
+#include <tdcf/base/types/Star.hpp>
 #include <tdcf/handle/Handle.hpp>
 #include <tdcf/node/agents/star/StarAgent.hpp>
 
 using namespace tdcf;
+
+using namespace tdcf::star;
 
 StarAgent::Scatter::Scatter(uint32_t version, ProcessingRulesPtr rp) :
     EventProgress(OperationType::Scatter, ProgressType::NodeRoot, version, std::move(rp)) {}
@@ -42,7 +45,7 @@ StatusFlag StarAgent::Scatter::handle_event(const MetaData& meta, Variant& data,
         return agent_store(data, handle);
     }
     /// 此时 _agent 指向的对象已销毁。
-    if (meta.stage == N_Scatter::finish_ack) {
+    if (meta.stage == Public_Scatter::node_finish_ack) {
         return close(handle);
     }
     TDCF_RAISE_ERROR(meta.stage error type)
@@ -50,7 +53,7 @@ StatusFlag StarAgent::Scatter::handle_event(const MetaData& meta, Variant& data,
 
 StatusFlag StarAgent::Scatter::agent_store(Variant& data, Handle& handle) const {
     MetaData meta = create_meta();
-    meta.stage = N_Scatter::send_data;
+    meta.stage = Public_Scatter::node_store;
     return _agent->proxy_event(meta, data, handle);
 }
 

@@ -36,22 +36,21 @@ void CommunicatorHandle::disconnect(const IdentityPtr& id) const {
 }
 
 uint32_t CommunicatorHandle::create_conversation_version() {
-    uint32_t ret = _version.version;
     ++_version;
-    return ret;
+    while (_receive.find(_version.version) != _receive.end()
+        || _send.find(_version.version) != _send.end()) {
+        ++_version;
+    }
+    return _version.version;
 }
 
 void CommunicatorHandle::close_conversation(uint32_t version) {
-    Key key(version, nullptr);
-    auto iter = _send.lower_bound(key);
-    assert(iter != _send.end());
-    while (iter != _send.end() && iter->first.first == version) {
-        auto [k, v] = *iter;
-        Key rk(v, k.second);
-        auto size = _receive.erase(rk);
-        assert(size == 1);
-        iter = _send.erase(iter);
-    }
+    auto send_iter = _send.find(version);
+    assert(send_iter != _send.end());
+    auto receive_iter = _receive.find(send_iter->second);
+    assert(receive_iter != _receive.end());
+    _send.erase(send_iter);
+    _receive.erase(receive_iter);
 }
 
 StatusFlag CommunicatorHandle::get_communicator_events() {
@@ -68,10 +67,8 @@ bool CommunicatorHandle::get_message(MessageEvent& message) {
     while (!_receive_queue.empty()) {
         auto [type, id, meta, data] = std::move(_receive_queue.front());
         _receive_queue.pop();
-        if (meta.link_mark == LinkMark::Create) {
-            meta.version = create_receive_link(meta.version, id);
-        } else if (meta.link_mark == LinkMark::Info) {
-            if (!receive_transition(id, meta)) continue;
+        if (meta.link_mark != LinkMark::Null) {
+            receive_transition(meta);
         }
         message = { type, std::move(id), meta, std::move(data) };
         return true;
@@ -88,7 +85,7 @@ StatusFlag CommunicatorHandle::send_message(const IdentityPtr& target,
 
 StatusFlag CommunicatorHandle::send_progress_message(uint32_t version, const IdentityPtr& target,
                                                      MetaData meta, SerializablePtr message) {
-    send_transition(version, target, meta);
+    send_transition(version, meta);
     StatusFlag flag = send(target, meta, std::move(message));
     return flag;
 }
@@ -124,44 +121,42 @@ StatusFlag CommunicatorHandle::send(const IdentityPtr& target,
     return StatusFlag::Success;
 }
 
-void CommunicatorHandle::create_send_link(uint32_t version, const IdentityPtr& to) {
-    Key key(version, to);
-    auto [i, success] = _send.emplace(key, version);
+void CommunicatorHandle::create_send_link(uint32_t version) {
+    auto [i, success] = _send.emplace(version, version);
     assert(success);
-    auto [ii, ss] = _receive.emplace(key, version);
+    auto [ii, ss] = _receive.emplace(version, version);
     assert(ss);
 }
 
-uint32_t CommunicatorHandle::create_receive_link(uint32_t from_version, const IdentityPtr& from) {
+uint32_t CommunicatorHandle::create_receive_link(uint32_t from_version) {
     uint32_t version = create_conversation_version();
-    Key key(from_version, from);
-    auto [i, success] = _receive.emplace(key, version);
+    auto [i, success] = _receive.emplace(from_version, version);
     assert(success);
-    key.first = version;
-    auto [ii, ss] = _send.emplace(key, from_version);
+    auto [ii, ss] = _send.emplace(version, from_version);
     assert(ss);
     return version;
 }
 
-void CommunicatorHandle::send_transition(uint32_t version, const IdentityPtr& to, MetaData& meta) {
-    Key key(version, to);
-    auto iter = _send.find(key);
+void CommunicatorHandle::send_transition(uint32_t version, MetaData& meta) {
+    auto iter = _send.find(version);
     if (iter != _send.end()) {
         meta.version = iter->second;
         meta.link_mark = LinkMark::Info;
     } else {
-        create_send_link(version, to);
+        create_send_link(version);
         meta.version = version;
         meta.link_mark = LinkMark::Create;
     }
 }
 
-bool CommunicatorHandle::receive_transition(const IdentityPtr& from, MetaData& meta) const {
-    Key key(meta.version, from);
-    auto iter = _receive.find(key);
-    if (iter == _receive.end()) return false;
-    meta.version = iter->second;
-    return true;
+void CommunicatorHandle::receive_transition(MetaData& meta) {
+    auto iter = _receive.find(meta.version);
+    if (iter == _receive.end()) {
+        meta.version = create_receive_link(meta.version);
+        meta.link_mark = LinkMark::Create;
+    } else {
+        meta.version = iter->second;
+    }
 }
 
 CommunicatorHandle::MessageEvent::MessageEvent(CommunicatorEvent::Type type, IdentityPtr id,

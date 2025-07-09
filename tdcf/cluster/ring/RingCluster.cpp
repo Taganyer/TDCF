@@ -26,24 +26,15 @@ StatusFlag RingCluster::RingAgentFactory::type(const ProcessingRulesPtr& rule, P
     RingClusterFun(fun, cluster_class) \
     RingAgentFactoryFun(fun, agent_class)
 
-#define Empty(fun, cluster_class, agent_class) \
-StatusFlag RingCluster::fun(ProcessingRulesPtr rule_ptr) { \
-    return StatusFlag::Success; \
-} \
-StatusFlag RingCluster::RingAgentFactory::fun(const ProcessingRulesPtr& rule, ProgressEventsMI iter, \
-    Handle& handle, EventProgressAgent **agent_ptr) { \
-    return BroadcastAgent::create(rule, iter, handle, agent_ptr); \
-}
-
 RingFunAll(broadcast, Broadcast, BroadcastAgent)
 
-Empty(scatter, Scatter, ScatterAgent)
+RingFunAll(scatter, Scatter, ScatterAgent)
 
-Empty(reduce, Reduce, ReduceAgent)
+RingFunAll(reduce, Reduce, ReduceAgent)
 
-Empty(all_reduce, AllReduce, AllReduceAgent)
+RingFunAll(all_reduce, AllReduce, AllReduceAgent)
 
-Empty(reduce_scatter, ReduceScatter, ReduceScatterAgent)
+RingFunAll(reduce_scatter, ReduceScatter, ReduceScatterAgent)
 
 using IdentityList = std::vector<IdentityPtr>;
 
@@ -59,25 +50,35 @@ void RingCluster::cluster_connect_children(const IdentitySet& child_nodes) {
 void RingCluster::cluster_start() {
     auto& list = _handle.cluster_data<IdentityList>();
     MetaData meta;
-    meta.operation_type = OperationType::Init;
+    meta.operation_type = OperationType::AgentCreate;
+    meta.data1[0] = ClusterType::ring;
+    meta.stage = Ring::start;
     meta.serial = list.size();
+    StatusFlag flag = _handle.send_message(*list.begin(), meta, create_node_data());
+    TDCF_CHECK_SUCCESS(flag)
+
+    meta.operation_type = OperationType::Init;
     for (auto iter = ++list.begin(); iter != list.end(); ++iter) {
-        _handle.send_message(*list.begin(), meta, *iter);
+        flag = _handle.send_message(*list.begin(), meta, *iter);
+        TDCF_CHECK_SUCCESS(flag)
         --meta.serial;
     }
     _handle.send_message(*list.begin(), meta, _handle.self_identity());
-    _handle.create_cluster_data<RingClusterData>(*list.begin(), nullptr, list.size());
-    auto receive = _handle.accept();
-    _handle.cluster_data<RingClusterData>().receive = receive;
-    _handle.agent_factory = std::unique_ptr<RingAgentFactory>();
+
+    if (list.size() > 1) {
+        auto receive = _handle.accept();
+        _handle.create_cluster_data<RingClusterData>(*list.begin(), receive, list.size());
+    } else {
+        _handle.create_cluster_data<RingClusterData>(*list.begin(), *list.begin(), list.size());
+    }
+    _handle.agent_factory = std::make_unique<RingAgentFactory>();
+    assert(_handle.agent_factory);
 }
 
 void RingCluster::cluster_end() {
-    MetaData meta;
-    meta.operation_type = OperationType::Close;
-    meta.stage = Ring::close;
     auto& [send, receive, cluster_size] = _handle.cluster_data<RingClusterData>();
-    _handle.send_message(send, meta, nullptr);
+    _handle.disconnect(send);
+    if (cluster_size == 1) return;
     while (receive) {
         StatusFlag flag = handle_a_loop();
         TDCF_CHECK_SUCCESS(flag)

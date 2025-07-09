@@ -3,9 +3,12 @@
 //
 
 #include <tdcf/base/Errors.hpp>
+#include <tdcf/base/types/Star.hpp>
 #include <tdcf/cluster/star/StarCluster.hpp>
 
 using namespace tdcf;
+
+using namespace tdcf::star;
 
 StarCluster::AllReduce::AllReduce(ProgressType type, uint32_t version, ProcessingRulesPtr rp) :
     EventProgress(OperationType::AllReduce, type, version, std::move(rp)) {}
@@ -21,10 +24,10 @@ StatusFlag StarCluster::AllReduce::create(ProcessingRulesPtr rp, Handle& handle)
     self._get.resize(handle.cluster_data<IdentityList>().size() + 1);
 
     MetaData meta = self.create_meta();
-    meta.stage = ClusterAllReduce::acquire_data;
+    meta.stage = C_AllReduce::acquire_data;
     handle.acquire_data(iter, meta, self.rule);
 
-    meta.stage = ClusterAllReduce::send_rule;
+    meta.stage = C_AllReduce::send_rule;
     uint32_t serial = 0;
     for (auto& id : handle.cluster_data<IdentityList>()) {
         meta.serial = ++serial;
@@ -38,13 +41,13 @@ StatusFlag StarCluster::AllReduce::create(ProcessingRulesPtr rp, Handle& handle)
 StatusFlag StarCluster::AllReduce::handle_event(const MetaData& meta,
                                                 Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::AllReduce);
-    if (meta.stage == ClusterAllReduce::acquire_data) {
+    if (meta.stage == C_AllReduce::acquire_data) {
         return acquire_data(meta, std::get<DataPtr>(data), handle);
     }
-    if (meta.stage == ClusterAllReduce::reduce_data) {
+    if (meta.stage == C_AllReduce::reduce_data) {
         return send_data(std::get<DataPtr>(data), handle);
     }
-    if (meta.stage == ClusterAllReduce::finish_ack) {
+    if (meta.stage == C_AllReduce::finish_ack) {
         ++_respond;
         if (_respond == handle.cluster_data<IdentityList>().size()) {
             rule->finish_callback();
@@ -63,7 +66,7 @@ StatusFlag StarCluster::AllReduce::acquire_data(const MetaData& meta,
     ++_received;
     if (_received == handle.cluster_data<IdentityList>().size() + 1) {
         MetaData new_meta = create_meta();
-        new_meta.stage = ClusterAllReduce::reduce_data;
+        new_meta.stage = C_AllReduce::reduce_data;
         handle.reduce_data(_self, new_meta, rule, _set);
     }
     return StatusFlag::Success;
@@ -72,7 +75,7 @@ StatusFlag StarCluster::AllReduce::acquire_data(const MetaData& meta,
 StatusFlag StarCluster::AllReduce::send_data(DataPtr& data, Handle& handle) {
     _set.clear();
     MetaData meta = create_meta();
-    meta.stage = ClusterAllReduce::send_data;
+    meta.stage = C_AllReduce::send_data;
     handle.store_data(rule, data);
     for (auto& id : handle.cluster_data<IdentityList>()) {
         StatusFlag flag = handle.send_progress_message(version, id, meta, data);
@@ -97,10 +100,10 @@ StatusFlag StarCluster::AllReduceAgent::create(ProcessingRulesPtr rp, ProgressEv
     self._get.resize(handle.cluster_data<IdentityList>().size() + 1);
 
     MetaData meta = self.create_meta();
-    meta.stage = AgentAllReduce::acquire_data1;
+    meta.stage = A_AllReduce::acquire_data1;
     handle.acquire_data(iter, meta, self.rule);
 
-    meta.stage = AgentAllReduce::send_rule;
+    meta.stage = A_AllReduce::send_rule;
     uint32_t serial = 0;
     for (auto& id : handle.cluster_data<IdentityList>()) {
         meta.serial = ++serial;
@@ -114,16 +117,16 @@ StatusFlag StarCluster::AllReduceAgent::create(ProcessingRulesPtr rp, ProgressEv
 StatusFlag StarCluster::AllReduceAgent::handle_event(const MetaData& meta,
                                                      Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::AllReduce);
-    if (meta.stage == AgentAllReduce::acquire_data1) {
+    if (meta.stage == A_AllReduce::acquire_data1) {
         return acquire_data(meta, std::get<DataPtr>(data), handle);
     }
-    if (meta.stage == AgentAllReduce::reduce_data) {
+    if (meta.stage == A_AllReduce::reduce_data) {
         return reduce_data(std::get<DataPtr>(data), handle);
     }
-    if (meta.stage == AgentAllReduce::acquire_data2) {
+    if (meta.stage == Public_AllReduce::agent_receive) {
         return send_data(std::get<DataPtr>(data), handle);
     }
-    if (meta.stage == AgentAllReduce::finish_ack) {
+    if (meta.stage == A_AllReduce::finish_ack) {
         ++_respond;
         if (_respond == handle.cluster_data<IdentityList>().size()) {
             return close(handle);
@@ -141,14 +144,14 @@ StatusFlag StarCluster::AllReduceAgent::proxy_event(const MetaData& meta,
 StatusFlag StarCluster::AllReduceAgent::reduce_data(DataPtr& data, Handle& handle) {
     _set.clear();
     MetaData meta = create_meta();
-    meta.stage = AgentAllReduce::send_data;
+    meta.stage = Public_AllReduce::agent_send;
     handle.create_processor_event(_other, meta, std::static_pointer_cast<Serializable>(data));
     return StatusFlag::Success;
 }
 
 StatusFlag StarCluster::AllReduceAgent::close(Handle& handle) const {
     MetaData meta = create_meta();
-    meta.stage = AgentAllReduce::finish;
+    meta.stage = Public_AllReduce::agent_finish;
     handle.create_processor_event(_other, meta, nullptr);
     return StatusFlag::EventEnd;
 }

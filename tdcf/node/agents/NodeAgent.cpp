@@ -6,6 +6,7 @@
 #include <tdcf/handle/Handle.hpp>
 #include <tdcf/node/agents/NodeAgent.hpp>
 #include <tdcf/node/agents/star/StarAgent.hpp>
+#include <tdcf/node/agents/ring/RingAgent.hpp>
 
 using namespace tdcf;
 
@@ -15,6 +16,12 @@ StatusFlag NodeAgent::deserialize_NodeAgent(const MetaData& meta, SerializablePt
     assert(meta.operation_type == OperationType::AgentCreate);
     if (meta.data1[0] == ClusterType::star) {
         auto ptr = std::make_shared<StarAgent>();
+        ptr->deserialize(buffer, buffer_size);
+        buffer_ptr = std::move(ptr);
+        return StatusFlag::Success;
+    }
+    if (meta.data1[0] == ClusterType::ring) {
+        auto ptr = std::make_shared<RingAgent>();
         ptr->deserialize(buffer, buffer_size);
         buffer_ptr = std::move(ptr);
         return StatusFlag::Success;
@@ -37,7 +44,6 @@ uint32_t NodeAgent::serialize_size() const {
 StatusFlag NodeAgent::handle_received_message(const IdentityPtr& from_id, const MetaData& meta,
                                               Variant& variant, Handle& handle) {
     if (meta.link_mark == LinkMark::Create) {
-        assert(from_id->equal_to(*handle.agent_data<IdentityPtr>()));
         assert(!handle.check_progress(handle.find_progress(meta.version)));
 
         auto& data_ptr = std::get<SerializablePtr>(variant);

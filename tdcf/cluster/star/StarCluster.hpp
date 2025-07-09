@@ -229,6 +229,7 @@ namespace tdcf {
             StatusFlag close(Handle& handle) const;
 
             ProgressEventsMI _other;
+
         };
 
     };

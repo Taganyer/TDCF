@@ -3,9 +3,12 @@
 //
 
 #include <tdcf/base/Errors.hpp>
+#include <tdcf/base/types/Ring.hpp>
 #include <tdcf/cluster/ring/RingCluster.hpp>
 
 using namespace tdcf;
+
+using namespace tdcf::ring;
 
 RingCluster::Reduce::Reduce(ProgressType type, uint32_t version, ProcessingRulesPtr rp) :
     EventProgress(OperationType::Reduce, type, version, std::move(rp)) {}
@@ -33,11 +36,10 @@ StatusFlag RingCluster::Reduce::create(ProcessingRulesPtr rp, Handle& handle) {
 StatusFlag RingCluster::Reduce::handle_event(const MetaData& meta,
                                              Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Reduce);
-    if (meta.stage == C_Reduce::acquire_data && !get) {
-        get = true;
+    if (meta.stage == C_Reduce::acquire_data) {
         return acquire_data(std::get<DataPtr>(data), handle);
     }
-    if (meta.stage == C_Reduce::acquire_data) {
+    if (meta.stage == C_Reduce::get_data) {
         handle.store_data(rule, std::get<DataPtr>(data));
         rule->finish_callback();
         return StatusFlag::EventEnd;
@@ -48,7 +50,7 @@ StatusFlag RingCluster::Reduce::handle_event(const MetaData& meta,
 StatusFlag RingCluster::Reduce::acquire_data(DataPtr& data, Handle& handle) const {
     auto& [send, receive, cluster_size] = handle.cluster_data<RingClusterData>();
     MetaData meta = create_meta();
-    meta.stage = N_Reduce::acquire_data;
+    meta.stage = C_Reduce::send_data;
     StatusFlag flag = handle.send_progress_message(version, send, meta, data);
     TDCF_CHECK_SUCCESS(flag)
     return StatusFlag::Success;
@@ -73,7 +75,7 @@ StatusFlag RingCluster::ReduceAgent::create(ProcessingRulesPtr rp, ProgressEvent
     meta.stage = A_Reduce::acquire_data;
     handle.acquire_data(iter, meta, self.rule);
 
-    meta.stage = C_Reduce::send_rule;
+    meta.stage = A_Reduce::send_rule;
     StatusFlag flag = handle.send_progress_message(version, send, meta, self.rule);
     TDCF_CHECK_SUCCESS(flag)
 
@@ -83,11 +85,10 @@ StatusFlag RingCluster::ReduceAgent::create(ProcessingRulesPtr rp, ProgressEvent
 StatusFlag RingCluster::ReduceAgent::handle_event(const MetaData& meta,
                                                   Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Reduce);
-    if (meta.stage == A_Reduce::acquire_data && !get) {
-        get = true;
+    if (meta.stage == A_Reduce::acquire_data) {
         return acquire_data(std::get<DataPtr>(data), handle);
     }
-    if (meta.stage == A_Reduce::acquire_data) {
+    if (meta.stage == A_Reduce::get_data) {
         return close(std::get<DataPtr>(data), handle);
     }
     TDCF_RAISE_ERROR(meta.stage error type)
@@ -100,7 +101,7 @@ StatusFlag RingCluster::ReduceAgent::proxy_event(const MetaData& meta,
 
 StatusFlag RingCluster::ReduceAgent::close(DataPtr& data, Handle& handle) const {
     MetaData meta = create_meta();
-    meta.stage = A_Reduce::send_data;
+    meta.stage = Public_Reduce::agent_send;
     handle.create_processor_event(_other, meta, std::static_pointer_cast<Serializable>(data));
     return StatusFlag::EventEnd;
 }

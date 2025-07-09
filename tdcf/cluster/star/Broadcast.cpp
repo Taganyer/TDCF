@@ -3,9 +3,12 @@
 //
 
 #include <tdcf/base/Errors.hpp>
+#include <tdcf/base/types/Star.hpp>
 #include <tdcf/cluster/star/StarCluster.hpp>
 
 using namespace tdcf;
+
+using namespace tdcf::star;
 
 StarCluster::Broadcast::Broadcast(ProgressType type, uint32_t version, ProcessingRulesPtr rp) :
     EventProgress(OperationType::Broadcast, type, version, std::move(rp)) {}
@@ -85,7 +88,7 @@ StatusFlag StarCluster::BroadcastAgent::create(ProcessingRulesPtr rp, ProgressEv
 StatusFlag StarCluster::BroadcastAgent::handle_event(const MetaData& meta,
                                                      Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Broadcast);
-    if (meta.stage == A_Broadcast::get_data) {
+    if (meta.stage == Public_Broadcast::agent_receive) {
         assert(_sent == 0);
         handle.store_data(rule, std::get<DataPtr>(data));
         return send_data(std::get<DataPtr>(data), handle);
@@ -107,7 +110,7 @@ StatusFlag StarCluster::BroadcastAgent::proxy_event(const MetaData& meta,
 
 StatusFlag StarCluster::BroadcastAgent::close(Handle& handle) const {
     MetaData meta = create_meta();
-    meta.stage = A_Broadcast::finish;
+    meta.stage = Public_Broadcast::agent_finish;
     handle.create_processor_event(_other, meta, nullptr);
     return StatusFlag::EventEnd;
 }

@@ -3,10 +3,13 @@
 //
 
 #include <tdcf/base/Errors.hpp>
+#include <tdcf/base/types/Star.hpp>
 #include <tdcf/handle/Handle.hpp>
 #include <tdcf/node/agents/star/StarAgent.hpp>
 
 using namespace tdcf;
+
+using namespace tdcf::star;
 
 StarAgent::Reduce::Reduce(uint32_t version, ProcessingRulesPtr rp) :
     EventProgress(OperationType::Reduce, ProgressType::NodeRoot, version, std::move(rp)) {}
@@ -22,7 +25,7 @@ StatusFlag StarAgent::Reduce::create(uint32_t version, const MetaData& meta,
 
     MetaData new_meta = self.create_meta();
     if (!handle.agent_factory) {
-        new_meta.stage = N_Reduce::acquire_data;
+        new_meta.stage = Public_Reduce::node_acquire;
         handle.acquire_data(iter, new_meta, self.rule);
         return StatusFlag::Success;
     }
@@ -39,7 +42,7 @@ StatusFlag StarAgent::Reduce::create(uint32_t version, const MetaData& meta,
 StatusFlag StarAgent::Reduce::handle_event(const MetaData& meta,
                                            Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Reduce);
-    if (meta.stage == N_Reduce::acquire_data) {
+    if (meta.stage == Public_Reduce::node_acquire) {
         return close(std::get<DataPtr>(data), handle);
     }
     TDCF_RAISE_ERROR(meta.stage error type)

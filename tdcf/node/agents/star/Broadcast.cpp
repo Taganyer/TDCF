@@ -3,10 +3,13 @@
 //
 
 #include <tdcf/base/Errors.hpp>
+#include <tdcf/base/types/Star.hpp>
 #include <tdcf/handle/Handle.hpp>
 #include <tdcf/node/agents/star/StarAgent.hpp>
 
 using namespace tdcf;
+
+using namespace tdcf::star;
 
 StarAgent::Broadcast::Broadcast(uint32_t version, ProcessingRulesPtr rp) :
     EventProgress(OperationType::Broadcast, ProgressType::NodeRoot, version, std::move(rp)) {}
@@ -43,7 +46,7 @@ StatusFlag StarAgent::Broadcast::handle_event(const MetaData& meta,
         return agent_store(data, handle);
     }
     /// 此时 _agent 指向的对象已销毁。
-    if (meta.stage == N_Broadcast::finish_ack) {
+    if (meta.stage == Public_Broadcast::node_finish_ack) {
         return close(handle);
     }
     TDCF_RAISE_ERROR(meta.stage error type)
@@ -51,7 +54,7 @@ StatusFlag StarAgent::Broadcast::handle_event(const MetaData& meta,
 
 StatusFlag StarAgent::Broadcast::agent_store(Variant& data, Handle& handle) const {
     MetaData meta = create_meta();
-    meta.stage = N_Broadcast::send_data;
+    meta.stage = Public_Broadcast::node_store;
     return _agent->proxy_event(meta, data, handle);
 }
 

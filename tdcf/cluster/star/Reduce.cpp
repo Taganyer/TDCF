@@ -3,9 +3,12 @@
 //
 
 #include <tdcf/base/Errors.hpp>
+#include <tdcf/base/types/Star.hpp>
 #include <tdcf/cluster/star/StarCluster.hpp>
 
 using namespace tdcf;
+
+using namespace tdcf::star;
 
 StarCluster::Reduce::Reduce(ProgressType type, uint32_t version, ProcessingRulesPtr rp) :
     EventProgress(OperationType::Reduce, type, version, std::move(rp)) {}
@@ -101,7 +104,7 @@ StatusFlag StarCluster::ReduceAgent::proxy_event(const MetaData& meta,
 
 StatusFlag StarCluster::ReduceAgent::close(DataPtr& data, Handle& handle) const {
     MetaData meta = create_meta();
-    meta.stage = A_Reduce::send_data;
+    meta.stage = Public_Reduce::agent_send;
     handle.create_processor_event(_other, meta, std::static_pointer_cast<Serializable>(data));
     return StatusFlag::EventEnd;
 }

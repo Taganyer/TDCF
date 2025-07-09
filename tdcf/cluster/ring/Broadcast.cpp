@@ -3,9 +3,12 @@
 //
 
 #include <tdcf/base/Errors.hpp>
+#include <tdcf/base/types/Ring.hpp>
 #include <tdcf/cluster/ring/RingCluster.hpp>
 
 using namespace tdcf;
+
+using namespace tdcf::ring;
 
 RingCluster::Broadcast::Broadcast(ProgressType type, uint32_t version, ProcessingRulesPtr rp) :
     EventProgress(OperationType::Broadcast, type, version, std::move(rp)) {}
@@ -38,7 +41,7 @@ StatusFlag RingCluster::Broadcast::handle_event(const MetaData& meta, Variant& d
     if (meta.stage == C_Broadcast::finish_ack) {
         assert(meta.serial == 0);
         rule->finish_callback();
-        return StatusFlag::Success;
+        return StatusFlag::EventEnd;
     }
     TDCF_RAISE_ERROR(meta.stage error type)
 }
@@ -48,6 +51,9 @@ StatusFlag RingCluster::Broadcast::send_data(DataPtr& data, Handle& handle) cons
     meta.stage = C_Broadcast::send_data;
     auto& send = handle.cluster_data<RingClusterData>().send;
     StatusFlag flag = handle.send_progress_message(version, send, meta, data);
+    TDCF_CHECK_SUCCESS(flag)
+    meta.stage = C_Broadcast::finish_ack;
+    flag = handle.send_progress_message(version, send, meta, nullptr);
     TDCF_CHECK_SUCCESS(flag)
     return StatusFlag::Success;
 }
@@ -78,7 +84,7 @@ StatusFlag RingCluster::BroadcastAgent::create(ProcessingRulesPtr rp, ProgressEv
 StatusFlag RingCluster::BroadcastAgent::handle_event(const MetaData& meta,
                                                      Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Broadcast);
-    if (meta.stage == A_Broadcast::get_data) {
+    if (meta.stage == Public_Broadcast::agent_receive) {
         handle.store_data(rule, std::get<DataPtr>(data));
         return send_data(std::get<DataPtr>(data), handle);
     }
@@ -96,7 +102,7 @@ StatusFlag RingCluster::BroadcastAgent::proxy_event(const MetaData& meta,
 
 StatusFlag RingCluster::BroadcastAgent::close(Handle& handle) const {
     MetaData meta = create_meta();
-    meta.stage = A_Broadcast::finish;
+    meta.stage = Public_Broadcast::agent_finish;
     handle.create_processor_event(_other, meta, nullptr);
     return StatusFlag::EventEnd;
 }

@@ -3,9 +3,12 @@
 //
 
 #include <tdcf/base/Errors.hpp>
+#include <tdcf/base/types/Star.hpp>
 #include <tdcf/cluster/star/StarCluster.hpp>
 
 using namespace tdcf;
+
+using namespace tdcf::star;
 
 StarCluster::Scatter::Scatter(ProgressType type, uint32_t version, ProcessingRulesPtr rp) :
     EventProgress(OperationType::Scatter, type, version, std::move(rp)) {}
@@ -101,7 +104,7 @@ StatusFlag StarCluster::ScatterAgent::create(ProcessingRulesPtr rp, ProgressEven
 StatusFlag StarCluster::ScatterAgent::handle_event(const MetaData& meta,
                                                    Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Scatter);
-    if (meta.stage == A_Scatter::get_data) {
+    if (meta.stage == Public_Scatter::agent_receive) {
         assert(_sent == 0);
         return scatter_data(std::get<DataPtr>(data), handle);
     }
@@ -126,7 +129,7 @@ StatusFlag StarCluster::ScatterAgent::proxy_event(const MetaData& meta,
 
 StatusFlag StarCluster::ScatterAgent::close(Handle& handle) const {
     MetaData meta = create_meta();
-    meta.stage = A_Scatter::finish;
+    meta.stage = Public_Scatter::agent_finish;
     handle.create_processor_event(_other, meta, nullptr);
     return StatusFlag::EventEnd;
 }

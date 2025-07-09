@@ -14,13 +14,16 @@ void RingAgent::init(const IdentityPtr& from_id, const MetaData& meta, Handle& h
 
     uint32_t serial = meta.serial;
     while (serial) {
-        StatusFlag flag = handle.get_communicator_events();
-        TDCF_CHECK_SUCCESS(flag)
         Handle::MessageEvent event;
         while (serial && handle.get_message(event)) {
             assert(event.type == CommunicatorEvent::ReceivedMessage);
             connect_handle(event, handle);
             --serial;
+        }
+        StatusFlag flag = StatusFlag::CommunicatorGetEventsFurtherWaiting;
+        while (serial && flag == StatusFlag::CommunicatorGetEventsFurtherWaiting) {
+            flag = handle.get_communicator_events();
+            TDCF_CHECK_EXPR(flag != StatusFlag::CommunicatorGetEventsError)
         }
     }
 }
@@ -33,7 +36,9 @@ StatusFlag RingAgent::handle_disconnect(const IdentityPtr& id, Handle& handle) {
     auto& [send, receive, serial] = handle.agent_data<RingAgentData>();
     assert(receive->equal_to(*id));
     handle.disconnect(receive);
-    handle.disconnect(send);
+    if (!send->equal_to(*receive)) {
+        handle.disconnect(send);
+    }
     return StatusFlag::ClusterOffline;
 }
 
@@ -45,9 +50,14 @@ void RingAgent::connect_handle(Handle::MessageEvent& event, Handle& handle) {
     auto& ptr = std::get<SerializablePtr>(variant);
     if (!send) {
         send = std::dynamic_pointer_cast<Identity>(ptr);
-        handle.connect(send);
+        if (!send->equal_to(*receive)) {
+            handle.connect(send);
+        }
         if (meta.serial > 1) {
             meta.operation_type = OperationType::AgentCreate;
+            meta.data1[0] = ClusterType::ring;
+            meta.stage = Ring::start;
+            --meta.serial;
             handle.send_message(send, meta, std::make_shared<RingAgent>());
             meta.operation_type = OperationType::Init;
         }
@@ -62,14 +72,14 @@ StatusFlag RingAgent::create_progress(uint32_t version, const MetaData& meta,
     switch (meta.operation_type) {
         case OperationType::Broadcast:
             return Broadcast::create(version, meta, rule, handle);
-        // case OperationType::Scatter:
-        //     return Scatter::create(version, meta, rule, handle);
-        // case OperationType::Reduce:
-        //     return Reduce::create(version, meta, rule, handle);
-        // case OperationType::AllReduce:
-        //     return AllReduce::create(version, meta, rule, handle);
-        // case OperationType::ReduceScatter:
-        //     return ReduceScatter::create(version, meta, rule, handle);
+        case OperationType::Scatter:
+            return Scatter::create(version, meta, rule, handle);
+        case OperationType::Reduce:
+            return Reduce::create(version, meta, rule, handle);
+        case OperationType::AllReduce:
+            return AllReduce::create(version, meta, rule, handle);
+        case OperationType::ReduceScatter:
+            return ReduceScatter::create(version, meta, rule, handle);
         default:
             TDCF_RAISE_ERROR(error OperationType)
     }

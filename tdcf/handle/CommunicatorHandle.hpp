@@ -4,7 +4,6 @@
 #pragma once
 
 #include <map>
-#include <set>
 #include <tdcf/base/Version.hpp>
 #include <tdcf/detail/EventProgress.hpp>
 #include <tdcf/detail/MetaData.hpp>
@@ -45,19 +44,9 @@ namespace tdcf {
         [[nodiscard]] bool delayed_message(const IdentityPtr& target) const;
 
     private:
-        using Key = std::pair<uint32_t, IdentityPtr>;
-
-        struct Cmp {
-            bool operator()(const Key& lhs, const Key& rhs) const {
-                if (lhs.first != rhs.first) return lhs.first < rhs.first;
-                if (lhs.second && rhs.second) return lhs.second->less_than(*rhs.second);
-                return !lhs.second;
-            };
-        };
-
         CommunicatorPtr _communicator;
 
-        using TransverterMap = std::map<Key, uint32_t, Cmp>;
+        using TransverterMap = std::unordered_map<uint32_t, uint32_t>;
 
         TransverterMap _receive, _send;
 
@@ -74,13 +63,13 @@ namespace tdcf {
 
         StatusFlag send(const IdentityPtr& target, MetaData meta, SerializablePtr message);
 
-        void create_send_link(uint32_t version, const IdentityPtr& to);
+        void create_send_link(uint32_t version);
 
-        uint32_t create_receive_link(uint32_t from_version, const IdentityPtr& from);
+        uint32_t create_receive_link(uint32_t from_version);
 
-        void send_transition(uint32_t version, const IdentityPtr& to, MetaData& meta);
+        void send_transition(uint32_t version, MetaData& meta);
 
-        bool receive_transition(const IdentityPtr& from, MetaData& meta) const;
+        void receive_transition(MetaData& meta);
 
     public:
         struct MessageEvent {

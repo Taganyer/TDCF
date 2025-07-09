@@ -3,9 +3,12 @@
 //
 
 #include <tdcf/base/Errors.hpp>
+#include <tdcf/base/types/Ring.hpp>
 #include <tdcf/node/agents/ring/RingAgent.hpp>
 
 using namespace tdcf;
+
+using namespace tdcf::ring;
 
 RingAgent::Reduce::Reduce(uint32_t version, ProcessingRulesPtr rp) :
     EventProgress(OperationType::Reduce, ProgressType::NodeRoot, version, std::move(rp)) {}
@@ -15,7 +18,7 @@ StatusFlag RingAgent::Reduce::create(uint32_t version, const MetaData& meta,
     assert(meta.operation_type == OperationType::Reduce);
     assert(meta.stage == N_Reduce::get_rule);
 
-    auto& [send, receive, serial] = handle.cluster_data<RingAgentData>();
+    auto& [send, receive, serial] = handle.agent_data<RingAgentData>();
 
     auto iter = handle.create_progress(std::make_unique<Reduce>(version, std::move(rp)));
 
@@ -24,7 +27,7 @@ StatusFlag RingAgent::Reduce::create(uint32_t version, const MetaData& meta,
 
     MetaData new_meta = self.create_meta();
     if (serial != 1) {
-        new_meta.stage = C_Reduce::send_rule;
+        new_meta.stage = N_Reduce::send_rule;
         StatusFlag flag = StatusFlag::Success;
         flag = handle.send_progress_message(version, send, new_meta, self.rule);
         if (flag != StatusFlag::Success) {
@@ -34,7 +37,7 @@ StatusFlag RingAgent::Reduce::create(uint32_t version, const MetaData& meta,
     }
 
     if (!handle.agent_factory) {
-        new_meta.stage = N_Reduce::acquire_data;
+        new_meta.stage = Public_Reduce::node_acquire;
         handle.acquire_data(iter, new_meta, self.rule);
         return StatusFlag::Success;
     }
@@ -51,7 +54,7 @@ StatusFlag RingAgent::Reduce::create(uint32_t version, const MetaData& meta,
 StatusFlag RingAgent::Reduce::handle_event(const MetaData& meta,
                                            Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Reduce);
-    if (meta.stage == N_Reduce::acquire_data) {
+    if (meta.stage == N_Reduce::get_data || meta.stage == Public_Reduce::node_acquire) {
         return acquire_data(std::get<DataPtr>(data), handle);
     }
     if (meta.stage == N_Reduce::reduce_data) {
@@ -71,7 +74,7 @@ StatusFlag RingAgent::Reduce::acquire_data(DataPtr& data, Handle& handle) {
 }
 
 StatusFlag RingAgent::Reduce::close(DataPtr& data, Handle& handle) const {
-    auto& [send, receive, serial] = handle.cluster_data<RingAgentData>();
+    auto& [send, receive, serial] = handle.agent_data<RingAgentData>();
     MetaData meta = create_meta();
     meta.stage = N_Reduce::send_data;
     StatusFlag flag = handle.send_progress_message(version, send, meta, data);
