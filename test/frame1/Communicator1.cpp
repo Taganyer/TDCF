@@ -20,7 +20,7 @@ using namespace Base;
 
 bool Communicator1::connect(const IdentityPtr& target) {
     Lock l(_share->mutex);
-    uint32_t id = static_cast<Identity1&>(*target).id();
+    uint32_t id = static_cast<Identity1&>(*target).guid();
     Key k1 { id, _id }, k2 { _id, id };
     _share->connect.emplace(k1);
     auto [iter, success] = _share->message.emplace(k2, Value(receive_size));
@@ -46,7 +46,7 @@ IdentityPtr Communicator1::accept() {
 
 bool Communicator1::disconnect(const IdentityPtr& target) {
     Lock l(_share->mutex);
-    uint32_t id = static_cast<Identity1&>(*target).id();
+    uint32_t id = static_cast<Identity1&>(*target).guid();
     Key k { _id, id };
     auto size = _share->message.erase(k);
     assert(size == 1);
@@ -62,7 +62,7 @@ OperationFlag Communicator1::send_message(const IdentityPtr& target,
                                           const Message& message,
                                           const SerializablePtr& data) {
     Lock l(_share->mutex);
-    uint32_t id = static_cast<Identity1&>(*target).id();
+    uint32_t id = static_cast<Identity1&>(*target).guid();
     assert(_id != id);
     Key key(id, _id);
     auto iter = _share->message.find(key);

@@ -16,7 +16,7 @@ namespace tdcf {
     public:
         struct MessageEvent;
 
-        explicit CommunicatorHandle(CommunicatorPtr ptr);
+        explicit CommunicatorHandle(CommunicatorPtr ptr, Identity::Uid uid);
 
         ~CommunicatorHandle();
 
@@ -26,9 +26,9 @@ namespace tdcf {
 
         void disconnect(const IdentityPtr& id) const;
 
-        uint32_t create_conversation_version();
+        uint32_t create_progress_version();
 
-        void close_conversation(uint32_t version);
+        void close_progress(uint32_t version);
 
         StatusFlag get_communicator_events();
 
@@ -46,9 +46,24 @@ namespace tdcf {
     private:
         CommunicatorPtr _communicator;
 
-        using TransverterMap = std::unordered_map<uint32_t, uint32_t>;
+        using Uid = Identity::Uid;
 
-        TransverterMap _receive, _send;
+        using ID = std::pair<Uid, uint32_t>;
+
+        struct IDHash {
+            std::size_t operator()(const ID& id) const {
+                return std::hash<unsigned int>{}(id.first) ^
+                       std::hash<unsigned int>{}(id.second) << 1;
+            }
+        };
+
+        using RTransverterMap = std::unordered_map<ID, uint32_t, IDHash>;
+
+        using STransverterMap = std::unordered_map<uint32_t, ID>;
+
+        RTransverterMap _receive;
+
+        STransverterMap _send;
 
         using SendDelayMQ = std::map<IdentityPtr, std::queue<std::pair<MetaData, SerializablePtr>>,
                                      IdentityPtrLess>;
@@ -59,13 +74,15 @@ namespace tdcf {
 
         MessageRQ _receive_queue;
 
+        Identity::Uid _uid;
+
         Version _version;
 
         StatusFlag send(const IdentityPtr& target, MetaData meta, SerializablePtr message);
 
         void create_send_link(uint32_t version);
 
-        uint32_t create_receive_link(uint32_t from_version);
+        uint32_t create_receive_link(ID id);
 
         void send_transition(uint32_t version, MetaData& meta);
 

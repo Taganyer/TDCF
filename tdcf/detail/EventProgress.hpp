@@ -20,8 +20,8 @@ namespace tdcf {
     struct EventProgress {
         explicit EventProgress(OperationType o_type, ProgressType p_type,
                                uint32_t version, ProcessingRulesPtr rule) :
-            operation_type(o_type), progress_type(p_type),
-            version(version), rule(std::move(rule)) {};
+            version(version), operation_type(o_type),
+            progress_type(p_type), rule(std::move(rule)) {};
 
         virtual ~EventProgress() = default;
 
@@ -36,11 +36,11 @@ namespace tdcf {
             return meta;
         };
 
+        uint32_t version = 0;
+
         OperationType operation_type;
 
         ProgressType progress_type;
-
-        uint32_t version = 0;
 
         uint32_t serial = 0;
 

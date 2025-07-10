@@ -36,6 +36,8 @@ namespace tdcf::ring {
     };
 
     struct A_Broadcast {
+        static constexpr StageNum send_rule = C_Broadcast::send_rule;
+
         static constexpr StageNum finish_ack = C_Broadcast::finish_ack;
 
     };

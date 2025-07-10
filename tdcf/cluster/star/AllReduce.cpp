@@ -14,7 +14,7 @@ StarCluster::AllReduce::AllReduce(ProgressType type, uint32_t version, Processin
     EventProgress(OperationType::AllReduce, type, version, std::move(rp)) {}
 
 StatusFlag StarCluster::AllReduce::create(ProcessingRulesPtr rp, Handle& handle) {
-    uint32_t version = handle.create_conversation_version();
+    uint32_t version = handle.create_progress_version();
     auto iter = handle.create_progress(
         std::make_unique<AllReduce>(ProgressType::Root, version, std::move(rp)));
 
@@ -89,7 +89,7 @@ StarCluster::AllReduceAgent::AllReduceAgent(uint32_t version, ProcessingRulesPtr
 
 StatusFlag StarCluster::AllReduceAgent::create(ProcessingRulesPtr rp, ProgressEventsMI other,
                                                Handle& handle, EventProgressAgent **agent_ptr) {
-    uint32_t version = handle.create_conversation_version();
+    uint32_t version = handle.create_progress_version();
     auto iter = handle.create_progress(
         std::make_unique<AllReduceAgent>(version, std::move(rp), other));
 

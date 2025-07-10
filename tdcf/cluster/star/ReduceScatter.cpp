@@ -14,7 +14,7 @@ StarCluster::ReduceScatter::ReduceScatter(ProgressType type, uint32_t version, P
     EventProgress(OperationType::ReduceScatter, type, version, std::move(rp)) {}
 
 StatusFlag StarCluster::ReduceScatter::create(ProcessingRulesPtr rp, Handle& handle) {
-    uint32_t version = handle.create_conversation_version();
+    uint32_t version = handle.create_progress_version();
     auto iter = handle.create_progress(
         std::make_unique<ReduceScatter>(ProgressType::Root, version, std::move(rp)));
 
@@ -102,7 +102,7 @@ StarCluster::ReduceScatterAgent::ReduceScatterAgent(uint32_t version, Processing
 
 StatusFlag StarCluster::ReduceScatterAgent::create(ProcessingRulesPtr rp, ProgressEventsMI other,
                                                    Handle& handle, EventProgressAgent **agent_ptr) {
-    uint32_t version = handle.create_conversation_version();
+    uint32_t version = handle.create_progress_version();
     auto iter = handle.create_progress(
         std::make_unique<ReduceScatterAgent>(version, std::move(rp), other));
 

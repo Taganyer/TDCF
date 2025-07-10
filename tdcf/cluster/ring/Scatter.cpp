@@ -14,7 +14,7 @@ RingCluster::Scatter::Scatter(ProgressType type, uint32_t version, ProcessingRul
     EventProgress(OperationType::Scatter, type, version, std::move(rp)) {}
 
 StatusFlag RingCluster::Scatter::create(ProcessingRulesPtr rp, Handle& handle) {
-    uint32_t version = handle.create_conversation_version();
+    uint32_t version = handle.create_progress_version();
     auto iter = handle.create_progress(
         std::make_unique<Scatter>(ProgressType::Root, version, std::move(rp)));
 
@@ -82,7 +82,7 @@ RingCluster::ScatterAgent::ScatterAgent(uint32_t version, ProcessingRulesPtr rp,
 
 StatusFlag RingCluster::ScatterAgent::create(ProcessingRulesPtr rp, ProgressEventsMI other,
                                              Handle& handle, EventProgressAgent **agent_ptr) {
-    uint32_t version = handle.create_conversation_version();
+    uint32_t version = handle.create_progress_version();
     auto iter = handle.create_progress(
         std::make_unique<ScatterAgent>(version, std::move(rp), other));
 

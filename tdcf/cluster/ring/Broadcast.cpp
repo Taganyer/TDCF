@@ -14,7 +14,7 @@ RingCluster::Broadcast::Broadcast(ProgressType type, uint32_t version, Processin
     EventProgress(OperationType::Broadcast, type, version, std::move(rp)) {}
 
 StatusFlag RingCluster::Broadcast::create(ProcessingRulesPtr rp, Handle& handle) {
-    uint32_t version = handle.create_conversation_version();
+    uint32_t version = handle.create_progress_version();
     auto iter = handle.create_progress(
         std::make_unique<Broadcast>(ProgressType::Root, version, std::move(rp)));
 
@@ -64,17 +64,17 @@ RingCluster::BroadcastAgent::BroadcastAgent(uint32_t version, ProcessingRulesPtr
 
 StatusFlag RingCluster::BroadcastAgent::create(ProcessingRulesPtr rp, ProgressEventsMI other,
                                                Handle& handle, EventProgressAgent **agent_ptr) {
-    uint32_t version = handle.create_conversation_version();
+    uint32_t version = handle.create_progress_version();
     auto iter = handle.create_progress(
         std::make_unique<BroadcastAgent>(version, std::move(rp), other));
 
-    auto& [send, receive, cluster_size] = handle.agent_data<RingClusterData>();
+    auto& [send, receive, cluster_size] = handle.cluster_data<RingClusterData>();
     auto& self = static_cast<BroadcastAgent&>(*iter->second);
     self.serial = cluster_size;
     *agent_ptr = &self;
 
     MetaData meta = self.create_meta();
-    meta.stage = C_Broadcast::send_rule;
+    meta.stage = A_Broadcast::send_rule;
     StatusFlag flag = handle.send_progress_message(version, send, meta, self.rule);
     TDCF_CHECK_SUCCESS(flag)
 

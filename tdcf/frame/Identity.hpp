@@ -9,9 +9,17 @@ namespace tdcf {
 
     class Identity : public Serializable {
     public:
-        [[nodiscard]] virtual bool equal_to(const Identity& other) const = 0;
+        using Uid = uint32_t;
 
-        [[nodiscard]] virtual bool less_than(const Identity& other) const = 0;
+        [[nodiscard]] virtual Uid guid() const = 0;
+
+        [[nodiscard]] bool equal_to(const Identity& other) const {
+            return guid() == other.guid();
+        };
+
+        [[nodiscard]] bool less_than(const Identity& other) const {
+            return guid() < other.guid();
+        };
 
         [[nodiscard]] SerializableType base_type() const final {
             return static_cast<SerializableType>(SerializableBaseType::Identity);

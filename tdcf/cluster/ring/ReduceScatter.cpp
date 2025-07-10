@@ -14,7 +14,7 @@ RingCluster::ReduceScatter::ReduceScatter(ProgressType type, uint32_t version, P
     EventProgress(OperationType::ReduceScatter, type, version, std::move(rp)) {}
 
 StatusFlag RingCluster::ReduceScatter::create(ProcessingRulesPtr rp, Handle& handle) {
-    uint32_t version = handle.create_conversation_version();
+    uint32_t version = handle.create_progress_version();
     auto iter = handle.create_progress(
         std::make_unique<ReduceScatter>(ProgressType::Root, version, std::move(rp)));
 
@@ -93,7 +93,7 @@ RingCluster::ReduceScatterAgent::ReduceScatterAgent(uint32_t version, Processing
 
 StatusFlag RingCluster::ReduceScatterAgent::create(ProcessingRulesPtr rp, ProgressEventsMI other,
                                                    Handle& handle, EventProgressAgent **agent_ptr) {
-    uint32_t version = handle.create_conversation_version();
+    uint32_t version = handle.create_progress_version();
     auto iter = handle.create_progress(
         std::make_unique<ReduceScatterAgent>(version, std::move(rp), other));
 

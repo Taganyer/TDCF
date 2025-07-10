@@ -2,6 +2,8 @@
 // Created by taganyer on 25-7-4.
 //
 #include <iostream>
+#include <tdcf/base/Errors.hpp>
+#include <tdcf/cluster/ring/RingCluster.hpp>
 #include <tdcf/cluster/star/StarCluster.hpp>
 #include <test/test.hpp>
 #include <test/frame1/Communicator1.hpp>
@@ -10,9 +12,6 @@
 #include <test/frame1/ProcessingRules1.hpp>
 #include <test/frame1/Processor1.hpp>
 #include <tinyBackend/Base/Thread.hpp>
-
-#include "tdcf/base/Errors.hpp"
-#include "tdcf/cluster/ring/RingCluster.hpp"
 
 
 using namespace test;
@@ -85,9 +84,9 @@ static void root(uint32_t type, uint32_t id,
 
     creat_task(serial, tasks_size, *root, OperationType::Broadcast);
     creat_task(serial, tasks_size, *root, OperationType::Scatter);
-    // creat_task(serial, tasks_size, *root, OperationType::Reduce);
-    // creat_task(serial, tasks_size, *root, OperationType::AllReduce);
-    // creat_task(serial, tasks_size, *root, OperationType::ReduceScatter);
+    creat_task(serial, tasks_size, *root, OperationType::Reduce);
+    creat_task(serial, tasks_size, *root, OperationType::AllReduce);
+    creat_task(serial, tasks_size, *root, OperationType::ReduceScatter);
 
     while (flag == StatusFlag::Success && tasks_size > 0) {
         flag = root->handle_a_loop();
@@ -111,11 +110,11 @@ static void node_root(uint32_t type, uint32_t id, uint32_t root_id,
     uint32_t serial = 0;
     StatusFlag flag = StatusFlag::Success;
 
-    // creat_task(serial, tasks_size, *node_root, OperationType::Broadcast);
-    // creat_task(serial, tasks_size, *node_root, OperationType::Scatter);
-    // creat_task(serial, tasks_size, *node_root, OperationType::Reduce);
-    // creat_task(serial, tasks_size, *node_root, OperationType::AllReduce);
-    // creat_task(serial, tasks_size, *node_root, OperationType::ReduceScatter);
+    creat_task(serial, tasks_size, *node_root, OperationType::Broadcast);
+    creat_task(serial, tasks_size, *node_root, OperationType::Scatter);
+    creat_task(serial, tasks_size, *node_root, OperationType::Reduce);
+    creat_task(serial, tasks_size, *node_root, OperationType::AllReduce);
+    creat_task(serial, tasks_size, *node_root, OperationType::ReduceScatter);
 
     bool root_end = false;
     while (flag == StatusFlag::Success && (tasks_size > 0 || !root_end)) {
@@ -165,8 +164,8 @@ void test::correctness_test() {
 
     uint32_t node11_id = ++serial;
     cluster2.insert(std::make_shared<Identity1>(node11_id));
-    // uint32_t node12_id = ++serial;
-    // cluster2.insert(std::make_shared<Identity1>(node12_id));
+    uint32_t node12_id = ++serial;
+    cluster2.insert(std::make_shared<Identity1>(node12_id));
 
     Base::Thread root_t([root_id, &share, &cluster1] {
         root(ClusterType::star, root_id, share, cluster1);
@@ -177,26 +176,26 @@ void test::correctness_test() {
     });
 
     Base::Thread root1_t([root1_id, root_id, &share, &cluster2] {
-        node_root(ClusterType::star, root1_id, root_id, share, cluster2);
+        node_root(ClusterType::ring, root1_id, root_id, share, cluster2);
     });
 
     Base::Thread node11_t([node11_id, &share, root1_id] {
         pure_node(node11_id, share, root1_id);
     });
-    //
-    // Base::Thread node12_t([node12_id, &share, root1_id] {
-    //     pure_node(node12_id, share, root1_id);
-    // });
+
+    Base::Thread node12_t([node12_id, &share, root1_id] {
+        pure_node(node12_id, share, root1_id);
+    });
 
     root_t.start();
     node1_t.start();
     root1_t.start();
     node11_t.start();
-    // node12_t.start();
+    node12_t.start();
 
     root_t.join();
     node1_t.join();
     root1_t.join();
     node11_t.join();
-    // node12_t.join();
+    node12_t.join();
 }

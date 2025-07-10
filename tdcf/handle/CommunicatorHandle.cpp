@@ -9,8 +9,8 @@
 
 using namespace tdcf;
 
-CommunicatorHandle::CommunicatorHandle(CommunicatorPtr ptr) :
-    _communicator(std::move(ptr)) {
+CommunicatorHandle::CommunicatorHandle(CommunicatorPtr ptr, Identity::Uid uid) :
+    _communicator(std::move(ptr)), _uid(uid) {
     TDCF_CHECK_EXPR(_communicator)
 }
 
@@ -35,16 +35,15 @@ void CommunicatorHandle::disconnect(const IdentityPtr& id) const {
     TDCF_CHECK_EXPR(success)
 }
 
-uint32_t CommunicatorHandle::create_conversation_version() {
+uint32_t CommunicatorHandle::create_progress_version() {
     ++_version;
-    while (_receive.find(_version.version) != _receive.end()
-        || _send.find(_version.version) != _send.end()) {
+    while (_send.find(_version.version) != _send.end()) {
         ++_version;
     }
     return _version.version;
 }
 
-void CommunicatorHandle::close_conversation(uint32_t version) {
+void CommunicatorHandle::close_progress(uint32_t version) {
     auto send_iter = _send.find(version);
     assert(send_iter != _send.end());
     auto receive_iter = _receive.find(send_iter->second);
@@ -122,17 +121,18 @@ StatusFlag CommunicatorHandle::send(const IdentityPtr& target,
 }
 
 void CommunicatorHandle::create_send_link(uint32_t version) {
-    auto [i, success] = _send.emplace(version, version);
+    ID id(_uid, version);
+    auto [i, success] = _send.emplace(version, id);
     assert(success);
-    auto [ii, ss] = _receive.emplace(version, version);
+    auto [ii, ss] = _receive.emplace(id, version);
     assert(ss);
 }
 
-uint32_t CommunicatorHandle::create_receive_link(uint32_t from_version) {
-    uint32_t version = create_conversation_version();
-    auto [i, success] = _receive.emplace(from_version, version);
+uint32_t CommunicatorHandle::create_receive_link(ID id) {
+    uint32_t version = create_progress_version();
+    auto [i, success] = _receive.emplace(id, version);
     assert(success);
-    auto [ii, ss] = _send.emplace(version, from_version);
+    auto [ii, ss] = _send.emplace(version, id);
     assert(ss);
     return version;
 }
@@ -140,19 +140,22 @@ uint32_t CommunicatorHandle::create_receive_link(uint32_t from_version) {
 void CommunicatorHandle::send_transition(uint32_t version, MetaData& meta) {
     auto iter = _send.find(version);
     if (iter != _send.end()) {
-        meta.version = iter->second;
+        meta.root_uid = iter->second.first;
+        meta.version = iter->second.second;
         meta.link_mark = LinkMark::Info;
     } else {
         create_send_link(version);
+        meta.root_uid = _uid;
         meta.version = version;
         meta.link_mark = LinkMark::Create;
     }
 }
 
 void CommunicatorHandle::receive_transition(MetaData& meta) {
-    auto iter = _receive.find(meta.version);
+    ID id(meta.root_uid, meta.version);
+    auto iter = _receive.find(id);
     if (iter == _receive.end()) {
-        meta.version = create_receive_link(meta.version);
+        meta.version = create_receive_link(id);
         meta.link_mark = LinkMark::Create;
     } else {
         meta.version = iter->second;

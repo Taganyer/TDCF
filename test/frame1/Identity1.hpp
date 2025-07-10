@@ -34,19 +34,9 @@ namespace test {
             return 1;
         };
 
-        [[nodiscard]] bool equal_to(const Identity& other) const override {
-            assert(other.derived_type() == 1);
-            auto& o = static_cast<const Identity1&>(other);
-            return _id == o._id;
+        [[nodiscard]] Uid guid() const override {
+            return _id;
         };
-
-        [[nodiscard]] bool less_than(const Identity& other) const override {
-            assert(other.derived_type() == 1);
-            auto& o = static_cast<const Identity1&>(other);
-            return _id < o._id;
-        };
-
-        [[nodiscard]] uint32_t id() const { return _id; };
 
     private:
         uint32_t _id = -1;
