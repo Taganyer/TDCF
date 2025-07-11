@@ -38,10 +38,10 @@ StatusFlag RingCluster::ReduceScatter::handle_event(const MetaData& meta,
                                                     Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::ReduceScatter);
     if (meta.stage == C_ReduceScatter::acquire_data) {
-        return acquire_data(std::get<DataPtr>(data), handle);
+        return acquire_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == C_ReduceScatter::get_data) {
-        return scatter_data(std::get<DataPtr>(data), handle);
+        return scatter_data(std::get<DataPtr>(data), meta.rest_data, handle);
     }
     if (meta.stage == C_ReduceScatter::scatter_data) {
         return send_data(std::get<DataSet>(data), handle);
@@ -53,33 +53,49 @@ StatusFlag RingCluster::ReduceScatter::handle_event(const MetaData& meta,
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag RingCluster::ReduceScatter::acquire_data(DataPtr& data, Handle& handle) const {
+StatusFlag RingCluster::ReduceScatter::acquire_data(DataSet& dataset, Handle& handle) const {
     auto& [send, receive, cluster_size] = handle.cluster_data<RingClusterData>();
     MetaData meta = create_meta();
     meta.stage = C_ReduceScatter::send_data1;
-    StatusFlag flag = handle.send_progress_message(version, send, meta, data);
-    TDCF_CHECK_SUCCESS(flag)
+    meta.rest_data = dataset.size();
+
+    for (auto& data : dataset) {
+        --meta.rest_data;
+        StatusFlag flag = handle.send_progress_message(version, send, meta, data);
+        TDCF_CHECK_SUCCESS(flag)
+    }
+
     return StatusFlag::Success;
 }
 
-StatusFlag RingCluster::ReduceScatter::scatter_data(DataPtr& data, Handle& handle) const {
-    auto& [send, receive, cluster_size] = handle.cluster_data<RingClusterData>();
-    MetaData meta = create_meta();
-    meta.stage = C_ReduceScatter::scatter_data;
-    handle.scatter_data(_self, meta, rule, cluster_size + 1, data);
+StatusFlag RingCluster::ReduceScatter::scatter_data(DataPtr& data,
+                                                    uint32_t rest_size, Handle& handle) {
+    _set.emplace_back(std::move(data));
+    if (rest_size == 0) {
+        auto& [send, receive, cluster_size] = handle.cluster_data<RingClusterData>();
+        MetaData meta = create_meta();
+        meta.stage = C_ReduceScatter::scatter_data;
+        handle.scatter_data(_self, meta, rule, cluster_size + 1, _set);
+    }
     return StatusFlag::Success;
 }
 
 StatusFlag RingCluster::ReduceScatter::send_data(DataSet& set, Handle& handle) const {
     auto& [send, receive, cluster_size] = handle.cluster_data<RingClusterData>();
-    assert(set.size() == cluster_size + 1);
-    handle.store_data(rule, set[0]);
+    uint32_t patch = set.size() / (cluster_size + 1);
+    TDCF_CHECK_EXPR(patch > 0 && set.size() % (cluster_size + 1) == 0);
 
     MetaData meta = create_meta();
     meta.stage = C_ReduceScatter::send_data2;
-    for (uint32_t i = 1; i < set.size(); ++i) {
-        StatusFlag flag = handle.send_progress_message(version, send, meta, std::move(set[i]));
-        TDCF_CHECK_SUCCESS(flag)
+    meta.rest_data = patch;
+
+    for (uint32_t i = 0; i < patch; ++i) {
+        handle.store_data(rule, set[i]);
+        --meta.rest_data;
+        for (uint32_t j = i + patch; j < set.size(); j += patch) {
+            StatusFlag flag = handle.send_progress_message(version, send, meta, std::move(set[j]));
+            TDCF_CHECK_SUCCESS(flag)
+        }
     }
 
     meta.stage = C_ReduceScatter::finish;
@@ -118,13 +134,19 @@ StatusFlag RingCluster::ReduceScatterAgent::handle_event(const MetaData& meta,
                                                          Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::ReduceScatter);
     if (meta.stage == A_ReduceScatter::acquire_data) {
-        return acquire_data(std::get<DataPtr>(data), handle);
+        return acquire_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == A_ReduceScatter::get_data) {
-        return agent_get_data(std::get<DataPtr>(data), handle);
+        return agent_get_data(std::get<DataPtr>(data), meta.rest_data, handle);
     }
     if (meta.stage == Public_ReduceScatter::agent_receive) {
-        return scatter_data(std::get<DataPtr>(data), handle);
+        auto& set = std::get<DataSet>(data);
+        uint32_t rest_size = set.size();
+        for (auto& d : set) {
+            --rest_size;
+            scatter_data(d, rest_size, handle);
+        }
+        return StatusFlag::Success;
     }
     if (meta.stage == C_ReduceScatter::scatter_data) {
         return send_data(std::get<DataSet>(data), handle);
@@ -140,11 +162,15 @@ StatusFlag RingCluster::ReduceScatterAgent::proxy_event(const MetaData& meta,
     return handle_event(meta, data, handle);
 }
 
-StatusFlag RingCluster::ReduceScatterAgent::agent_get_data(DataPtr& data, Handle& handle) const {
-    auto& [send, receive, cluster_size] = handle.cluster_data<RingClusterData>();
-    MetaData meta = create_meta();
-    meta.stage = Public_ReduceScatter::agent_send;
-    handle.create_processor_event(_other, meta, std::static_pointer_cast<Serializable>(data));
+StatusFlag RingCluster::ReduceScatterAgent::agent_get_data(DataPtr& data,
+                                                           uint32_t rest_size, Handle& handle) {
+    _set.emplace_back(std::move(data));
+    if (rest_size == 0) {
+        auto& [send, receive, cluster_size] = handle.cluster_data<RingClusterData>();
+        MetaData meta = create_meta();
+        meta.stage = Public_ReduceScatter::agent_send;
+        handle.create_processor_event(_other, meta, std::move(_set));
+    }
     return StatusFlag::Success;
 }
 

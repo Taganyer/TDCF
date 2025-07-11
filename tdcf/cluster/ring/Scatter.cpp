@@ -37,7 +37,7 @@ StatusFlag RingCluster::Scatter::create(ProcessingRulesPtr rp, Handle& handle) {
 StatusFlag RingCluster::Scatter::handle_event(const MetaData& meta, Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Scatter);
     if (meta.stage == C_Scatter::acquire_data) {
-        return scatter_data(std::get<DataPtr>(data), handle);
+        return scatter_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == C_Scatter::scatter_data) {
         return send_data(std::get<DataSet>(data), handle);
@@ -49,25 +49,30 @@ StatusFlag RingCluster::Scatter::handle_event(const MetaData& meta, Variant& dat
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag RingCluster::Scatter::scatter_data(DataPtr& data, Handle& handle) const {
+StatusFlag RingCluster::Scatter::scatter_data(DataSet& dataset, Handle& handle) const {
     auto& [send, receive, cluster_size] = handle.cluster_data<RingClusterData>();
     MetaData meta = create_meta();
     meta.stage = C_Scatter::scatter_data;
-    handle.scatter_data(_self, meta, rule, cluster_size + 1, data);
+    handle.scatter_data(_self, meta, rule, cluster_size + 1, dataset);
     return StatusFlag::Success;
 }
 
 StatusFlag RingCluster::Scatter::send_data(DataSet& set, Handle& handle) const {
     auto& [send, receive, cluster_size] = handle.cluster_data<RingClusterData>();
-    TDCF_CHECK_EXPR(set.size() == cluster_size + 1);
-
-    handle.store_data(rule, set[0]);
+    uint32_t patch = set.size() / (cluster_size + 1);
+    TDCF_CHECK_EXPR(patch > 0 && set.size() % (cluster_size + 1) == 0);
 
     MetaData meta = create_meta();
     meta.stage = C_Scatter::send_data;
-    for (uint32_t i = 1; i < set.size(); ++i) {
-        StatusFlag flag = handle.send_progress_message(version, send, meta, set[i]);
-        TDCF_CHECK_SUCCESS(flag)
+    meta.rest_data = patch;
+
+    for (uint32_t i = 0; i < patch; ++i) {
+        handle.store_data(rule, set[i]);
+        --meta.rest_data;
+        for (uint32_t j = i + patch; j < set.size(); j += patch) {
+            StatusFlag flag = handle.send_progress_message(version, send, meta, std::move(set[j]));
+            TDCF_CHECK_SUCCESS(flag)
+        }
     }
 
     meta.stage = C_Scatter::finish;
@@ -104,7 +109,7 @@ StatusFlag RingCluster::ScatterAgent::handle_event(const MetaData& meta,
                                                    Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Scatter);
     if (meta.stage == Public_Scatter::agent_receive) {
-        return scatter_data(std::get<DataPtr>(data), handle);
+        return scatter_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == A_Scatter::scatter_data) {
         return send_data(std::get<DataSet>(data), handle);

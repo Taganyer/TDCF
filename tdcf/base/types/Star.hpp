@@ -64,11 +64,13 @@ namespace tdcf::star {
     };
 
     struct C_Reduce {
-        static constexpr StageNum acquire_data = 1;
+        static constexpr StageNum self_acquire_data = 1;
 
-        static constexpr StageNum send_rule = 2;
+        static constexpr StageNum acquire_data = 2;
 
-        static constexpr StageNum reduce_data = 3;
+        static constexpr StageNum send_rule = 3;
+
+        static constexpr StageNum reduce_data = 4;
 
     };
 
@@ -80,6 +82,8 @@ namespace tdcf::star {
     };
 
     struct A_Reduce {
+        static constexpr StageNum self_acquire_data = C_Reduce::self_acquire_data;
+
         static constexpr StageNum send_rule = C_Reduce::send_rule;
 
         static constexpr StageNum acquire_data = C_Reduce::acquire_data;
@@ -89,15 +93,17 @@ namespace tdcf::star {
     };
 
     struct C_AllReduce {
-        static constexpr StageNum acquire_data = 1;
+        static constexpr StageNum self_acquire_data = 1;
 
-        static constexpr StageNum send_rule = 2;
+        static constexpr StageNum acquire_data = 2;
 
-        static constexpr StageNum reduce_data = 3;
+        static constexpr StageNum send_rule = 3;
 
-        static constexpr StageNum send_data = 4;
+        static constexpr StageNum reduce_data = 4;
 
-        static constexpr StageNum finish_ack = 5;
+        static constexpr StageNum send_data = 5;
+
+        static constexpr StageNum finish_ack = 6;
 
     };
 
@@ -113,6 +119,8 @@ namespace tdcf::star {
     };
 
     struct A_AllReduce {
+        static constexpr StageNum self_acquire_data = C_AllReduce::self_acquire_data;
+
         static constexpr StageNum acquire_data1 = C_AllReduce::acquire_data;
 
         static constexpr StageNum send_rule = C_AllReduce::send_rule;
@@ -124,17 +132,19 @@ namespace tdcf::star {
     };
 
     struct C_ReduceScatter {
-        static constexpr StageNum acquire_data = 1;
+        static constexpr StageNum self_acquire_data = 1;
 
-        static constexpr StageNum send_rule = 2;
+        static constexpr StageNum acquire_data = 2;
 
-        static constexpr StageNum reduce_data = 3;
+        static constexpr StageNum send_rule = 3;
 
-        static constexpr StageNum scatter_data = 4;
+        static constexpr StageNum reduce_data = 4;
 
-        static constexpr StageNum send_data = 5;
+        static constexpr StageNum scatter_data = 5;
 
-        static constexpr StageNum finish_ack = 6;
+        static constexpr StageNum send_data = 6;
+
+        static constexpr StageNum finish_ack = 7;
 
     };
 
@@ -150,6 +160,8 @@ namespace tdcf::star {
     };
 
     struct A_ReduceScatter {
+        static constexpr StageNum self_acquire_data = C_ReduceScatter::self_acquire_data;
+
         static constexpr StageNum acquire_data1 = C_ReduceScatter::acquire_data;
 
         static constexpr StageNum send_rule = C_ReduceScatter::send_rule;

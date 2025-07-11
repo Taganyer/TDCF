@@ -4,7 +4,6 @@
 #pragma once
 
 #include <queue>
-#include <variant>
 #include <vector>
 #include <tdcf/base/NoCopy.hpp>
 #include <tdcf/frame/Data.hpp>
@@ -13,8 +12,6 @@
 namespace tdcf {
 
     using DataSet = std::vector<DataPtr>;
-
-    using DataVariant = std::variant<DataPtr, DataSet>;
 
     enum class OperationFlag : uint8_t;
 
@@ -33,7 +30,7 @@ namespace tdcf {
 
         Type type = Null;
         ProcessorEventMark mark;
-        DataVariant result {};
+        DataSet result {};
 
     };
 
@@ -55,7 +52,7 @@ namespace tdcf {
                             const DataSet& target) = 0;
 
         virtual void scatter(ProcessorEventMark mark, const ProcessingRulesPtr& rule_ptr,
-                             uint32_t scatter_size, const DataPtr& data_ptr) = 0;
+                             uint32_t scatter_size, const DataSet& dataset) = 0;
 
         virtual OperationFlag get_events(EventQueue& queue) = 0;
 

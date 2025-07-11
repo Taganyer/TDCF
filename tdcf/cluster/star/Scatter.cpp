@@ -38,11 +38,9 @@ StatusFlag StarCluster::Scatter::handle_event(const MetaData& meta,
                                               Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Scatter);
     if (meta.stage == C_Scatter::acquire_data) {
-        assert(_sent == 0);
-        return scatter_data(std::get<DataPtr>(data), handle);
+        return scatter_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == C_Scatter::scatter_data) {
-        assert(_sent == 0);
         return send_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == C_Scatter::finish_ack) {
@@ -56,25 +54,33 @@ StatusFlag StarCluster::Scatter::handle_event(const MetaData& meta,
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag StarCluster::Scatter::scatter_data(DataPtr& data, Handle& handle) const {
+StatusFlag StarCluster::Scatter::scatter_data(DataSet& dataset, Handle& handle) const {
     MetaData meta = create_meta();
     meta.stage = C_Scatter::scatter_data;
-    handle.scatter_data(_self, meta, rule, handle.cluster_data<IdentityList>().size() + 1, data);
+    handle.scatter_data(_self, meta, rule, handle.cluster_data<IdentityList>().size() + 1, dataset);
     return StatusFlag::Success;
 }
 
-StatusFlag StarCluster::Scatter::send_data(DataSet& set, Handle& handle) {
-    TDCF_CHECK_EXPR(set.size() == handle.cluster_data<IdentityList>().size() + 1);
-
-    handle.store_data(rule, set[0]);
+StatusFlag StarCluster::Scatter::send_data(DataSet& set, Handle& handle) const {
+    uint32_t total = handle.cluster_data<IdentityList>().size() + 1;
+    uint32_t patch = set.size() / total;
+    TDCF_CHECK_EXPR(patch > 0 && set.size() % total == 0)
 
     MetaData meta = create_meta();
     meta.stage = C_Scatter::send_data;
-    for (auto& id : handle.cluster_data<IdentityList>()) {
-        meta.serial = ++_sent;
-        StatusFlag flag = handle.send_progress_message(version, id, meta, std::move(set[_sent]));
-        TDCF_CHECK_SUCCESS(flag)
+    meta.rest_data = patch;
+
+    for (uint32_t i = 0; i < patch; ++i) {
+        handle.store_data(rule, set[i]);
+        --meta.rest_data;
+        uint32_t j = i + patch;
+        for (auto& id : handle.cluster_data<IdentityList>()) {
+            StatusFlag flag = handle.send_progress_message(version, id, meta, std::move(set[j]));
+            TDCF_CHECK_SUCCESS(flag)
+            j += patch;
+        }
     }
+
     return StatusFlag::Success;
 }
 
@@ -105,11 +111,9 @@ StatusFlag StarCluster::ScatterAgent::handle_event(const MetaData& meta,
                                                    Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Scatter);
     if (meta.stage == Public_Scatter::agent_receive) {
-        assert(_sent == 0);
-        return scatter_data(std::get<DataPtr>(data), handle);
+        return scatter_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == A_Scatter::scatter_data) {
-        assert(_sent == 0);
         return send_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == A_Scatter::finish_ack) {

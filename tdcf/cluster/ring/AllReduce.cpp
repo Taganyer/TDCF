@@ -38,10 +38,10 @@ StatusFlag RingCluster::AllReduce::handle_event(const MetaData& meta,
                                                 Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::AllReduce);
     if (meta.stage == C_AllReduce::acquire_data) {
-        return acquire_data(std::get<DataPtr>(data), handle);
+        return acquire_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == C_AllReduce::get_data2) {
-        return send_data(std::get<DataPtr>(data), handle);
+        return send_data(std::get<DataPtr>(data), meta.rest_data, handle);
     }
     if (meta.stage == C_AllReduce::finish_ack) {
         rule->finish_callback();
@@ -50,27 +50,36 @@ StatusFlag RingCluster::AllReduce::handle_event(const MetaData& meta,
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag RingCluster::AllReduce::acquire_data(DataPtr& data, Handle& handle) const {
+StatusFlag RingCluster::AllReduce::acquire_data(DataSet& dataset, Handle& handle) const {
     auto& [send, receive, cluster_size] = handle.cluster_data<RingClusterData>();
     MetaData meta = create_meta();
     meta.stage = C_AllReduce::send_data1;
-    StatusFlag flag = handle.send_progress_message(version, send, meta, data);
-    TDCF_CHECK_SUCCESS(flag)
+    meta.rest_data = dataset.size();
+
+    for (auto& data : dataset) {
+        --meta.rest_data;
+        StatusFlag flag = handle.send_progress_message(version, send, meta, std::move(data));
+        TDCF_CHECK_SUCCESS(flag)
+    }
 
     return StatusFlag::Success;
 }
 
-StatusFlag RingCluster::AllReduce::send_data(DataPtr& data, Handle& handle) const {
+StatusFlag RingCluster::AllReduce::send_data(DataPtr& data, uint32_t rest_size, Handle& handle) const {
     handle.store_data(rule, data);
     auto& [send, receive, cluster_size] = handle.cluster_data<RingClusterData>();
     MetaData meta = create_meta();
     meta.stage = C_AllReduce::send_data2;
+    meta.rest_data = rest_size;
     StatusFlag flag = handle.send_progress_message(version, send, meta, data);
     TDCF_CHECK_SUCCESS(flag)
 
-    meta.stage = C_AllReduce::finish;
-    flag = handle.send_progress_message(version, send, meta, nullptr);
-    TDCF_CHECK_SUCCESS(flag)
+    if (rest_size == 0) {
+        meta.stage = C_AllReduce::finish;
+        flag = handle.send_progress_message(version, send, meta, nullptr);
+        TDCF_CHECK_SUCCESS(flag)
+    }
+
     return StatusFlag::Success;
 }
 
@@ -102,13 +111,19 @@ StatusFlag RingCluster::AllReduceAgent::handle_event(const MetaData& meta,
     assert(meta.operation_type == OperationType::AllReduce);
     assert(meta.operation_type == OperationType::AllReduce);
     if (meta.stage == A_AllReduce::acquire_data) {
-        return acquire_data(std::get<DataPtr>(data), handle);
+        return acquire_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == A_AllReduce::get_data2) {
-        return agent_get_data(std::get<DataPtr>(data), handle);
+        return agent_get_data(std::get<DataPtr>(data), meta.rest_data, handle);
     }
     if (meta.stage == Public_AllReduce::agent_receive) {
-        return send_data(std::get<DataPtr>(data), handle);
+        auto& set = std::get<DataSet>(data);
+        uint32_t rest_size = set.size();
+        for (auto& d : set) {
+            --rest_size;
+            send_data(d, rest_size, handle);
+        }
+        return StatusFlag::Success;
     }
     if (meta.stage == A_AllReduce::finish_ack) {
         return close(handle);
@@ -121,10 +136,14 @@ StatusFlag RingCluster::AllReduceAgent::proxy_event(const MetaData& meta,
     return handle_event(meta, data, handle);
 }
 
-StatusFlag RingCluster::AllReduceAgent::agent_get_data(DataPtr& data, Handle& handle) const {
-    MetaData meta = create_meta();
-    meta.stage = Public_AllReduce::agent_send;
-    handle.create_processor_event(_other, meta, data);
+StatusFlag RingCluster::AllReduceAgent::agent_get_data(DataPtr& data,
+                                                       uint32_t rest_size, Handle& handle) {
+    _set.emplace_back(std::move(data));
+    if (rest_size == 0) {
+        MetaData meta = create_meta();
+        meta.stage = Public_AllReduce::agent_send;
+        handle.create_processor_event(_other, meta, std::move(_set));
+    }
     return StatusFlag::Success;
 }
 

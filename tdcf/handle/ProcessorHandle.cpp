@@ -33,16 +33,21 @@ void ProcessorHandle::reduce_data(ProgressEventsMI iter, const MetaData& meta,
 
 void ProcessorHandle::scatter_data(ProgressEventsMI iter, const MetaData& meta,
                                    const ProcessingRulesPtr& rule_ptr,
-                                   uint32_t scatter_size, const DataPtr& data_ptr) {
+                                   uint32_t scatter_size, const DataSet& dataset) {
     ProcessorEventMark mark = get_mark(iter);
     auto [i, success] = _process_delay.emplace(mark, std::pair(iter, meta));
     assert(success);
-    _processor->scatter(mark, rule_ptr, scatter_size, data_ptr);
+    _processor->scatter(mark, rule_ptr, scatter_size, dataset);
 }
 
 void ProcessorHandle::create_processor_event(ProgressEventsMI iter,
                                              const MetaData& meta, SerializablePtr ptr) {
     _processed_queue.emplace(iter, meta, std::move(ptr));
+}
+
+void ProcessorHandle::create_processor_event(ProgressEventsMI iter,
+                                             const MetaData& meta, DataSet dataset) {
+    _processed_queue.emplace(iter, meta, std::move(dataset));
 }
 
 StatusFlag ProcessorHandle::get_processor_events() {
@@ -70,14 +75,8 @@ ProcessorEventMark ProcessorHandle::get_mark(ProgressEventsMI iter) {
 }
 
 ProcessorHandle::ProgressTask::ProgressTask(ProgressEventsMI iter,
-                                            const MetaData& meta, DataVariant data) :
-    iter(iter), meta(meta) {
-    if (data.index() == 0) {
-        result = std::move(std::get<DataPtr>(data));
-    } else {
-        result = std::move(std::get<DataSet>(data));
-    }
-}
+                                            const MetaData& meta, DataSet data) :
+    iter(iter), meta(meta), result(std::move(data)) {}
 
 ProcessorHandle::ProgressTask::ProgressTask(ProgressEventsMI iter,
                                             const MetaData& meta, SerializablePtr ptr) :
@@ -93,6 +92,7 @@ bool ProcessorHandle::get_task(ProgressTask& task) {
     while (!_data_queue.empty()) {
         auto [type, mark, result] = std::move(_data_queue.front());
         _data_queue.pop();
+        TDCF_CHECK_EXPR(!result.empty())
         auto iter = _process_delay.find(mark);
         if (iter == _process_delay.end()) continue;
         task = ProgressTask(iter->second.first, iter->second.second, std::move(result));

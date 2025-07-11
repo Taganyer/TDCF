@@ -53,12 +53,12 @@ StatusFlag RingAgent::Broadcast::handle_event(const MetaData& meta, Variant& dat
     if (meta.stage == N_Broadcast::get_data) {
         if (!_agent) {
             handle.store_data(rule, std::get<DataPtr>(data));
-            _finish = true;
+            if (meta.rest_data == 0) _finish = true;
         } else {
-            StatusFlag flag = agent_store(data, handle);
+            StatusFlag flag = agent_store(std::get<DataPtr>(data), meta.rest_data, handle);
             TDCF_CHECK_SUCCESS(flag)
         }
-        return send_data(std::get<DataPtr>(data), handle);
+        return send_data(std::get<DataPtr>(data), meta.rest_data, handle);
     }
     if (meta.stage == N_Broadcast::finish_ack) {
         _finish_ack = true;
@@ -71,21 +71,29 @@ StatusFlag RingAgent::Broadcast::handle_event(const MetaData& meta, Variant& dat
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag RingAgent::Broadcast::send_data(DataPtr& data, Handle& handle) const {
+StatusFlag RingAgent::Broadcast::send_data(DataPtr& data, uint32_t rest_size, Handle& handle) const {
     auto& [send, receive, serial] = handle.agent_data<RingAgentData>();
     if (serial != 1) {
         MetaData meta = create_meta();
         meta.stage = N_Broadcast::send_data;
+        meta.rest_data = rest_size;
         StatusFlag flag = handle.send_progress_message(version, send, meta, data);
         TDCF_CHECK_SUCCESS(flag)
     }
     return StatusFlag::Success;
 }
 
-StatusFlag RingAgent::Broadcast::agent_store(Variant& data, Handle& handle) const {
+StatusFlag RingAgent::Broadcast::agent_store(DataPtr& data, uint32_t
+                                             rest_size, Handle& handle) {
+    _set.emplace_back(data);
+    if (rest_size != 0) return StatusFlag::Success;
+
     MetaData meta = create_meta();
     meta.stage = Public_Broadcast::node_store;
-    return _agent->proxy_event(meta, data, handle);
+    meta.rest_data = rest_size;
+
+    Variant variant(std::move(_set));
+    return _agent->proxy_event(meta, variant, handle);
 }
 
 StatusFlag RingAgent::Broadcast::close(Handle& handle) const {

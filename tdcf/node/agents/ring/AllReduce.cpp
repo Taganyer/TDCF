@@ -7,8 +7,6 @@
 #include <tdcf/handle/Handle.hpp>
 #include <tdcf/node/agents/ring/RingAgent.hpp>
 
-#include "tdcf/base/types/Star.hpp"
-
 using namespace tdcf;
 
 using namespace tdcf::ring;
@@ -55,14 +53,23 @@ StatusFlag RingAgent::AllReduce::create(uint32_t version, const MetaData& meta,
 StatusFlag RingAgent::AllReduce::handle_event(const MetaData& meta,
                                               Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::AllReduce);
-    if (meta.stage == N_AllReduce::get_data1 || meta.stage == Public_AllReduce::node_acquire) {
-        return acquire_data1(std::get<DataPtr>(data), handle);
+    if (meta.stage == Public_AllReduce::node_acquire) {
+        auto& set = std::get<DataSet>(data);
+        uint32_t rest_size = set.size();
+        for (auto& d : set) {
+            --rest_size;
+            acquire_data1(d, rest_size, handle);
+        }
+        return StatusFlag::Success;
+    }
+    if (meta.stage == N_AllReduce::get_data1) {
+        return acquire_data1(std::get<DataPtr>(data), meta.rest_data, handle);
     }
     if (meta.stage == N_AllReduce::reduce_data) {
-        return reduce_data(std::get<DataPtr>(data), handle);
+        return reduce_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == N_AllReduce::get_data2) {
-        return acquire_data2(std::get<DataPtr>(data), handle);
+        return acquire_data2(std::get<DataPtr>(data), meta.rest_data, handle);
     }
     if (meta.stage == N_AllReduce::finish_ack) {
         _finish_ack = true;
@@ -75,9 +82,10 @@ StatusFlag RingAgent::AllReduce::handle_event(const MetaData& meta,
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag RingAgent::AllReduce::acquire_data1(DataPtr& data, Handle& handle) {
+StatusFlag RingAgent::AllReduce::acquire_data1(DataPtr& data, uint32_t rest_size, Handle& handle) {
     _set.emplace_back(std::move(data));
-    if (_set.size() > 1) {
+    if (rest_size == 0) ++_step;
+    if (_step == 2) {
         MetaData meta = create_meta();
         meta.stage = N_AllReduce::reduce_data;
         handle.reduce_data(_self, meta, rule, _set);
@@ -85,30 +93,41 @@ StatusFlag RingAgent::AllReduce::acquire_data1(DataPtr& data, Handle& handle) {
     return StatusFlag::Success;
 }
 
-StatusFlag RingAgent::AllReduce::reduce_data(DataPtr& data, Handle& handle) const {
+StatusFlag RingAgent::AllReduce::reduce_data(DataSet& dataset, Handle& handle) {
+    _set.clear();
     auto& [send, receive, serial] = handle.agent_data<RingAgentData>();
     MetaData meta = create_meta();
     meta.stage = N_AllReduce::send_data1;
-    StatusFlag flag = handle.send_progress_message(version, send, meta, data);
-    TDCF_CHECK_SUCCESS(flag)
+    meta.rest_data = dataset.size();
+
+    for (auto& data : dataset) {
+        --meta.rest_data;
+        StatusFlag flag = handle.send_progress_message(version, send, meta, data);
+        TDCF_CHECK_SUCCESS(flag)
+    }
+
     return StatusFlag::Success;
 }
 
-StatusFlag RingAgent::AllReduce::acquire_data2(DataPtr& data, Handle& handle) {
+StatusFlag RingAgent::AllReduce::acquire_data2(DataPtr& data, uint32_t rest_size, Handle& handle) {
     auto& [send, receive, serial] = handle.agent_data<RingAgentData>();
     if (!_agent) {
         handle.store_data(rule, data);
-        _finish = true;
+        if (rest_size == 0) _finish = true;
     } else {
-        MetaData meta = create_meta();
-        meta.stage = Public_AllReduce::node_store;
-        Variant variant(std::move(data));
-        StatusFlag flag = _agent->proxy_event(meta, variant, handle);
-        TDCF_CHECK_SUCCESS(flag)
+        _set.emplace_back(data);
+        if (rest_size == 0) {
+            MetaData meta = create_meta();
+            meta.stage = Public_AllReduce::node_store;
+            Variant variant(std::move(_set));
+            StatusFlag flag = _agent->proxy_event(meta, variant, handle);
+            TDCF_CHECK_SUCCESS(flag)
+        }
     }
     if (serial != 1) {
         MetaData meta = create_meta();
         meta.stage = N_AllReduce::send_data2;
+        meta.rest_data = rest_size;
         StatusFlag flag = handle.send_progress_message(version, send, meta, data);
         TDCF_CHECK_SUCCESS(flag)
     }

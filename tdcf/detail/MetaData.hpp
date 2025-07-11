@@ -43,8 +43,8 @@ namespace tdcf {
                 ((uint32_t) progress_type << 8) +
                 ((uint32_t) stage << 0));
             ptr[3] = htonl(serial);
-            ptr[4] = htonl(data4[0]);
-            ptr[5] = htonl(data4[1]);
+            ptr[4] = htonl(rest_data);
+            ptr[5] = htonl(data4[0]);
         };
 
         void deserialize(const void *buffer) {
@@ -58,8 +58,8 @@ namespace tdcf {
             progress_type = static_cast<ProgressType>((t & (mask << 8)) >> 16);
             stage = static_cast<uint8_t>((t & (mask << 0)) >> 0);
             serial = ntohl(ptr[3]);
-            data4[0] = ntohl(ptr[4]);
-            data4[1] = ntohl(ptr[5]);
+            rest_data = ntohl(ptr[4]);
+            data4[0] = ntohl(ptr[5]);
         };
 
 #define MetaDataOF(op) \
@@ -83,6 +83,7 @@ namespace tdcf {
 
         uint32_t root_uid = 0;
         uint32_t version = 0;
+
         OperationType operation_type = OperationType::Null;
         LinkMark link_mark = LinkMark::Null;
         ProgressType progress_type = ProgressType::Null;
@@ -90,11 +91,11 @@ namespace tdcf {
         uint8_t stage = 0;
         uint32_t serial = 0;
 
+        uint32_t rest_data = 0;
         union {
-            uint8_t data1[8];
-            uint16_t data2[4];
-            uint32_t data4[2];
-            uint64_t data8[1] {};
+            uint8_t data1[4];
+            uint16_t data2[2];
+            uint32_t data4[1] {};
         };
 
     };

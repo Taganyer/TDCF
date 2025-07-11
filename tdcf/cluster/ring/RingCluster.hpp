@@ -47,7 +47,7 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         protected:
-            StatusFlag send_data(DataPtr& data, Handle& handle) const;
+            StatusFlag send_data(DataSet& dataset, Handle& handle) const;
 
         };
 
@@ -79,7 +79,7 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         protected:
-            StatusFlag scatter_data(DataPtr& data, Handle& handle) const;
+            StatusFlag scatter_data(DataSet& dataset, Handle& handle) const;
 
             StatusFlag send_data(DataSet& set, Handle& handle) const;
 
@@ -104,6 +104,8 @@ namespace tdcf {
 
             ProgressEventsMI _other;
 
+            DataSet _set;
+
         };
 
         class Reduce : public EventProgress {
@@ -115,7 +117,7 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         protected:
-            StatusFlag acquire_data(DataPtr& data, Handle& handle) const;
+            StatusFlag acquire_data(DataSet& dataset, Handle& handle) const;
 
         };
 
@@ -132,9 +134,11 @@ namespace tdcf {
             StatusFlag proxy_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         private:
-            StatusFlag close(DataPtr& data, Handle& handle) const;
+            StatusFlag close(DataPtr& data, uint32_t rest_size, Handle& handle);
 
             ProgressEventsMI _other;
+
+            DataSet _set;
 
         };
 
@@ -147,9 +151,9 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         protected:
-            StatusFlag acquire_data(DataPtr& data, Handle& handle) const;
+            StatusFlag acquire_data(DataSet& dataset, Handle& handle) const;
 
-            StatusFlag send_data(DataPtr& data, Handle& handle) const;
+            StatusFlag send_data(DataPtr& data, uint32_t rest_size, Handle& handle) const;
 
         };
 
@@ -166,11 +170,13 @@ namespace tdcf {
             StatusFlag proxy_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         private:
-            StatusFlag agent_get_data(DataPtr& data, Handle& handle) const;
+            StatusFlag agent_get_data(DataPtr& data, uint32_t rest_size, Handle& handle);
 
             StatusFlag close(Handle& handle) const;
 
             ProgressEventsMI _other;
+
+            DataSet _set;
 
         };
 
@@ -183,13 +189,15 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         protected:
-            StatusFlag acquire_data(DataPtr& data, Handle& handle) const;
+            StatusFlag acquire_data(DataSet& dataset, Handle& handle) const;
 
-            StatusFlag scatter_data(DataPtr& data, Handle& handle) const;
+            StatusFlag scatter_data(DataPtr& data, uint32_t rest_size, Handle& handle);
 
             StatusFlag send_data(DataSet& set, Handle& handle) const;
 
             ProgressEventsMI _self;
+
+            DataSet _set;
 
         };
 
@@ -206,7 +214,7 @@ namespace tdcf {
             StatusFlag proxy_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         private:
-            StatusFlag agent_get_data(DataPtr& data, Handle& handle) const;
+            StatusFlag agent_get_data(DataPtr& data, uint32_t rest_size, Handle& handle);
 
             StatusFlag close(Handle& handle) const;
 

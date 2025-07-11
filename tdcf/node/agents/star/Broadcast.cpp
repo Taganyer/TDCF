@@ -40,10 +40,11 @@ StatusFlag StarAgent::Broadcast::handle_event(const MetaData& meta,
     if (!_agent) {
         assert(meta.stage == N_Broadcast::get_data);
         handle.store_data(rule, std::get<DataPtr>(data));
+        if (meta.rest_data != 0) return StatusFlag::Success;
         return close(handle);
     }
     if (meta.stage == N_Broadcast::get_data) {
-        return agent_store(data, handle);
+        return agent_store(std::get<DataPtr>(data), meta.rest_data, handle);
     }
     /// 此时 _agent 指向的对象已销毁。
     if (meta.stage == Public_Broadcast::node_finish_ack) {
@@ -52,10 +53,15 @@ StatusFlag StarAgent::Broadcast::handle_event(const MetaData& meta,
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag StarAgent::Broadcast::agent_store(Variant& data, Handle& handle) const {
+StatusFlag StarAgent::Broadcast::agent_store(DataPtr& data,
+                                             uint32_t rest_size, Handle& handle) {
+    _set.emplace_back(std::move(data));
+    if (rest_size != 0) return StatusFlag::Success;
     MetaData meta = create_meta();
     meta.stage = Public_Broadcast::node_store;
-    return _agent->proxy_event(meta, data, handle);
+
+    Variant variant(std::move(_set));
+    return _agent->proxy_event(meta, variant, handle);
 }
 
 StatusFlag StarAgent::Broadcast::close(Handle& handle) const {

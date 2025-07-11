@@ -32,11 +32,13 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         private:
-            StatusFlag agent_store(Variant& data, Handle& handle) const;
+            StatusFlag agent_store(DataPtr& data, uint32_t rest_size, Handle& handle);
 
             StatusFlag close(Handle& handle) const;
 
             EventProgressAgent *_agent = nullptr;
+
+            DataSet _set;
 
         };
 
@@ -49,13 +51,15 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         private:
-            StatusFlag agent_store(Variant& data, Handle& handle) const;
+            StatusFlag agent_store(DataPtr& data, uint32_t rest_size, Handle& handle);
 
             StatusFlag close(Handle& handle) const;
 
             ProgressEventsMI _self;
 
             EventProgressAgent *_agent = nullptr;
+
+            DataSet _set;
 
         };
 
@@ -68,7 +72,7 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         private:
-            StatusFlag close(DataPtr& data, Handle& handle) const;
+            StatusFlag close(DataSet& dataset, Handle& handle) const;
 
             EventProgressAgent *_agent = nullptr;
 
@@ -83,13 +87,15 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         private:
-            StatusFlag acquire_data1(DataPtr& data, Handle& handle) const;
+            StatusFlag acquire_data1(DataSet& dataset, Handle& handle) const;
 
-            StatusFlag acquire_data2(DataPtr& data, Handle& handle) const;
+            StatusFlag acquire_data2(DataPtr& data, uint32_t rest_size, Handle& handle);
 
             StatusFlag close(Handle& handle) const;
 
             EventProgressAgent *_agent = nullptr;
+
+            DataSet _set;
 
         };
 
@@ -102,13 +108,15 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         private:
-            StatusFlag acquire_data1(DataPtr& data, Handle& handle) const;
+            StatusFlag acquire_data1(DataSet& dataset, Handle& handle) const;
 
-            StatusFlag acquire_data2(DataPtr& data, Handle& handle) const;
+            StatusFlag acquire_data2(DataPtr& data, uint32_t rest_size, Handle& handle);
 
             StatusFlag close(Handle& handle) const;
 
             EventProgressAgent *_agent = nullptr;
+
+            DataSet _set;
 
         };
 

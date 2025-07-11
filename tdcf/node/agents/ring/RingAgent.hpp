@@ -42,15 +42,17 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         private:
-            StatusFlag send_data(DataPtr& data, Handle& handle) const;
+            StatusFlag send_data(DataPtr& data, uint32_t rest_size, Handle& handle) const;
 
-            StatusFlag agent_store(Variant& data, Handle& handle) const;
+            StatusFlag agent_store(DataPtr& data, uint32_t rest_size, Handle& handle);
 
             StatusFlag close(Handle& handle) const;
 
             EventProgressAgent *_agent = nullptr;
 
             bool _finish_ack = false, _finish = false;
+
+            DataSet _set;
 
         };
 
@@ -63,7 +65,7 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         private:
-            StatusFlag agent_store(Variant& data, Handle& handle);
+            StatusFlag agent_store(DataPtr& data, uint32_t rest_size, Handle& handle);
 
             StatusFlag close(Handle& handle) const;
 
@@ -71,7 +73,9 @@ namespace tdcf {
 
             ProgressEventsMI _self;
 
-            uint32_t get = 0;
+            DataSet _set;
+
+            uint32_t last = -1;
 
             bool _finish_ack = false, _finish = false;
 
@@ -86,15 +90,17 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         private:
-            StatusFlag acquire_data(DataPtr& data, Handle& handle);
+            StatusFlag acquire_data(DataPtr& data, uint32_t rest_size, Handle& handle);
 
-            StatusFlag close(DataPtr& data, Handle& handle) const;
+            StatusFlag close(DataSet& dataset, Handle& handle) const;
 
             EventProgressAgent *_agent = nullptr;
 
             ProgressEventsMI _self;
 
             DataSet _set;
+
+            uint32_t _step = 0;
 
         };
 
@@ -107,11 +113,11 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         private:
-            StatusFlag acquire_data1(DataPtr& data, Handle& handle);
+            StatusFlag acquire_data1(DataPtr& data, uint32_t rest_size, Handle& handle);
 
-            StatusFlag reduce_data(DataPtr& data, Handle& handle) const;
+            StatusFlag reduce_data(DataSet& dataset, Handle& handle);
 
-            StatusFlag acquire_data2(DataPtr& data, Handle& handle);
+            StatusFlag acquire_data2(DataPtr& data, uint32_t rest_size, Handle& handle);
 
             StatusFlag close(Handle& handle) const;
 
@@ -120,6 +126,8 @@ namespace tdcf {
             ProgressEventsMI _self;
 
             DataSet _set;
+
+            uint32_t _step = 0;
 
             bool _finish_ack = false, _finish = false;
 
@@ -134,11 +142,11 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         private:
-            StatusFlag acquire_data1(DataPtr& data, Handle& handle);
+            StatusFlag acquire_data1(DataPtr& data, uint32_t rest_size, Handle& handle);
 
-            StatusFlag send_data1(DataPtr& data, Handle& handle) const;
+            StatusFlag send_data1(DataSet& dataset, Handle& handle) const;
 
-            StatusFlag acquire_data2(Variant& data, Handle& handle);
+            StatusFlag acquire_data2(DataPtr& data, uint32_t rest_size, Handle& handle);
 
             StatusFlag close(Handle& handle) const;
 
@@ -148,7 +156,7 @@ namespace tdcf {
 
             DataSet _set;
 
-            uint32_t get = 0;
+            uint32_t _get = 0, _last = -1;
 
             bool _finish_ack = false, _finish = false;
 

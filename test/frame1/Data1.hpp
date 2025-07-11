@@ -13,27 +13,25 @@ namespace test {
     public:
         Data1() = default;
 
-        explicit Data1(uint32_t src) : src(src), data(1, src) {};
+        explicit Data1(uint32_t src) : src(src), data(src) {};
 
         [[nodiscard]] uint32_t serialize_size() const override {
-            return sizeof(uint32_t) + sizeof(uint32_t) + data.size() * sizeof(uint32_t);
+            return sizeof(uint32_t) + sizeof(uint32_t);
         };
 
         bool serialize(void *buffer, uint32_t buffer_size) const override {
             if (buffer_size < serialize_size()) return false;
             auto ptr = static_cast<uint32_t *>(buffer);
             ptr[0] = src;
-            ptr[1] = data.size();
-            std::memcpy(ptr + 2, data.data(), sizeof(uint32_t) * data.size());
+            ptr[1] = data;
             return true;
         };
 
         bool deserialize(const void *buffer, uint32_t buffer_size) override {
-            if (buffer_size < 4) return false;
+            if (buffer_size < serialize_size()) return false;
             auto ptr = static_cast<const uint32_t *>(buffer);
             src = ptr[0];
-            data.resize(ptr[1]);
-            std::memcpy(data.data(), ptr + 2, sizeof(uint32_t) * ptr[1]);
+            data = ptr[1];
             return true;
         };
 
@@ -43,7 +41,7 @@ namespace test {
 
         uint32_t src = -1;
 
-        std::vector<uint32_t> data;
+        uint32_t data = -1;
 
     };
 

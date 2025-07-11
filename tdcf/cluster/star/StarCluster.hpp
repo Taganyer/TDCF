@@ -41,9 +41,9 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         protected:
-            StatusFlag send_data(DataPtr& data, Handle& handle) const;
+            void send_data(DataPtr& data, uint32_t rest_size, Handle& handle) const;
 
-            unsigned _sent = 0, _respond = 0;
+            uint32_t _respond = 0;
 
         };
 
@@ -75,13 +75,13 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         protected:
-            StatusFlag scatter_data(DataPtr& data, Handle& handle) const;
+            StatusFlag scatter_data(DataSet& dataset, Handle& handle) const;
 
-            StatusFlag send_data(DataSet& set, Handle& handle);
+            StatusFlag send_data(DataSet& set, Handle& handle) const;
 
             ProgressEventsMI _self;
 
-            unsigned _sent = 0, _respond = 0;
+            uint32_t _respond = 0;
 
         };
 
@@ -102,6 +102,8 @@ namespace tdcf {
 
             ProgressEventsMI _other;
 
+            DataSet _set;
+
         };
 
         class Reduce : public EventProgress {
@@ -113,11 +115,13 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         protected:
-            StatusFlag acquire_data(DataPtr& data, Handle& handle);
+            StatusFlag acquire_data(DataPtr& data, uint32_t rest_size, Handle& handle);
 
             ProgressEventsMI _self;
 
             DataSet _set;
+
+            uint32_t _finish_size = 0;
 
         };
 
@@ -134,7 +138,7 @@ namespace tdcf {
             StatusFlag proxy_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         private:
-            StatusFlag close(DataPtr& data, Handle& handle) const;
+            StatusFlag close(DataSet& dataset, Handle& handle) const;
 
             ProgressEventsMI _other;
 
@@ -149,18 +153,15 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         protected:
-            StatusFlag acquire_data(const MetaData& meta, DataPtr& data, Handle& handle);
+            StatusFlag acquire_data(DataPtr& data, uint32_t rest_size, Handle& handle);
 
-            StatusFlag send_data(DataPtr& data, Handle& handle);
+            StatusFlag send_data(DataSet& dataset, Handle& handle);
 
             ProgressEventsMI _self;
 
             DataSet _set;
 
-            /// 防止空数据。
-            std::vector<bool> _get;
-
-            unsigned _received = 0, _respond = 0;
+            uint32_t _received = 0, _respond = 0;
 
         };
 
@@ -177,7 +178,7 @@ namespace tdcf {
             StatusFlag proxy_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         private:
-            StatusFlag reduce_data(DataPtr& data, Handle& handle);
+            StatusFlag reduce_data(DataSet& dataset, Handle& handle);
 
             StatusFlag close(Handle& handle) const;
 
@@ -194,18 +195,15 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         protected:
-            StatusFlag acquire_data(const MetaData& meta, DataPtr& data, Handle& handle);
+            StatusFlag acquire_data(DataPtr& data, uint32_t rest_size, Handle& handle);
 
-            StatusFlag scatter_data(DataPtr& data, Handle& handle);
+            StatusFlag scatter_data(DataSet& dataset, Handle& handle);
 
             StatusFlag send_data(DataSet& set, Handle& handle) const;
 
             ProgressEventsMI _self;
 
             DataSet _set;
-
-            /// 防止空数据。
-            std::vector<bool> _get;
 
             unsigned _received = 0, _respond = 0;
 
@@ -224,7 +222,7 @@ namespace tdcf {
             StatusFlag proxy_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         private:
-            StatusFlag reduce_data(DataPtr& data, Handle& handle);
+            StatusFlag reduce_data(DataSet& dataset, Handle& handle);
 
             StatusFlag close(Handle& handle) const;
 

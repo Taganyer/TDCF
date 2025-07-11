@@ -33,10 +33,11 @@ StatusFlag RingCluster::Broadcast::create(ProcessingRulesPtr rp, Handle& handle)
     return StatusFlag::Success;
 }
 
-StatusFlag RingCluster::Broadcast::handle_event(const MetaData& meta, Variant& data, Handle& handle) {
+StatusFlag RingCluster::Broadcast::handle_event(const MetaData& meta,
+                                                Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Broadcast);
     if (meta.stage == C_Broadcast::acquire_data) {
-        return send_data(std::get<DataPtr>(data), handle);
+        return send_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == C_Broadcast::finish_ack) {
         assert(meta.serial == 0);
@@ -46,14 +47,20 @@ StatusFlag RingCluster::Broadcast::handle_event(const MetaData& meta, Variant& d
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag RingCluster::Broadcast::send_data(DataPtr& data, Handle& handle) const {
+StatusFlag RingCluster::Broadcast::send_data(DataSet& dataset, Handle& handle) const {
+    auto& send = handle.cluster_data<RingClusterData>().send;
     MetaData meta = create_meta();
     meta.stage = C_Broadcast::send_data;
-    auto& send = handle.cluster_data<RingClusterData>().send;
-    StatusFlag flag = handle.send_progress_message(version, send, meta, data);
-    TDCF_CHECK_SUCCESS(flag)
+    meta.rest_data = dataset.size();
+
+    for (auto& data : dataset) {
+        --meta.rest_data;
+        StatusFlag flag = handle.send_progress_message(version, send, meta, data);
+        TDCF_CHECK_SUCCESS(flag)
+    }
+
     meta.stage = C_Broadcast::finish_ack;
-    flag = handle.send_progress_message(version, send, meta, nullptr);
+    StatusFlag flag = handle.send_progress_message(version, send, meta, nullptr);
     TDCF_CHECK_SUCCESS(flag)
     return StatusFlag::Success;
 }
@@ -85,8 +92,7 @@ StatusFlag RingCluster::BroadcastAgent::handle_event(const MetaData& meta,
                                                      Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Broadcast);
     if (meta.stage == Public_Broadcast::agent_receive) {
-        handle.store_data(rule, std::get<DataPtr>(data));
-        return send_data(std::get<DataPtr>(data), handle);
+        return send_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == A_Broadcast::finish_ack) {
         assert(meta.serial == 0);

@@ -37,8 +37,13 @@ StatusFlag StarCluster::Broadcast::handle_event(const MetaData& meta,
                                                 Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Broadcast);
     if (meta.stage == C_Broadcast::acquire_data) {
-        assert(_sent == 0);
-        return send_data(std::get<DataPtr>(data), handle);
+        auto& set = std::get<DataSet>(data);
+        uint32_t rest_size = set.size();
+        for (auto& d : set) {
+            --rest_size;
+            send_data(d, rest_size, handle);
+        }
+        return StatusFlag::Success;
     }
     if (meta.stage == C_Broadcast::finish_ack) {
         ++_respond;
@@ -51,15 +56,15 @@ StatusFlag StarCluster::Broadcast::handle_event(const MetaData& meta,
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag StarCluster::Broadcast::send_data(DataPtr& data, Handle& handle) const {
+void StarCluster::Broadcast::send_data(DataPtr& data, uint32_t rest_size, Handle& handle) const {
     MetaData meta = create_meta();
     meta.stage = C_Broadcast::send_data;
+    meta.rest_data = rest_size;
+
     for (auto& id : handle.cluster_data<IdentityList>()) {
-        meta.serial = _sent;
         StatusFlag flag = handle.send_progress_message(version, id, meta, data);
         TDCF_CHECK_SUCCESS(flag)
     }
-    return StatusFlag::Success;
 }
 
 StarCluster::BroadcastAgent::BroadcastAgent(uint32_t version, ProcessingRulesPtr rp,
@@ -89,9 +94,14 @@ StatusFlag StarCluster::BroadcastAgent::handle_event(const MetaData& meta,
                                                      Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Broadcast);
     if (meta.stage == Public_Broadcast::agent_receive) {
-        assert(_sent == 0);
-        handle.store_data(rule, std::get<DataPtr>(data));
-        return send_data(std::get<DataPtr>(data), handle);
+        auto& set = std::get<DataSet>(data);
+        uint32_t rest_size = set.size();
+        for (auto& d : set) {
+            --rest_size;
+            handle.store_data(rule, d);
+            send_data(d, rest_size, handle);
+        }
+        return StatusFlag::Success;
     }
     if (meta.stage == A_Broadcast::finish_ack) {
         ++_respond;
