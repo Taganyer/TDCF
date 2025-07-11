@@ -37,22 +37,29 @@ StatusFlag RingCluster::Reduce::handle_event(const MetaData& meta,
                                              Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Reduce);
     if (meta.stage == C_Reduce::acquire_data) {
-        return acquire_data(std::get<DataPtr>(data), handle);
+        return acquire_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == C_Reduce::get_data) {
         handle.store_data(rule, std::get<DataPtr>(data));
+        if (meta.rest_data != 0) return StatusFlag::Success;
         rule->finish_callback();
         return StatusFlag::EventEnd;
     }
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag RingCluster::Reduce::acquire_data(DataPtr& data, Handle& handle) const {
+StatusFlag RingCluster::Reduce::acquire_data(DataSet& dataset, Handle& handle) const {
     auto& [send, receive, cluster_size] = handle.cluster_data<RingClusterData>();
     MetaData meta = create_meta();
     meta.stage = C_Reduce::send_data;
-    StatusFlag flag = handle.send_progress_message(version, send, meta, data);
-    TDCF_CHECK_SUCCESS(flag)
+    meta.rest_data = dataset.size();
+
+    for (auto& data : dataset) {
+        --meta.rest_data;
+        StatusFlag flag = handle.send_progress_message(version, send, meta, data);
+        TDCF_CHECK_SUCCESS(flag)
+    }
+
     return StatusFlag::Success;
 }
 
@@ -86,10 +93,10 @@ StatusFlag RingCluster::ReduceAgent::handle_event(const MetaData& meta,
                                                   Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Reduce);
     if (meta.stage == A_Reduce::acquire_data) {
-        return acquire_data(std::get<DataPtr>(data), handle);
+        return acquire_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == A_Reduce::get_data) {
-        return close(std::get<DataPtr>(data), handle);
+        return close(std::get<DataPtr>(data), meta.rest_data, handle);
     }
     TDCF_RAISE_ERROR(meta.stage error type)
 }
@@ -99,9 +106,12 @@ StatusFlag RingCluster::ReduceAgent::proxy_event(const MetaData& meta,
     return handle_event(meta, data, handle);
 }
 
-StatusFlag RingCluster::ReduceAgent::close(DataPtr& data, Handle& handle) const {
+StatusFlag RingCluster::ReduceAgent::close(DataPtr& data, uint32_t rest_size, Handle& handle) {
+    _set.emplace_back(std::move(data));
+    if (rest_size != 0) return StatusFlag::Success;
+
     MetaData meta = create_meta();
     meta.stage = Public_Reduce::agent_send;
-    handle.create_processor_event(_other, meta, std::static_pointer_cast<Serializable>(data));
+    handle.create_processor_event(_other, meta, std::move(_set));
     return StatusFlag::EventEnd;
 }

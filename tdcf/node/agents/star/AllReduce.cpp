@@ -43,10 +43,10 @@ StatusFlag StarAgent::AllReduce::handle_event(const MetaData& meta,
                                               Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::AllReduce);
     if (meta.stage == Public_AllReduce::node_acquire) {
-        return acquire_data1(std::get<DataPtr>(data), handle);
+        return acquire_data1(std::get<DataSet>(data), handle);
     }
     if (meta.stage == N_AllReduce::acquire_data2) {
-        return acquire_data2(std::get<DataPtr>(data), handle);
+        return acquire_data2(std::get<DataPtr>(data), meta.rest_data, handle);
     }
     if (meta.stage == Public_AllReduce::node_finish_ack) {
         return close(handle);
@@ -54,24 +54,36 @@ StatusFlag StarAgent::AllReduce::handle_event(const MetaData& meta,
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag StarAgent::AllReduce::acquire_data1(DataPtr& data, Handle& handle) const {
+StatusFlag StarAgent::AllReduce::acquire_data1(DataSet& dataset, Handle& handle) const {
     MetaData meta = create_meta();
     meta.stage = N_AllReduce::send_data1;
-    StatusFlag flag = handle.send_progress_message(version, handle.agent_data<IdentityPtr>(), meta, data);
-    TDCF_CHECK_SUCCESS(flag)
+    meta.rest_data = dataset.size();
+
+    auto& send = handle.agent_data<IdentityPtr>();
+    for (auto& data : dataset) {
+        --meta.rest_data;
+        StatusFlag flag = handle.send_progress_message(version, send, meta, std::move(data));
+        TDCF_CHECK_SUCCESS(flag)
+    }
     return StatusFlag::Success;
 }
 
-StatusFlag StarAgent::AllReduce::acquire_data2(DataPtr& data, Handle& handle) const {
+StatusFlag StarAgent::AllReduce::acquire_data2(DataPtr& data,
+                                               uint32_t rest_size, Handle& handle) {
     if (!_agent) {
         handle.store_data(rule, data);
+        if (rest_size != 0) return StatusFlag::Success;
         return close(handle);
     }
+    _set.emplace_back(std::move(data));
+    if (rest_size != 0) return StatusFlag::Success;
+
     MetaData meta = create_meta();
     meta.stage = Public_AllReduce::node_store;
-    Variant variant(std::move(data));
+    Variant variant(std::move(_set));
     StatusFlag flag = _agent->proxy_event(meta, variant, handle);
     TDCF_CHECK_SUCCESS(flag)
+
     return StatusFlag::Success;
 }
 

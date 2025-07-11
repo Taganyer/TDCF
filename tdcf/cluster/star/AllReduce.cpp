@@ -20,11 +20,9 @@ StatusFlag StarCluster::AllReduce::create(ProcessingRulesPtr rp, Handle& handle)
 
     auto& self = static_cast<AllReduce&>(*iter->second);
     self._self = iter;
-    self._set.resize(handle.cluster_data<IdentityList>().size() + 1);
-    self._get.resize(handle.cluster_data<IdentityList>().size() + 1);
 
     MetaData meta = self.create_meta();
-    meta.stage = C_AllReduce::acquire_data;
+    meta.stage = C_AllReduce::self_acquire_data;
     handle.acquire_data(iter, meta, self.rule);
 
     meta.stage = C_AllReduce::send_rule;
@@ -41,11 +39,20 @@ StatusFlag StarCluster::AllReduce::create(ProcessingRulesPtr rp, Handle& handle)
 StatusFlag StarCluster::AllReduce::handle_event(const MetaData& meta,
                                                 Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::AllReduce);
+    if (meta.stage == C_AllReduce::self_acquire_data) {
+        auto& set = std::get<DataSet>(data);
+        uint32_t rest_size = set.size();
+        for (auto& d : set) {
+            --rest_size;
+            acquire_data(d, rest_size, handle);
+        }
+        return StatusFlag::Success;
+    }
     if (meta.stage == C_AllReduce::acquire_data) {
-        return acquire_data(meta, std::get<DataPtr>(data), handle);
+        return acquire_data(std::get<DataPtr>(data), meta.rest_data, handle);
     }
     if (meta.stage == C_AllReduce::reduce_data) {
-        return send_data(std::get<DataPtr>(data), handle);
+        return send_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == C_AllReduce::finish_ack) {
         ++_respond;
@@ -58,12 +65,10 @@ StatusFlag StarCluster::AllReduce::handle_event(const MetaData& meta,
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag StarCluster::AllReduce::acquire_data(const MetaData& meta,
-                                                DataPtr& data, Handle& handle) {
-    assert(!_get[meta.serial]);
-    _set[meta.serial] = std::move(data);
-    _get[meta.serial] = true;
-    ++_received;
+StatusFlag StarCluster::AllReduce::acquire_data(DataPtr& data,
+                                                uint32_t rest_size, Handle& handle) {
+    _set.emplace_back(std::move(data));
+    if (rest_size == 0) ++_received;
     if (_received == handle.cluster_data<IdentityList>().size() + 1) {
         MetaData new_meta = create_meta();
         new_meta.stage = C_AllReduce::reduce_data;
@@ -72,15 +77,22 @@ StatusFlag StarCluster::AllReduce::acquire_data(const MetaData& meta,
     return StatusFlag::Success;
 }
 
-StatusFlag StarCluster::AllReduce::send_data(DataPtr& data, Handle& handle) {
+StatusFlag StarCluster::AllReduce::send_data(DataSet& dataset, Handle& handle) {
     _set.clear();
+
     MetaData meta = create_meta();
     meta.stage = C_AllReduce::send_data;
-    handle.store_data(rule, data);
-    for (auto& id : handle.cluster_data<IdentityList>()) {
-        StatusFlag flag = handle.send_progress_message(version, id, meta, data);
-        TDCF_CHECK_SUCCESS(flag)
+    meta.rest_data = dataset.size();
+
+    for (auto& data : dataset) {
+        --meta.rest_data;
+        handle.store_data(rule, data);
+        for (auto& id : handle.cluster_data<IdentityList>()) {
+            StatusFlag flag = handle.send_progress_message(version, id, meta, data);
+            TDCF_CHECK_SUCCESS(flag)
+        }
     }
+
     return StatusFlag::Success;
 }
 
@@ -96,11 +108,9 @@ StatusFlag StarCluster::AllReduceAgent::create(ProcessingRulesPtr rp, ProgressEv
     auto& self = static_cast<AllReduceAgent&>(*iter->second);
     *agent_ptr = &self;
     self._self = iter;
-    self._set.resize(handle.cluster_data<IdentityList>().size() + 1);
-    self._get.resize(handle.cluster_data<IdentityList>().size() + 1);
 
     MetaData meta = self.create_meta();
-    meta.stage = A_AllReduce::acquire_data1;
+    meta.stage = A_AllReduce::self_acquire_data;
     handle.acquire_data(iter, meta, self.rule);
 
     meta.stage = A_AllReduce::send_rule;
@@ -117,14 +127,23 @@ StatusFlag StarCluster::AllReduceAgent::create(ProcessingRulesPtr rp, ProgressEv
 StatusFlag StarCluster::AllReduceAgent::handle_event(const MetaData& meta,
                                                      Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::AllReduce);
+    if (meta.stage == A_AllReduce::self_acquire_data) {
+        auto& set = std::get<DataSet>(data);
+        uint32_t rest_size = set.size();
+        for (auto& d : set) {
+            --rest_size;
+            acquire_data(d, rest_size, handle);
+        }
+        return StatusFlag::Success;
+    }
     if (meta.stage == A_AllReduce::acquire_data1) {
-        return acquire_data(meta, std::get<DataPtr>(data), handle);
+        return acquire_data(std::get<DataPtr>(data), meta.rest_data, handle);
     }
     if (meta.stage == A_AllReduce::reduce_data) {
-        return reduce_data(std::get<DataPtr>(data), handle);
+        return reduce_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == Public_AllReduce::agent_receive) {
-        return send_data(std::get<DataPtr>(data), handle);
+        return send_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == A_AllReduce::finish_ack) {
         ++_respond;
@@ -137,15 +156,15 @@ StatusFlag StarCluster::AllReduceAgent::handle_event(const MetaData& meta,
 }
 
 StatusFlag StarCluster::AllReduceAgent::proxy_event(const MetaData& meta,
-                                              Variant& data, Handle& handle) {
+                                                    Variant& data, Handle& handle) {
     return handle_event(meta, data, handle);
 }
 
-StatusFlag StarCluster::AllReduceAgent::reduce_data(DataPtr& data, Handle& handle) {
+StatusFlag StarCluster::AllReduceAgent::reduce_data(DataSet& dataset, Handle& handle) {
     _set.clear();
     MetaData meta = create_meta();
     meta.stage = Public_AllReduce::agent_send;
-    handle.create_processor_event(_other, meta, std::static_pointer_cast<Serializable>(data));
+    handle.create_processor_event(_other, meta, std::move(dataset));
     return StatusFlag::Success;
 }
 

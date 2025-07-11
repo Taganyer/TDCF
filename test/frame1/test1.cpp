@@ -168,7 +168,7 @@ void test::correctness_test() {
     cluster2.insert(std::make_shared<Identity1>(node12_id));
 
     Base::Thread root_t([root_id, &share, &cluster1] {
-        root(ClusterType::star, root_id, share, cluster1);
+        root(ClusterType::ring, root_id, share, cluster1);
     });
 
     Base::Thread node1_t([node1_id, &share, root_id] {
@@ -176,7 +176,7 @@ void test::correctness_test() {
     });
 
     Base::Thread root1_t([root1_id, root_id, &share, &cluster2] {
-        node_root(ClusterType::ring, root1_id, root_id, share, cluster2);
+        node_root(ClusterType::star, root1_id, root_id, share, cluster2);
     });
 
     Base::Thread node11_t([node11_id, &share, root1_id] {

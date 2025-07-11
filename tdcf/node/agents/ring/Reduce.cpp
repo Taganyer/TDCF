@@ -54,18 +54,29 @@ StatusFlag RingAgent::Reduce::create(uint32_t version, const MetaData& meta,
 StatusFlag RingAgent::Reduce::handle_event(const MetaData& meta,
                                            Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Reduce);
-    if (meta.stage == N_Reduce::get_data || meta.stage == Public_Reduce::node_acquire) {
-        return acquire_data(std::get<DataPtr>(data), handle);
+    if (meta.stage == Public_Reduce::node_acquire) {
+        auto& set = std::get<DataSet>(data);
+        uint32_t rest_size = set.size();
+        for (auto& d : set) {
+            --rest_size;
+            acquire_data(d, rest_size, handle);
+        }
+        return StatusFlag::Success;
+    }
+    if (meta.stage == N_Reduce::get_data) {
+        return acquire_data(std::get<DataPtr>(data), meta.rest_data, handle);
     }
     if (meta.stage == N_Reduce::reduce_data) {
-        return close(std::get<DataPtr>(data), handle);
+        return close(std::get<DataSet>(data), handle);
     }
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag RingAgent::Reduce::acquire_data(DataPtr& data, Handle& handle) {
+StatusFlag RingAgent::Reduce::acquire_data(DataPtr& data,
+                                           uint32_t rest_size, Handle& handle) {
     _set.emplace_back(std::move(data));
-    if (_set.size() > 1) {
+    if (rest_size == 0) ++_step;
+    if (_step == 2) {
         MetaData meta = create_meta();
         meta.stage = N_Reduce::reduce_data;
         handle.reduce_data(_self, meta, rule, _set);
@@ -73,11 +84,17 @@ StatusFlag RingAgent::Reduce::acquire_data(DataPtr& data, Handle& handle) {
     return StatusFlag::Success;
 }
 
-StatusFlag RingAgent::Reduce::close(DataPtr& data, Handle& handle) const {
+StatusFlag RingAgent::Reduce::close(DataSet& dataset, Handle& handle) const {
     auto& [send, receive, serial] = handle.agent_data<RingAgentData>();
     MetaData meta = create_meta();
     meta.stage = N_Reduce::send_data;
-    StatusFlag flag = handle.send_progress_message(version, send, meta, data);
-    TDCF_CHECK_SUCCESS(flag)
+    meta.rest_data = dataset.size();
+
+    for (auto& data : dataset) {
+        --meta.rest_data;
+        StatusFlag flag = handle.send_progress_message(version, send, meta, std::move(data));
+        TDCF_CHECK_SUCCESS(flag)
+    }
+
     return StatusFlag::EventEnd;
 }

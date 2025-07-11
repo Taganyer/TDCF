@@ -43,15 +43,22 @@ StatusFlag StarAgent::Reduce::handle_event(const MetaData& meta,
                                            Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Reduce);
     if (meta.stage == Public_Reduce::node_acquire) {
-        return close(std::get<DataPtr>(data), handle);
+        return close(std::get<DataSet>(data), handle);
     }
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag StarAgent::Reduce::close(DataPtr& data, Handle& handle) const {
+StatusFlag StarAgent::Reduce::close(DataSet& dataset, Handle& handle) const {
     MetaData meta = create_meta();
     meta.stage = N_Reduce::send_data;
-    StatusFlag flag = handle.send_progress_message(version, handle.agent_data<IdentityPtr>(), meta, data);
-    TDCF_CHECK_SUCCESS(flag)
+    meta.rest_data = dataset.size();
+
+    auto& send = handle.agent_data<IdentityPtr>();
+    for (auto& data : dataset) {
+        --meta.rest_data;
+        StatusFlag flag = handle.send_progress_message(version, send, meta, std::move(data));
+        TDCF_CHECK_SUCCESS(flag)
+    }
+
     return StatusFlag::EventEnd;
 }

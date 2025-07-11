@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <variant>
 #include <tdcf/detail/StatusFlag.hpp>
 #include <tdcf/frame/Data.hpp>
 #include <tdcf/frame/Processor.hpp>

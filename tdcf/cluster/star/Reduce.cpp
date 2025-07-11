@@ -23,7 +23,7 @@ StatusFlag StarCluster::Reduce::create(ProcessingRulesPtr rp, Handle& handle) {
     self._set.reserve(handle.cluster_data<IdentityList>().size() + 1);
 
     MetaData meta = self.create_meta();
-    meta.stage = C_Reduce::acquire_data;
+    meta.stage = C_Reduce::self_acquire_data;
     handle.acquire_data(iter, meta, self.rule);
 
     meta.stage = C_Reduce::send_rule;
@@ -38,20 +38,32 @@ StatusFlag StarCluster::Reduce::create(ProcessingRulesPtr rp, Handle& handle) {
 StatusFlag StarCluster::Reduce::handle_event(const MetaData& meta,
                                              Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Reduce);
+    if (meta.stage == C_Reduce::self_acquire_data) {
+        auto& set = std::get<DataSet>(data);
+        uint32_t rest_size = set.size();
+        for (auto& d : set) {
+            --rest_size;
+            acquire_data(d, rest_size, handle);
+        }
+        return StatusFlag::Success;
+    }
     if (meta.stage == C_Reduce::acquire_data) {
-        return acquire_data(std::get<DataPtr>(data), handle);
+        return acquire_data(std::get<DataPtr>(data), meta.rest_data, handle);
     }
     if (meta.stage == C_Reduce::reduce_data) {
-        handle.store_data(rule, std::get<DataPtr>(data));
+        for (auto& data_ptr : std::get<DataSet>(data)) {
+            handle.store_data(rule, data_ptr);
+        }
         rule->finish_callback();
         return StatusFlag::EventEnd;
     }
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag StarCluster::Reduce::acquire_data(DataPtr& data, Handle& handle) {
+StatusFlag StarCluster::Reduce::acquire_data(DataPtr& data, uint32_t rest_size, Handle& handle) {
     _set.push_back(std::move(data));
-    if (_set.size() == handle.cluster_data<IdentityList>().size() + 1) {
+    if (rest_size == 0) ++_finish_size;
+    if (_finish_size == handle.cluster_data<IdentityList>().size() + 1) {
         MetaData meta = create_meta();
         meta.stage = C_Reduce::reduce_data;
         handle.reduce_data(_self, meta, rule, _set);
@@ -73,7 +85,7 @@ StatusFlag StarCluster::ReduceAgent::create(ProcessingRulesPtr rp, ProgressEvent
     self._self = iter;
 
     MetaData meta = self.create_meta();
-    meta.stage = A_Reduce::acquire_data;
+    meta.stage = A_Reduce::self_acquire_data;
     handle.acquire_data(iter, meta, self.rule);
 
     meta.stage = A_Reduce::send_rule;
@@ -88,11 +100,20 @@ StatusFlag StarCluster::ReduceAgent::create(ProcessingRulesPtr rp, ProgressEvent
 StatusFlag StarCluster::ReduceAgent::handle_event(const MetaData& meta,
                                                   Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Reduce);
+    if (meta.stage == A_Reduce::self_acquire_data) {
+        auto& set = std::get<DataSet>(data);
+        uint32_t rest_size = set.size();
+        for (auto& d : set) {
+            --rest_size;
+            acquire_data(d, rest_size, handle);
+        }
+        return StatusFlag::Success;
+    }
     if (meta.stage == A_Reduce::acquire_data) {
-        return acquire_data(std::get<DataPtr>(data), handle);
+        return acquire_data(std::get<DataPtr>(data), meta.rest_data, handle);
     }
     if (meta.stage == A_Reduce::reduce_data) {
-        return close(std::get<DataPtr>(data), handle);
+        return close(std::get<DataSet>(data), handle);
     }
     TDCF_RAISE_ERROR(meta.stage error type)
 }
@@ -102,9 +123,9 @@ StatusFlag StarCluster::ReduceAgent::proxy_event(const MetaData& meta,
     return handle_event(meta, data, handle);
 }
 
-StatusFlag StarCluster::ReduceAgent::close(DataPtr& data, Handle& handle) const {
+StatusFlag StarCluster::ReduceAgent::close(DataSet& dataset, Handle& handle) const {
     MetaData meta = create_meta();
     meta.stage = Public_Reduce::agent_send;
-    handle.create_processor_event(_other, meta, std::static_pointer_cast<Serializable>(data));
+    handle.create_processor_event(_other, meta, std::move(dataset));
     return StatusFlag::EventEnd;
 }

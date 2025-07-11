@@ -27,9 +27,11 @@ namespace tdcf {
 
         void scatter_data(ProgressEventsMI iter, const MetaData& meta,
                           const ProcessingRulesPtr& rule_ptr,
-                          uint32_t scatter_size, const DataPtr& data_ptr);
+                          uint32_t scatter_size, const DataSet& dataset);
 
         void create_processor_event(ProgressEventsMI iter, const MetaData& meta, SerializablePtr ptr);
+
+        void create_processor_event(ProgressEventsMI iter, const MetaData& meta, DataSet dataset);
 
         StatusFlag get_processor_events();
 
@@ -67,7 +69,7 @@ namespace tdcf {
 
             ProgressTask() = default;
 
-            ProgressTask(ProgressEventsMI iter, const MetaData& meta, DataVariant data);
+            ProgressTask(ProgressEventsMI iter, const MetaData& meta, DataSet data);
 
             ProgressTask(ProgressEventsMI iter, const MetaData& meta, SerializablePtr ptr);
 

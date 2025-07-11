@@ -19,7 +19,7 @@ namespace test {
                     const tdcf::DataSet& target) override;
 
         void scatter(tdcf::ProcessorEventMark mark, const tdcf::ProcessingRulesPtr& rule_ptr,
-                     uint32_t scatter_size, const tdcf::DataPtr& data_ptr) override;
+                     uint32_t scatter_size, const tdcf::DataSet& dataset) override;
 
         tdcf::OperationFlag get_events(EventQueue& queue) override;
 

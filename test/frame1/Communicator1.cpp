@@ -91,9 +91,9 @@ OperationFlag Communicator1::send_message(const IdentityPtr& target,
     uint32_t writen = iter->second.write(str.data(), str.size());
     assert(writen == size);
     assert(iter->second.readable_len() >= size);
-    T_INFO << __FUNCTION__ << " " << _id << "----" << id << " "
+    T_INFO << __FUNCTION__ << " " << _id << "----" << id << " operation: "
             << operation_type_name(message.meta_data.operation_type)
-            << " " << serializable_base_type_name(
+            << " base type: " << serializable_base_type_name(
             data ? (SerializableBaseType) data->base_type() : SerializableBaseType::Null);
 
     _share->conditions[id].notify_one();
@@ -134,6 +134,7 @@ uint32_t Communicator1::get_messages(EventQueue& queue) {
 uint32_t Communicator1::get_message(EventQueue& queue, RingBuffer& buf, IdentityPtr& from) {
     uint32_t get = 0;
     while (buf.readable_len() != 0) {
+        auto len = buf.readable_len();
         SerializableBaseType type = SerializableBaseType::Null;
         auto read = buf.read(&type, 1);
         assert(read == 1);

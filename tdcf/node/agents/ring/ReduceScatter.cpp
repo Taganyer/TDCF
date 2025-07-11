@@ -56,14 +56,23 @@ StatusFlag RingAgent::ReduceScatter::create(uint32_t version, const MetaData& me
 StatusFlag RingAgent::ReduceScatter::handle_event(const MetaData& meta,
                                                   Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::ReduceScatter);
-    if (meta.stage == N_ReduceScatter::get_data1 || meta.stage == Public_ReduceScatter::node_acquire) {
-        return acquire_data1(std::get<DataPtr>(data), handle);
+    if (meta.stage == Public_ReduceScatter::node_acquire) {
+        auto& set = std::get<DataSet>(data);
+        uint32_t rest_size = set.size();
+        for (auto& d : set) {
+            --rest_size;
+            acquire_data1(d, rest_size, handle);
+        }
+        return StatusFlag::Success;
+    }
+    if (meta.stage == N_ReduceScatter::get_data1) {
+        return acquire_data1(std::get<DataPtr>(data), meta.rest_data, handle);
     }
     if (meta.stage == N_ReduceScatter::reduce_data) {
-        return send_data1(std::get<DataPtr>(data), handle);
+        return send_data1(std::get<DataSet>(data), handle);
     }
     if (meta.stage == N_ReduceScatter::get_data2) {
-        return acquire_data2(data, handle);
+        return acquire_data2(std::get<DataPtr>(data), meta.rest_data, handle);
     }
     if (meta.stage == N_ReduceScatter::finish_ack) {
         _finish_ack = true;
@@ -76,50 +85,65 @@ StatusFlag RingAgent::ReduceScatter::handle_event(const MetaData& meta,
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag RingAgent::ReduceScatter::acquire_data1(DataPtr& data, Handle& handle) {
+StatusFlag RingAgent::ReduceScatter::acquire_data1(DataPtr& data, uint32_t rest_size, Handle& handle) {
     _set.emplace_back(std::move(data));
-    auto& [send, receive, serial] = handle.agent_data<RingAgentData>();
-    if (_set.size() > 1) {
+    if (rest_size == 0) ++_get;
+
+    if (_get == 2) {
+        auto& [send, receive, serial] = handle.agent_data<RingAgentData>();
         MetaData meta = create_meta();
         meta.stage = N_ReduceScatter::reduce_data;
         handle.reduce_data(_self, meta, rule, _set);
     }
+
     return StatusFlag::Success;
 }
 
-StatusFlag RingAgent::ReduceScatter::send_data1(DataPtr& data, Handle& handle) const {
+StatusFlag RingAgent::ReduceScatter::send_data1(DataSet& dataset, Handle& handle) const {
     auto& [send, receive, serial] = handle.agent_data<RingAgentData>();
     MetaData meta = create_meta();
     meta.stage = N_ReduceScatter::send_data1;
-    StatusFlag flag = handle.send_progress_message(version, send, meta, data);
-    TDCF_CHECK_SUCCESS(flag)
+    meta.rest_data = dataset.size();
+
+    for (auto& data : dataset) {
+        --meta.rest_data;
+        StatusFlag flag = handle.send_progress_message(version, send, meta, std::move(data));
+        TDCF_CHECK_SUCCESS(flag)
+    }
+
     return StatusFlag::Success;
 }
 
-StatusFlag RingAgent::ReduceScatter::acquire_data2(Variant& data, Handle& handle) {
+StatusFlag RingAgent::ReduceScatter::acquire_data2(DataPtr& data, uint32_t rest_size, Handle& handle) {
     auto& [send, receive, serial] = handle.agent_data<RingAgentData>();
-    if (++get == 1) {
+    if (rest_size != _last) {
+        _last = rest_size;
         if (!_agent) {
-            handle.store_data(rule, std::get<DataPtr>(data));
-            _finish = true;
+            handle.store_data(rule, data);
+            if (rest_size == 0) _finish = true;
         } else {
-            MetaData meta = create_meta();
-            meta.stage = Public_ReduceScatter::node_store;
-            StatusFlag flag = _agent->proxy_event(meta, data, handle);
-            TDCF_CHECK_SUCCESS(flag)
+            _set.emplace_back(std::move(data));
+            if (rest_size == 0) {
+                MetaData meta = create_meta();
+                meta.stage = Public_ReduceScatter::node_store;
+                Variant variant(std::move(_set));
+                StatusFlag flag = _agent->proxy_event(meta, variant, handle);
+                TDCF_CHECK_SUCCESS(flag)
+            }
         }
     } else {
         MetaData meta = create_meta();
         meta.stage = N_ReduceScatter::send_data2;
-        StatusFlag flag = handle.send_progress_message(version, send, meta, std::get<DataPtr>(data));
+        meta.rest_data = rest_size;
+        StatusFlag flag = handle.send_progress_message(version, send, meta, data);
         TDCF_CHECK_SUCCESS(flag)
     }
-    return close(handle);
+    return StatusFlag::Success;
 }
 
 StatusFlag RingAgent::ReduceScatter::close(Handle& handle) const {
     auto& [send, receive, serial] = handle.agent_data<RingAgentData>();
-    if (get < serial || !_finish_ack || !_finish) return StatusFlag::Success;
+    if (!_finish_ack || !_finish) return StatusFlag::Success;
     MetaData meta = create_meta();
     meta.stage = N_ReduceScatter::finish;
     StatusFlag flag = handle.send_progress_message(version, send, meta, nullptr);
