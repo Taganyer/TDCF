@@ -93,7 +93,7 @@ StatusFlag RingAgent::ReduceScatter::acquire_data1(DataPtr& data, uint32_t rest_
         auto& [send, receive, serial] = handle.agent_data<RingAgentData>();
         MetaData meta = create_meta();
         meta.stage = N_ReduceScatter::reduce_data;
-        handle.reduce_data(_self, meta, rule, _set);
+        handle.reduce_data(_self, meta, rule, std::move(_set));
     }
 
     return StatusFlag::Success;

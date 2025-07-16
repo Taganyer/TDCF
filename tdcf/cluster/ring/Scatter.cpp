@@ -53,7 +53,7 @@ StatusFlag RingCluster::Scatter::scatter_data(DataSet& dataset, Handle& handle) 
     auto& [send, receive, cluster_size] = handle.cluster_data<RingClusterData>();
     MetaData meta = create_meta();
     meta.stage = C_Scatter::scatter_data;
-    handle.scatter_data(_self, meta, rule, cluster_size + 1, dataset);
+    handle.scatter_data(_self, meta, rule, cluster_size + 1, std::move(dataset));
     return StatusFlag::Success;
 }
 

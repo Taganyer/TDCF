@@ -74,16 +74,15 @@ StatusFlag StarCluster::ReduceScatter::acquire_data(DataPtr& data, uint32_t rest
     if (_received == handle.cluster_data<IdentityList>().size() + 1) {
         MetaData new_meta = create_meta();
         new_meta.stage = C_ReduceScatter::reduce_data;
-        handle.reduce_data(_self, new_meta, rule, _set);
+        handle.reduce_data(_self, new_meta, rule, std::move(_set));
     }
     return StatusFlag::Success;
 }
 
-StatusFlag StarCluster::ReduceScatter::scatter_data(DataSet& dataset, Handle& handle) {
-    _set.clear();
+StatusFlag StarCluster::ReduceScatter::scatter_data(DataSet& dataset, Handle& handle) const {
     MetaData meta = create_meta();
     meta.stage = C_ReduceScatter::scatter_data;
-    handle.scatter_data(_self, meta, rule, handle.cluster_data<IdentityList>().size() + 1, dataset);
+    handle.scatter_data(_self, meta, rule, handle.cluster_data<IdentityList>().size() + 1, std::move(dataset));
     return StatusFlag::Success;
 }
 
@@ -176,8 +175,7 @@ StatusFlag StarCluster::ReduceScatterAgent::proxy_event(const MetaData& meta,
     return handle_event(meta, data, handle);
 }
 
-StatusFlag StarCluster::ReduceScatterAgent::reduce_data(DataSet& dataset, Handle& handle) {
-    _set.clear();
+StatusFlag StarCluster::ReduceScatterAgent::reduce_data(DataSet& dataset, Handle& handle) const {
     MetaData meta= create_meta();
     meta.stage = Public_ReduceScatter::agent_send;
 

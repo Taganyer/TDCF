@@ -16,6 +16,7 @@ namespace tdcf {
 
         [[nodiscard]] SerializableType derived_type() const override;
 
+    private:
         struct RingAgentData {
             IdentityPtr send;
             IdentityPtr receive;
@@ -25,7 +26,6 @@ namespace tdcf {
                 send(std::move(send)), receive(std::move(receive)), serial(serial) {};
         };
 
-    private:
         StatusFlag handle_disconnect(const IdentityPtr& id, Handle& handle) override;
 
         static void connect_handle(Handle::MessageEvent& event, Handle& handle);
@@ -115,7 +115,7 @@ namespace tdcf {
         private:
             StatusFlag acquire_data1(DataPtr& data, uint32_t rest_size, Handle& handle);
 
-            StatusFlag reduce_data(DataSet& dataset, Handle& handle);
+            StatusFlag reduce_data(DataSet& dataset, Handle& handle) const;
 
             StatusFlag acquire_data2(DataPtr& data, uint32_t rest_size, Handle& handle);
 

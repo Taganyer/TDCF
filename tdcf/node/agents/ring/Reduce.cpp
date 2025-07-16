@@ -79,7 +79,7 @@ StatusFlag RingAgent::Reduce::acquire_data(DataPtr& data,
     if (_step == 2) {
         MetaData meta = create_meta();
         meta.stage = N_Reduce::reduce_data;
-        handle.reduce_data(_self, meta, rule, _set);
+        handle.reduce_data(_self, meta, rule, std::move(_set));
     }
     return StatusFlag::Success;
 }

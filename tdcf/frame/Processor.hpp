@@ -49,10 +49,10 @@ namespace tdcf {
         virtual void acquire(ProcessorEventMark mark, const ProcessingRulesPtr& rule_ptr) = 0;
 
         virtual void reduce(ProcessorEventMark mark, const ProcessingRulesPtr& rule_ptr,
-                            const DataSet& target) = 0;
+                            DataSet target) = 0;
 
         virtual void scatter(ProcessorEventMark mark, const ProcessingRulesPtr& rule_ptr,
-                             uint32_t scatter_size, const DataSet& dataset) = 0;
+                             uint32_t scatter_size, DataSet dataset) = 0;
 
         virtual OperationFlag get_events(EventQueue& queue) = 0;
 

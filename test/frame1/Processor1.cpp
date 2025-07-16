@@ -26,16 +26,15 @@ void Processor1::store(const ProcessingRulesPtr& rule_ptr, const DataPtr& data_p
 }
 
 void Processor1::reduce(ProcessorEventMark mark, const ProcessingRulesPtr& rule_ptr,
-                        const DataSet& target) {
+                        DataSet target) {
     auto& rule = static_cast<ProcessingRules1&>(*rule_ptr);
-    DataSet data(target);
     T_INFO << "Processor " << _id << " reduce event " << rule.id()
-            << " total size " << data.size();
-    _store.emplace(ProcessorEvent { ProcessorEvent::Reduce, mark, std::move(data) });
+            << " total size " << target.size();
+    _store.emplace(ProcessorEvent { ProcessorEvent::Reduce, mark, std::move(target) });
 }
 
 void Processor1::scatter(ProcessorEventMark mark, const ProcessingRulesPtr& rule_ptr,
-                         uint32_t scatter_size, const DataSet& dataset) {
+                         uint32_t scatter_size, DataSet dataset) {
     auto& rule = static_cast<ProcessingRules1&>(*rule_ptr);
     DataSet set;
     set.reserve(scatter_size * dataset.size());

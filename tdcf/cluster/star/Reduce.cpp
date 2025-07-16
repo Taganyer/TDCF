@@ -61,12 +61,12 @@ StatusFlag StarCluster::Reduce::handle_event(const MetaData& meta,
 }
 
 StatusFlag StarCluster::Reduce::acquire_data(DataPtr& data, uint32_t rest_size, Handle& handle) {
-    _set.push_back(std::move(data));
+    _set.emplace_back(std::move(data));
     if (rest_size == 0) ++_finish_size;
     if (_finish_size == handle.cluster_data<IdentityList>().size() + 1) {
         MetaData meta = create_meta();
         meta.stage = C_Reduce::reduce_data;
-        handle.reduce_data(_self, meta, rule, _set);
+        handle.reduce_data(_self, meta, rule, std::move(_set));
     }
     return StatusFlag::Success;
 }

@@ -72,14 +72,12 @@ StatusFlag StarCluster::AllReduce::acquire_data(DataPtr& data,
     if (_received == handle.cluster_data<IdentityList>().size() + 1) {
         MetaData new_meta = create_meta();
         new_meta.stage = C_AllReduce::reduce_data;
-        handle.reduce_data(_self, new_meta, rule, _set);
+        handle.reduce_data(_self, new_meta, rule, std::move(_set));
     }
     return StatusFlag::Success;
 }
 
-StatusFlag StarCluster::AllReduce::send_data(DataSet& dataset, Handle& handle) {
-    _set.clear();
-
+StatusFlag StarCluster::AllReduce::send_data(DataSet& dataset, Handle& handle) const {
     MetaData meta = create_meta();
     meta.stage = C_AllReduce::send_data;
     meta.rest_data = dataset.size();
@@ -160,8 +158,7 @@ StatusFlag StarCluster::AllReduceAgent::proxy_event(const MetaData& meta,
     return handle_event(meta, data, handle);
 }
 
-StatusFlag StarCluster::AllReduceAgent::reduce_data(DataSet& dataset, Handle& handle) {
-    _set.clear();
+StatusFlag StarCluster::AllReduceAgent::reduce_data(DataSet& dataset, Handle& handle) const {
     MetaData meta = create_meta();
     meta.stage = Public_AllReduce::agent_send;
     handle.create_processor_event(_other, meta, std::move(dataset));

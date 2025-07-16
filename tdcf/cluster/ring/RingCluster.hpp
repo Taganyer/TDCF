@@ -14,6 +14,7 @@ namespace tdcf {
 
         ClusterFunOverride
 
+    private:
         struct RingClusterData {
             IdentityPtr send;
             IdentityPtr receive;
@@ -23,7 +24,6 @@ namespace tdcf {
                 send(std::move(send)), receive(std::move(receive)), cluster_size(cluster_size) {};
         };
 
-    private:
         ProcessorAgentFactoryInherit(RingAgentFactory)
 
         void cluster_connect_children(const IdentitySet& child_nodes) override;

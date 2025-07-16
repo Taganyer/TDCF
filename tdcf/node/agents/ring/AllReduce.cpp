@@ -88,13 +88,12 @@ StatusFlag RingAgent::AllReduce::acquire_data1(DataPtr& data, uint32_t rest_size
     if (_step == 2) {
         MetaData meta = create_meta();
         meta.stage = N_AllReduce::reduce_data;
-        handle.reduce_data(_self, meta, rule, _set);
+        handle.reduce_data(_self, meta, rule, std::move(_set));
     }
     return StatusFlag::Success;
 }
 
-StatusFlag RingAgent::AllReduce::reduce_data(DataSet& dataset, Handle& handle) {
-    _set.clear();
+StatusFlag RingAgent::AllReduce::reduce_data(DataSet& dataset, Handle& handle) const {
     auto& [send, receive, serial] = handle.agent_data<RingAgentData>();
     MetaData meta = create_meta();
     meta.stage = N_AllReduce::send_data1;

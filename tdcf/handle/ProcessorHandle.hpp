@@ -23,11 +23,11 @@ namespace tdcf {
         void store_data(const ProcessingRulesPtr& rule_ptr, const DataPtr& data_ptr) const;
 
         void reduce_data(ProgressEventsMI iter, const MetaData& meta,
-                         const ProcessingRulesPtr& rule_ptr, const DataSet& target);
+                         const ProcessingRulesPtr& rule_ptr, DataSet target);
 
         void scatter_data(ProgressEventsMI iter, const MetaData& meta,
                           const ProcessingRulesPtr& rule_ptr,
-                          uint32_t scatter_size, const DataSet& dataset);
+                          uint32_t scatter_size, DataSet dataset);
 
         void create_processor_event(ProgressEventsMI iter, const MetaData& meta, SerializablePtr ptr);
 

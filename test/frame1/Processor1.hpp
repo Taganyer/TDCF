@@ -16,10 +16,10 @@ namespace test {
         void store(const tdcf::ProcessingRulesPtr& rule_ptr, const tdcf::DataPtr& data_ptr) override;
 
         void reduce(tdcf::ProcessorEventMark mark, const tdcf::ProcessingRulesPtr& rule_ptr,
-                    const tdcf::DataSet& target) override;
+                    tdcf::DataSet target) override;
 
         void scatter(tdcf::ProcessorEventMark mark, const tdcf::ProcessingRulesPtr& rule_ptr,
-                     uint32_t scatter_size, const tdcf::DataSet& dataset) override;
+                     uint32_t scatter_size, tdcf::DataSet dataset) override;
 
         tdcf::OperationFlag get_events(EventQueue& queue) override;
 

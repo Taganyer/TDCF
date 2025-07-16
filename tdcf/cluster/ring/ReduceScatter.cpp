@@ -75,7 +75,7 @@ StatusFlag RingCluster::ReduceScatter::scatter_data(DataPtr& data,
         auto& [send, receive, cluster_size] = handle.cluster_data<RingClusterData>();
         MetaData meta = create_meta();
         meta.stage = C_ReduceScatter::scatter_data;
-        handle.scatter_data(_self, meta, rule, cluster_size + 1, _set);
+        handle.scatter_data(_self, meta, rule, cluster_size + 1, std::move(_set));
     }
     return StatusFlag::Success;
 }

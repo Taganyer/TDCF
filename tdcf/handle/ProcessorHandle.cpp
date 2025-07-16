@@ -4,6 +4,7 @@
 
 #include <tdcf/base/Errors.hpp>
 #include <tdcf/handle/ProcessorHandle.hpp>
+#include <utility>
 
 using namespace tdcf;
 
@@ -24,20 +25,20 @@ void ProcessorHandle::store_data(const ProcessingRulesPtr& rule_ptr, const DataP
 }
 
 void ProcessorHandle::reduce_data(ProgressEventsMI iter, const MetaData& meta,
-                                  const ProcessingRulesPtr& rule_ptr, const DataSet& target) {
+                                  const ProcessingRulesPtr& rule_ptr, DataSet target) {
     ProcessorEventMark mark = get_mark(iter);
     auto [i, success] = _process_delay.emplace(mark, std::pair(iter, meta));
     assert(success);
-    _processor->reduce(mark, rule_ptr, target);
+    _processor->reduce(mark, rule_ptr, std::move(target));
 }
 
 void ProcessorHandle::scatter_data(ProgressEventsMI iter, const MetaData& meta,
                                    const ProcessingRulesPtr& rule_ptr,
-                                   uint32_t scatter_size, const DataSet& dataset) {
+                                   uint32_t scatter_size, DataSet dataset) {
     ProcessorEventMark mark = get_mark(iter);
     auto [i, success] = _process_delay.emplace(mark, std::pair(iter, meta));
     assert(success);
-    _processor->scatter(mark, rule_ptr, scatter_size, dataset);
+    _processor->scatter(mark, rule_ptr, scatter_size, std::move(dataset));
 }
 
 void ProcessorHandle::create_processor_event(ProgressEventsMI iter,

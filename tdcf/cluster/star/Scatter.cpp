@@ -57,7 +57,7 @@ StatusFlag StarCluster::Scatter::handle_event(const MetaData& meta,
 StatusFlag StarCluster::Scatter::scatter_data(DataSet& dataset, Handle& handle) const {
     MetaData meta = create_meta();
     meta.stage = C_Scatter::scatter_data;
-    handle.scatter_data(_self, meta, rule, handle.cluster_data<IdentityList>().size() + 1, dataset);
+    handle.scatter_data(_self, meta, rule, handle.cluster_data<IdentityList>().size() + 1, std::move(dataset));
     return StatusFlag::Success;
 }
 
