@@ -3,11 +3,13 @@
 //
 #pragma once
 
-
+#include <tdcf/detail/EventProgress.hpp>
+#include <tdcf/handle/Handle.hpp>
+#include <tdcf/node/agents/NodeAgent.hpp>
 
 namespace tdcf {
 
-    class DBTAgent {
+    class DBTAgent : public NodeAgent {
 
     };
 

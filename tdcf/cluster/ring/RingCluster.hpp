@@ -32,7 +32,7 @@ namespace tdcf {
 
         void cluster_end() override;
 
-        bool come_from_children(const IdentityPtr& from_id) override;
+        bool from_sub_cluster(const IdentityPtr& from_id) override;
 
         static SerializablePtr create_node_data();
 

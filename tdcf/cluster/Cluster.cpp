@@ -51,7 +51,7 @@ StatusFlag Cluster::handle_received_message(const IdentityPtr& from_id, const Me
 }
 
 StatusFlag Cluster::handle_message(Handle::MessageEvent& event) {
-    if (_node_agent_started && !come_from_children(event.id)) {
+    if (_node_agent_started && !from_sub_cluster(event.id)) {
         return Node::handle_message(event);
     }
     if (!_cluster_started) return StatusFlag::ClusterOffline;

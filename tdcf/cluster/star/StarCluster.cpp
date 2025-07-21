@@ -67,7 +67,7 @@ void StarCluster::cluster_end() {
     }
 }
 
-bool StarCluster::come_from_children(const IdentityPtr& from_id) {
+bool StarCluster::from_sub_cluster(const IdentityPtr& from_id) {
     auto& id_list = _handle.cluster_data<IdentityList>();
     auto find = std::binary_search(id_list.begin(), id_list.end(), from_id,
                                    IdentityPtrLess());

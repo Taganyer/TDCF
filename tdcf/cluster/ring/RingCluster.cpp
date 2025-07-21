@@ -85,7 +85,7 @@ void RingCluster::cluster_end() {
     }
 }
 
-bool RingCluster::come_from_children(const IdentityPtr& from_id) {
+bool RingCluster::from_sub_cluster(const IdentityPtr& from_id) {
     auto& [send, receive, cluster_size] = _handle.cluster_data<RingClusterData>();
     return send->equal_to(*from_id) || receive->equal_to(*from_id);
 }

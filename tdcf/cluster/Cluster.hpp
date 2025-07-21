@@ -39,7 +39,7 @@ namespace tdcf {
 
         virtual void cluster_end() = 0;
 
-        virtual bool come_from_children(const IdentityPtr& from_id) = 0;
+        virtual bool from_sub_cluster(const IdentityPtr& from_id) = 0;
 
         virtual StatusFlag handle_received_message(const IdentityPtr& from_id, const MetaData& meta,
                                                    Variant& variant);

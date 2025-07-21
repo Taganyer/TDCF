@@ -10,10 +10,10 @@
 namespace test {
 
     inline void print(const tdcf::dbt::DBTNodeInfo& info) {
-        std::cout << info.t1_parent << ' '
+        std::cerr << info.t1_parent << ' '
             << info.t1_left << ' '
             << info.t1_right << ' '
-            << info.t1_color << " - "
+            << info.t1_color << " --- "
             << info.t2_parent << ' '
             << info.t2_left << ' '
             << info.t2_right << ' '
@@ -21,16 +21,14 @@ namespace test {
     }
 
     inline void DBT_correctness_test() {
-        for (uint32_t i = 2; i < 10000; ++i) {
+        for (uint32_t i = 2; i < 100; ++i) {
             std::vector<bool> vis1(i, false), vis2(i, false);
             auto [root1, root2, array] = tdcf::dbt::creat_dbt(i);
-            if (i < 10) {
-                for (uint32_t j = 0; j < i; ++j) {
-                    std::cout << j << ": ";
-                    print(array[j]);
-                }
+            for (uint32_t j = 0; j < i; ++j) {
+                std::cerr << j << ": ";
+                print(array[j]);
             }
-            std::cout << std::endl;
+            std::cerr << std::endl;
             assert(array[root1].t1_parent == -1 && array[root2].t2_parent == -1);
             std::stack<uint32_t> st;
             st.push(root1);

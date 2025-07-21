@@ -20,10 +20,14 @@ namespace tdcf {
 
             IdentityPtr black_child;
 
-            IdentityPtr parent;
+            IdentityPtr t1_parent;
 
-            DBTClusterData(IdentityPtr red_child, IdentityPtr black_child, IdentityPtr parent) :
-                red_child(std::move(red_child)), black_child(std::move(black_child)), parent(std::move(parent)) {};
+            IdentityPtr t2_parent;
+
+            DBTClusterData(IdentityPtr red_child, IdentityPtr black_child,
+                           IdentityPtr t1_parent, IdentityPtr t2_parent) :
+                red_child(std::move(red_child)), black_child(std::move(black_child)),
+                t1_parent(std::move(t1_parent)), t2_parent(std::move(t2_parent)) {};
 
         };
 
@@ -33,9 +37,15 @@ namespace tdcf {
 
         void cluster_start() override;
 
+        void send_message_to_child(const std::vector<IdentityPtr>& node_list,
+                                   const dbt::DBTInfo& dbt_info);
+
+        void link(IdentityPtr t1_left, uint32_t t1_left_color,
+                  IdentityPtr t1_right, IdentityPtr t2_parent);
+
         void cluster_end() override;
 
-        bool come_from_children(const IdentityPtr& from_id) override;
+        bool from_sub_cluster(const IdentityPtr& from_id) override;
 
         static SerializablePtr create_node_data();
 

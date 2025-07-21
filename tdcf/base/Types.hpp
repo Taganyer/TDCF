@@ -79,6 +79,8 @@ namespace tdcf {
 
         static constexpr StageNum ring = 2;
 
+        static constexpr StageNum dbt = 3;
+
     };
 
     struct Star {
@@ -90,6 +92,15 @@ namespace tdcf {
 
     struct Ring {
         static constexpr StageNum start = 1;
+
+        static constexpr StageNum close = 2;
+
+    };
+
+    struct DBT {
+        static constexpr StageNum start = 1;
+
+        static constexpr StageNum init_end = 2;
 
         static constexpr StageNum close = 2;
 
