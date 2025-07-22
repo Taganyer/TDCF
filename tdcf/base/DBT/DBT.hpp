@@ -32,7 +32,7 @@ namespace tdcf::dbt {
 
     namespace details {
 
-        uint32_t __build_tree1(DBTArray& array, uint32_t begin, uint32_t size) {
+        inline uint32_t __build_tree1(DBTArray& array, uint32_t begin, uint32_t size) {
             if (size == 0) return -1;
             uint32_t root = get_root(begin, size);
             uint32_t left_size = root - begin;
@@ -83,13 +83,13 @@ namespace tdcf::dbt {
             return (get_root(0, size) + 1) % size;
         }
 
-        uint32_t __dyeing_tree1_even(DBTArray& array, uint32_t index) {
+        inline uint32_t __dyeing_tree1_even(DBTArray& array, uint32_t index) {
             if (array[index].t1_color != -1) return array[index].t1_color;
 
             uint32_t parent_color = __dyeing_tree1_even(array, array[index].t1_parent);
             return array[index].t1_color =
                 parent_color ^
-                array[index].t1_parent > index;
+                (array[index].t1_parent > index);
         }
 
         inline void __dyeing_tree2(DBTArray& array) {

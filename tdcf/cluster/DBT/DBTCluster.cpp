@@ -112,6 +112,9 @@ void DBTCluster::link(IdentityPtr t1_left, uint32_t t1_left_color,
 }
 
 void DBTCluster::cluster_end() {
+    auto& [red, black, t1p, t2p] = _handle.cluster_data<DBTClusterData>();
+    if (red) _handle.disconnect(red);
+    if (black) _handle.disconnect(black);
 }
 
 bool DBTCluster::from_sub_cluster(const IdentityPtr& from_id) {
@@ -126,4 +129,5 @@ SerializablePtr DBTCluster::create_node_data() {
 }
 
 StatusFlag DBTCluster::handle_disconnect_request(const IdentityPtr& from_id) {
+    throw std::runtime_error(std::string("unexpect ") + __PRETTY_FUNCTION__);
 }
