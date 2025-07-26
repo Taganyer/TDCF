@@ -9,21 +9,21 @@ using namespace tdcf;
 
 void DBTAgent::init(const IdentityPtr& from_id, const MetaData& meta, Handle& handle) {
     create_agent_data(from_id, handle);
-    auto& [red, black, t1p, t2p, leaf1] = handle.agent_data<DBTAgentData>();
+    auto& [t1, t2, red, black, leaf1] = handle.agent_data<DBTAgentData>();
     if (!leaf1) {
         if (red) handle.connect(red);
         if (black) handle.connect(black);
     } else {
         auto id = handle.accept();
-        TDCF_CHECK_EXPR(id->equal_to(*t1p))
+        TDCF_CHECK_EXPR(id->equal_to(*t1))
     }
     if (leaf1) {
-        if (red && !red->equal_to(*t1p)) handle.connect(red);
-        if (black && !black->equal_to(*t1p)) handle.connect(black);
+        if (red && !red->equal_to(*t1)) handle.connect(red);
+        if (black && !black->equal_to(*t1)) handle.connect(black);
     } else {
-        if ((!red || !red->equal_to(*t2p)) && (!black || !black->equal_to(*t2p))) {
+        if ((!red || !red->equal_to(*t2)) && (!black || !black->equal_to(*t2))) {
             auto id = handle.accept();
-            TDCF_CHECK_EXPR(id->equal_to(*t2p))
+            TDCF_CHECK_EXPR(id->equal_to(*t2))
         }
     }
 }
@@ -34,6 +34,7 @@ SerializableType DBTAgent::derived_type() const {
 
 void DBTAgent::create_agent_data(const IdentityPtr& from_id, Handle& handle) {
     bool end = false;
+    bool is_leaf_node_in_t1 = false;
     std::vector<IdentityPtr> ids;
     std::vector<int> colors;
     while (!end) {
@@ -45,50 +46,50 @@ void DBTAgent::create_agent_data(const IdentityPtr& from_id, Handle& handle) {
             if (event.type == CommunicatorEvent::DisconnectRequest) {
                 end = true;
                 handle.disconnect(event.id);
-            } else {
-                assert(event.meta.operation_type == OperationType::Init);
-                ids.emplace_back(std::move(event.id));
-                colors.push_back(event.meta.data1[0]);
+                break;
             }
+            assert(event.meta.operation_type == OperationType::Init);
+            is_leaf_node_in_t1 = event.meta.data1[0] == 1;
+            ids.emplace_back(std::move(event.id));
+            colors.push_back(event.meta.data1[1]);
         }
     }
-    assert(ids.size() == 6);
-    bool is_leaf_node_in_t1 = !ids[1] && !ids[2];
-    if (is_leaf_node_in_t1) {
-        assert(ids[3] || ids[4]);
-    } else {
-        assert(!ids[3] && !ids[4]);
-    }
+    assert(ids.size() == 4);
+
     int red_index, black_index;
-    if (is_leaf_node_in_t1) {
-        if (colors[1] == 0) {
-            red_index = 1;
-            black_index = 2;
-        } else {
-            red_index = 2;
-            black_index = 1;
-        }
+    if (colors[2] == 0) {
+        assert(colors[3] == 1);
+        red_index = 2;
+        black_index = 3;
     } else {
-        if (colors[4] == 0) {
-            red_index = 4;
-            black_index = 5;
-        } else {
-            red_index = 5;
-            black_index = 4;
-        }
+        assert(colors[3] == 0);
+        red_index = 3;
+        black_index = 2;
     }
-    handle.create_agent_data<DBTAgentData>(std::move(ids[red_index]), std::move(ids[black_index]),
-                                           std::move(ids[0]), std::move(ids[3]), is_leaf_node_in_t1);
+
+    handle.connect(ids[0]);
+    if (!ids[0]->equal_to(*ids[1])) {
+        handle.connect(ids[1]);
+    }
+    handle.create_agent_data<DBTAgentData>(std::move(ids[0]), std::move(ids[1]),
+                                           std::move(ids[red_index]), std::move(ids[black_index]),
+                                           is_leaf_node_in_t1);
 }
 
 StatusFlag DBTAgent::handle_disconnect(const IdentityPtr& id, Handle& handle) {
-    auto& [red, black, t1p, t2p, leaf1] = handle.agent_data<DBTAgentData>();
-    TDCF_CHECK_EXPR(id->equal_to(*t1p))
+    auto& [t1, t2, red, black, leaf1] = handle.agent_data<DBTAgentData>();
     handle.disconnect(id);
-    if (!leaf1) {
-        if (red) handle.disconnect(red);
-        if (black) handle.disconnect(black);
+    if (t1->equal_to(*id)) t1 = nullptr;
+    if (t2->equal_to(*id)) t2 = nullptr;
+    if (red) {
+        handle.disconnect(red);
+        red = nullptr;
     }
+    if (black) {
+        handle.disconnect(black);
+        black = nullptr;
+    }
+    if (t1 || t2) return StatusFlag::Success;
     return StatusFlag::ClusterOffline;
 }
 

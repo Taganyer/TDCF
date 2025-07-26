@@ -1,0 +1,73 @@
+//
+// Created by taganyer on 25-7-23.
+//
+
+#include <tdcf/base/Errors.hpp>
+#include <tdcf/base/types/DBT.hpp>
+#include "tdcf/cluster/DBT/DBTCluster.hpp"
+
+using namespace tdcf;
+
+using namespace tdcf::dbt;
+
+DBTCluster::Broadcast::Broadcast(ProgressType type, uint32_t version, ProcessingRulesPtr rp) :
+    EventProgress(OperationType::Broadcast, type, version, std::move(rp)) {}
+
+StatusFlag DBTCluster::Broadcast::create(ProcessingRulesPtr rp, Handle& handle) {
+    uint32_t version = handle.create_progress_version();
+    auto iter = handle.create_progress(
+        std::make_unique<Broadcast>(ProgressType::Root, version, std::move(rp)));
+
+    auto& [t1, t2] = handle.cluster_data<DBTClusterData>();
+    auto& self = static_cast<Broadcast&>(*iter->second);
+
+    MetaData meta = self.create_meta();
+    meta.stage = C_Broadcast::acquire_data;
+    handle.acquire_data(iter, meta, self.rule);
+
+    meta.stage = C_Broadcast::send_rule;
+    StatusFlag flag = handle.send_progress_message(version, t1, meta, self.rule);
+    TDCF_CHECK_SUCCESS(flag)
+
+    return StatusFlag::Success;
+}
+
+StatusFlag DBTCluster::Broadcast::handle_event(const MetaData& meta,
+                                               Variant& data, Handle& handle) {
+    assert(meta.operation_type == OperationType::Broadcast);
+    if (meta.stage == C_Broadcast::acquire_data) {
+        return send_data(std::get<DataSet>(data), handle);
+    }
+    if (meta.stage == C_Broadcast::finish_ack) {
+        if (++_finish_count == 1) return StatusFlag::Success;
+        rule->finish_callback();
+        return StatusFlag::EventEnd;
+    }
+    TDCF_RAISE_ERROR(meta.stage error type)
+}
+
+StatusFlag DBTCluster::Broadcast::send_data(DataSet& dataset, Handle& handle) const {
+    auto& [t1, t2] = handle.cluster_data<DBTClusterData>();
+    MetaData meta = create_meta();
+    meta.stage = C_Broadcast::send_data;
+    if (dataset.size() & 1) dataset.emplace_back(DataPtr());
+
+    uint32_t t1_rest_data = dataset.size() / 2, t2_rest_data = t1_rest_data;
+    for (uint32_t i = 0; i < t1_rest_data; ++i) {
+        auto& data = dataset[i];
+        meta.serial = i & 1;
+        if (i & 1) {
+            meta.rest_data = --t2_rest_data;
+            meta.data1[0] = 1;
+            StatusFlag flag = handle.send_progress_message(version, t2, meta, data);
+            TDCF_CHECK_SUCCESS(flag)
+        } else {
+            meta.data1[0] = 0;
+            meta.rest_data = --t1_rest_data;
+            StatusFlag flag = handle.send_progress_message(version, t1, meta, data);
+            TDCF_CHECK_SUCCESS(flag)
+        }
+    }
+
+    return StatusFlag::Success;
+}

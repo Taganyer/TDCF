@@ -16,18 +16,12 @@ namespace tdcf {
 
     private:
         struct DBTClusterData {
-            IdentityPtr red_child;
+            IdentityPtr t1_root;
 
-            IdentityPtr black_child;
+            IdentityPtr t2_root;
 
-            IdentityPtr t1_parent;
-
-            IdentityPtr t2_parent;
-
-            DBTClusterData(IdentityPtr red_child, IdentityPtr black_child,
-                           IdentityPtr t1_parent, IdentityPtr t2_parent) :
-                red_child(std::move(red_child)), black_child(std::move(black_child)),
-                t1_parent(std::move(t1_parent)), t2_parent(std::move(t2_parent)) {};
+            DBTClusterData(IdentityPtr t1_root, IdentityPtr t2_root) :
+                t1_root(std::move(t1_root)), t2_root(std::move(t2_root)) {};
 
         };
 
@@ -40,9 +34,6 @@ namespace tdcf {
         void send_message_to_child(const std::vector<IdentityPtr>& node_list,
                                    const dbt::DBTInfo& dbt_info);
 
-        void link(IdentityPtr t1_left, uint32_t t1_left_color,
-                  IdentityPtr t1_right, IdentityPtr t2_parent);
-
         void cluster_end() override;
 
         bool from_sub_cluster(const IdentityPtr& from_id) override;
@@ -50,6 +41,20 @@ namespace tdcf {
         static SerializablePtr create_node_data();
 
         StatusFlag handle_disconnect_request(const IdentityPtr& from_id) override;
+
+        class Broadcast : public EventProgress {
+        public:
+            explicit Broadcast(ProgressType type, uint32_t version, ProcessingRulesPtr rp);
+
+            static StatusFlag create(ProcessingRulesPtr rp, Handle& handle);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
+
+        protected:
+            StatusFlag send_data(DataSet& dataset, Handle& handle) const;
+
+            uint32_t _finish_count = 0;
+        };
 
     };
 

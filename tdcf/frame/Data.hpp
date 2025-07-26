@@ -15,6 +15,10 @@ namespace tdcf {
             return static_cast<SerializableType>(SerializableBaseType::Data);
         };
 
+        [[nodiscard]] SerializableType derived_type() const override {
+            return 0;
+        };
+
     };
 
     using DataPtr = std::shared_ptr<Data>;
