@@ -18,24 +18,25 @@ StatusFlag DBTAgent::Broadcast::create(uint32_t version, const MetaData& meta,
     assert(meta.operation_type == OperationType::Broadcast);
     assert(meta.stage == N_Broadcast::get_rule);
 
-    auto& [t1, t2, red, black, leaf1] = handle.agent_data<DBTAgentData>();
+    auto& info = handle.agent_data<DBTAgentData>();
 
     auto iter = handle.create_progress(std::make_unique<Broadcast>(version, std::move(rp)));
 
     auto& self = static_cast<Broadcast&>(*iter->second);
-    if (!red || !black) ++self._finish_count;
+    if (!info.red()) ++self._finish_count;
+    if (!info.black()) ++self._finish_count;
 
     MetaData new_meta = self.create_meta();
     new_meta.stage = N_Broadcast::send_rule;
-    if (!leaf1 && red) {
-        StatusFlag flag = handle.send_progress_message(version, red, new_meta, self.rule);
+    if (info.internal1() && info.red()) {
+        StatusFlag flag = handle.send_progress_message(version, info.red(), new_meta, self.rule);
         if (flag != StatusFlag::Success) {
             handle.destroy_progress(iter);
             return flag;
         }
     }
-    if (!leaf1 && black) {
-        StatusFlag flag = handle.send_progress_message(version, black, new_meta, self.rule);
+    if (info.internal1() && info.black()) {
+        StatusFlag flag = handle.send_progress_message(version, info.black(), new_meta, self.rule);
         if (flag != StatusFlag::Success) {
             handle.destroy_progress(iter);
             return flag;
@@ -60,37 +61,79 @@ StatusFlag DBTAgent::Broadcast::handle_event(const MetaData& meta, Variant& data
             if (std::get<DataPtr>(data)->derived_type() != 0) {
                 handle.store_data(rule, std::get<DataPtr>(data));
             }
-            if (meta.rest_data == 0) ++_message_count;
+            if (meta.rest_data == 0 && ++_message_count == 2) {
+                _data_stored = true;
+            }
         } else {
             StatusFlag flag = agent_store(std::get<DataPtr>(data), meta.rest_data, handle);
             TDCF_CHECK_SUCCESS(flag)
         }
-
+        return send_data(std::get<DataPtr>(data), meta.rest_data, meta.data1[0], meta.serial, handle);
     }
+    if (meta.stage == N_Broadcast::finish_ack) {
+        return close(handle);
+    }
+    if (meta.stage == Public_Broadcast::node_finish_ack) {
+        _data_stored = true;
+        if (_t1_finished && _t2_finished)
+            return StatusFlag::EventEnd;
+        return StatusFlag::Success;
+    }
+    TDCF_RAISE_ERROR(meta.stage error type)
 }
 
 StatusFlag DBTAgent::Broadcast::send_data(DataPtr& data, uint32_t rest_size,
-                                          uint32_t from_serial, Handle& handle) const {
-    auto& [t1, t2, red, black, leaf1] = handle.agent_data<DBTAgentData>();
+                                          bool receive_message_from_t1,
+                                          uint32_t from_serial, Handle& handle) {
+    auto& info = handle.agent_data<DBTAgentData>();
+
     MetaData meta = create_meta();
-    meta.stage = N_Broadcast::send_data;
-    meta.rest_data = rest_size;
-    meta.data1[0] = !leaf1;
 
     StatusFlag flag;
-    /// TODO: 有BUG
+    if (receive_message_from_t1 && info.leaf1()) {
+        if (rest_size != 0) return StatusFlag::Success;
+        meta.stage = N_Broadcast::finish;
+        flag = handle.send_progress_message(version, info.t1(), meta, nullptr);
+        _t1_finished = true;
+        TDCF_CHECK_SUCCESS(flag)
+        if (_t2_finished && _data_stored)
+            return StatusFlag::EventEnd;
+        return StatusFlag::Success;
+    }
+    if (!receive_message_from_t1 && info.leaf2()) {
+        if (rest_size != 0) return StatusFlag::Success;
+        meta.stage = N_Broadcast::finish;
+        flag = handle.send_progress_message(version, info.t2(), meta, nullptr);
+        _t2_finished = true;
+        TDCF_CHECK_SUCCESS(flag)
+        if (_t1_finished && _data_stored)
+            return StatusFlag::EventEnd;
+        return StatusFlag::Success;
+    }
+
+    meta.stage = N_Broadcast::send_data;
+    meta.rest_data = rest_size;
+    meta.data1[0] = info.internal1();
     if (from_serial == 0) {
-        meta.serial = 1;
-        flag = handle.send_progress_message(version, black, meta, data);
-        TDCF_CHECK_SUCCESS(flag)
-        meta.serial = 0;
-        flag = handle.send_progress_message(version, red, meta, data);
+        if (info.black()) {
+            meta.serial = 1;
+            flag = handle.send_progress_message(version, info.black(), meta, data);
+            TDCF_CHECK_SUCCESS(flag)
+        }
+        if (info.red()) {
+            meta.serial = 0;
+            flag = handle.send_progress_message(version, info.red(), meta, data);
+        }
     } else {
-        meta.serial = 0;
-        flag = handle.send_progress_message(version, red, meta, data);
-        TDCF_CHECK_SUCCESS(flag)
-        meta.serial = 1;
-        flag = handle.send_progress_message(version, black, meta, data);
+        if (info.red()) {
+            meta.serial = 0;
+            flag = handle.send_progress_message(version, info.red(), meta, data);
+            TDCF_CHECK_SUCCESS(flag)
+        }
+        if (info.black()) {
+            meta.serial = 1;
+            flag = handle.send_progress_message(version, info.black(), meta, data);
+        }
     }
     TDCF_CHECK_SUCCESS(flag)
 
@@ -110,31 +153,23 @@ StatusFlag DBTAgent::Broadcast::agent_store(DataPtr& data, uint32_t rest_size, H
     return _agent->proxy_event(meta, variant, handle);
 }
 
-StatusFlag DBTAgent::Broadcast::close(bool receive_message_from_t1, Handle& handle) {
-    auto& [t1, t2, red, black, leaf1] = handle.agent_data<DBTAgentData>();
+StatusFlag DBTAgent::Broadcast::close(Handle& handle) {
+    auto& info = handle.agent_data<DBTAgentData>();
     MetaData meta = create_meta();
     meta.stage = N_Broadcast::finish;
+
     StatusFlag flag = StatusFlag::Success;
-    if (leaf1) {
-        meta.data1[0] = 0;
-        if (receive_message_from_t1) {
-            _t1_finished = true;
-            flag = handle.send_progress_message(version, t1, meta, nullptr);
-        } else if (++_finish_count == 2) {
-            _t2_finished = true;
-            flag = handle.send_progress_message(version, t2, meta, nullptr);
-        }
-    } else {
-        meta.data1[0] = 1;
-        if (!receive_message_from_t1) {
-            _t2_finished = true;
-            flag = handle.send_progress_message(version, t2, meta, nullptr);
-        } else if (++_finish_count == 2) {
-            _t1_finished = true;
-            flag = handle.send_progress_message(version, t1, meta, nullptr);
-        }
+    if (info.internal1() && ++_finish_count == 2) {
+        _t1_finished = true;
+        flag = handle.send_progress_message(version, info.t1(), meta, nullptr);
     }
+    if (info.internal2() && ++_finish_count == 2) {
+        _t2_finished = true;
+        flag = handle.send_progress_message(version, info.t2(), meta, nullptr);
+    }
+
     TDCF_CHECK_SUCCESS(flag)
-    if (_t1_finished && _t2_finished) return StatusFlag::ClusterOffline;
+    if (_t1_finished && _t2_finished && _data_stored)
+        return StatusFlag::EventEnd;
     return StatusFlag::Success;
 }

@@ -29,17 +29,26 @@ namespace tdcf {
 
     using IdentityPtr = std::shared_ptr<Identity>;
 
+    inline bool less_than(const IdentityPtr& lhs, const IdentityPtr& rhs) {
+        if (lhs && rhs) return lhs->less_than(*rhs);
+        return !lhs;
+    };
+
+    inline bool equal_to(const IdentityPtr& lhs, const IdentityPtr& rhs) {
+        if (lhs && rhs) return lhs->equal_to(*rhs);
+        return !lhs && !rhs;
+    };
+
+
     struct IdentityPtrLess {
         bool operator()(const IdentityPtr& lhs, const IdentityPtr& rhs) const {
-            if (lhs && rhs) return lhs->less_than(*rhs);
-            return !lhs;
+            return less_than(lhs, rhs);
         };
     };
 
     struct IdentityPtrEqual {
         bool operator()(const IdentityPtr& lhs, const IdentityPtr& rhs) const {
-            if (lhs && rhs) return lhs->equal_to(*rhs);
-            return !lhs && !rhs;
+           return equal_to(lhs, rhs);
         };
     };
 }

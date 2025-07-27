@@ -26,18 +26,38 @@ namespace tdcf {
 
             IdentityPtr black_child;
 
-            bool is_leaf_node_in_t1;
+            bool is_leaf_node_in_t1, is_leaf_node_in_t2;
 
             DBTAgentData(IdentityPtr t1_parent, IdentityPtr t2_parent,
                          IdentityPtr red_child, IdentityPtr black_child,
-                         bool is_leaf_node_in_t1) :
-                t1_parent(std::move(t1_parent)), t2_parent(std::move(t2_parent)),
-                red_child(std::move(red_child)), black_child(std::move(black_child)),
-                is_leaf_node_in_t1(is_leaf_node_in_t1) {};
+                         bool is_leaf_node_in_t1, bool is_leaf_node_in_t2);
+
+            IdentityPtr& t1() { return t1_parent; };
+
+            IdentityPtr& t2() { return t2_parent; };
+
+            IdentityPtr& red() { return red_child; };
+
+            IdentityPtr& black() { return black_child; };
+
+            bool leaf1() const { return is_leaf_node_in_t1; };
+
+            bool leaf2() const { return is_leaf_node_in_t2; };
+
+            bool internal1() const { return !is_leaf_node_in_t1; };
+
+            bool internal2() const { return !is_leaf_node_in_t2; };
 
         };
 
+        bool _t1_connected = false, _t2_connected = false,
+             _red_connected = false, _black_connected = false;
+
+        void connect(bool connect, const IdentityPtr& id, Handle& handle);
+
         static void create_agent_data(const IdentityPtr& from_id, Handle& handle);
+
+        static void disconnect(const IdentityPtr& id, Handle& handle);
 
         StatusFlag handle_disconnect(const IdentityPtr& id, Handle& handle) override;
 
@@ -53,18 +73,20 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         private:
-            StatusFlag send_data(DataPtr& data, uint32_t rest_size,
-                                 uint32_t from_serial, Handle& handle) const;
+            StatusFlag send_data(DataPtr& data, uint32_t rest_size, bool receive_message_from_t1,
+                                 uint32_t from_serial, Handle& handle);
 
             StatusFlag agent_store(DataPtr& data, uint32_t rest_size, Handle& handle);
 
-            StatusFlag close(bool receive_message_from_t1, Handle& handle);
+            StatusFlag close(Handle& handle);
 
             EventProgressAgent *_agent = nullptr;
 
             uint8_t _message_count = 0, _finish_count = 0;
 
             bool _t1_finished = false, _t2_finished = false;
+
+            bool _data_stored = false;
 
             DataSet _set;
 

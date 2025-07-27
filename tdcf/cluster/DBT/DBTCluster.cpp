@@ -9,6 +9,43 @@
 using namespace tdcf;
 
 
+#define DBTClusterFun(fun_name, class_name) \
+StatusFlag DBTCluster::fun_name(ProcessingRulesPtr rule_ptr) { \
+    StatusFlag flag = class_name::create(std::move(rule_ptr), _handle); \
+    if (flag != StatusFlag::Success) return flag; \
+    return flag; \
+}
+
+#define DBTAgentFactoryFun(type, class_name) \
+StatusFlag DBTCluster::DBTAgentFactory::type(const ProcessingRulesPtr& rule, ProgressEventsMI iter, \
+    Handle& handle, EventProgressAgent **agent_ptr) { \
+    return class_name::create(rule, iter, handle, agent_ptr); \
+}
+
+#define DBTFunAll(fun, cluster_class, agent_class) \
+    DBTClusterFun(fun, cluster_class) \
+    DBTAgentFactoryFun(fun, agent_class)
+
+
+#define DBTEmpty(fun, cluster_class, agent_class) \
+StatusFlag DBTCluster::fun(ProcessingRulesPtr rule_ptr) { \
+    return StatusFlag::Success; \
+} \
+StatusFlag DBTCluster::DBTAgentFactory::fun(const ProcessingRulesPtr& rule, ProgressEventsMI iter, \
+    Handle& handle, EventProgressAgent **agent_ptr) { \
+    return StatusFlag::Success; \
+}
+
+DBTFunAll(broadcast, Broadcast, BroadcastAgent)
+
+DBTEmpty(scatter, Scatter, ScatterAgent)
+
+DBTEmpty(reduce, Reduce, ReduceAgent)
+
+DBTEmpty(all_reduce, AllReduce, AllReduceAgent)
+
+DBTEmpty(reduce_scatter, ReduceScatter, ReduceScatterAgent)
+
 void DBTCluster::cluster_connect_children(const IdentitySet& child_nodes) {
     TDCF_CHECK_EXPR(!child_nodes.empty())
     TDCF_CHECK_EXPR(child_nodes.find(nullptr) == child_nodes.end())
@@ -43,15 +80,15 @@ void DBTCluster::cluster_start() {
 
     send_message_to_child(node_list, dbt_info);
 
-    IdentityPtr t1_root = std::move(node_list[root1]);
-    IdentityPtr t2_root = std::move(node_list[root2]);
+    IdentityPtr t1_root = node_list[root1];
+    IdentityPtr t2_root = node_list[root2];
 
     _handle.destroy_cluster_data();
 
-    auto id1 = _handle.accept();
-    assert(id1 && (id1->equal_to(*t1_root) || (t2_root && id1->equal_to(*t2_root))));
-    auto id2 = t2_root ? _handle.accept() : id1;
-    assert(id2->equal_to(*t1_root) || id2->equal_to(*t2_root));
+    _handle.connect(t1_root);
+    if (!equal_to(t1_root, t2_root)) {
+        _handle.connect(t2_root);
+    }
 
     _handle.create_cluster_data<DBTClusterData>(std::move(t1_root), std::move(t2_root));
 
@@ -67,9 +104,11 @@ void DBTCluster::send_message_to_child(const std::vector<IdentityPtr>& node_list
     for (uint32_t i = 0; i < array.size(); ++i) {
         auto& [t1_parent, t1_left, t1_right, t1_color,
             t2_parent, t2_left, t2_right, t2_color] = array[i];
-        if (i == root1) continue;
 
-        assert(t1_parent != -1);
+        /// is_leaf_node_in_t1
+        meta.data1[0] = t1_left == -1 && t1_right == -1;
+        /// is_leaf_node_in_t2
+        meta.data1[1] = t2_left == -1 && t2_right == -1;
         _handle.send_message(node_list[i], meta,
                              t1_parent != -1 ? node_list[t1_parent] : _handle.self_identity());
 
@@ -77,21 +116,23 @@ void DBTCluster::send_message_to_child(const std::vector<IdentityPtr>& node_list
                              t2_parent != -1 ? node_list[t2_parent] : _handle.self_identity());
 
         if (t1_left != -1 || t1_right != -1) {
-            meta.data1[0] = false;
-            meta.data1[1] = t1_left != -1 ? array[t1_left].t1_color : 3;
-            _handle.send_message(node_list[i], meta,
-                                 t1_left != -1 ? node_list[t1_left] : nullptr);
-            meta.data1[1] = t1_right != -1 ? array[t1_right].t1_color : 3;
-            _handle.send_message(node_list[i], meta,
-                                 t1_right != -1 ? node_list[t1_right] : nullptr);
+            if (t1_left != -1) {
+                meta.data1[2] = array[t1_left].t1_color;
+                _handle.send_message(node_list[i], meta, node_list[t1_left]);
+            }
+            if (t1_right != -1) {
+                meta.data1[2] = array[t1_right].t1_color;
+                _handle.send_message(node_list[i], meta, node_list[t1_right]);
+            }
         } else {
-            meta.data1[0] = true;
-            meta.data1[1] = t2_left != -1 ? array[t2_left].t1_color : 3;
-            _handle.send_message(node_list[i], meta,
-                                 t2_left != -1 ? node_list[t2_left] : nullptr);
-            meta.data1[1] = t2_right != -1 ? array[t2_right].t1_color : 3;
-            _handle.send_message(node_list[i], meta,
-                                 t2_right != -1 ? node_list[t2_right] : nullptr);
+            if (t2_left != -1) {
+                meta.data1[2] = array[t2_left].t1_color;
+                _handle.send_message(node_list[i], meta, node_list[t2_left]);
+            }
+            if (t2_right != -1) {
+                meta.data1[2] = array[t2_right].t1_color;
+                _handle.send_message(node_list[i], meta, node_list[t2_right]);
+            }
         }
     }
 

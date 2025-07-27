@@ -8,6 +8,8 @@
 #include <tdcf/node/agents/star/StarAgent.hpp>
 #include <tdcf/node/agents/ring/RingAgent.hpp>
 
+#include "DBT/DBTAgent.hpp"
+
 using namespace tdcf;
 
 
@@ -22,6 +24,12 @@ StatusFlag NodeAgent::deserialize_NodeAgent(const MetaData& meta, SerializablePt
     }
     if (meta.data1[0] == ClusterType::ring) {
         auto ptr = std::make_shared<RingAgent>();
+        ptr->deserialize(buffer, buffer_size);
+        buffer_ptr = std::move(ptr);
+        return StatusFlag::Success;
+    }
+    if (meta.data1[0] == ClusterType::dbt) {
+        auto ptr = std::make_shared<DBTAgent>();
         ptr->deserialize(buffer, buffer_size);
         buffer_ptr = std::move(ptr);
         return StatusFlag::Success;

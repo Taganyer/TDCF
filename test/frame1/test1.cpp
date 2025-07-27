@@ -13,6 +13,8 @@
 #include <test/frame1/Processor1.hpp>
 #include <tinyBackend/Base/Thread.hpp>
 
+#include "tdcf/cluster/DBT/DBTCluster.hpp"
+
 
 using namespace test;
 
@@ -31,6 +33,9 @@ static ClusterPtr create_cluster(uint32_t type, uint32_t id, CommShare& share) {
     }
     if (type == ClusterType::ring) {
         return std::make_shared<RingCluster>(std::move(self), std::move(comm), std::move(proc));
+    }
+    if (type == ClusterType::dbt) {
+        return std::make_shared<DBTCluster>(std::move(self), std::move(comm), std::move(proc));
     }
     TDCF_RAISE_ERROR(error cluster type)
 }
@@ -83,10 +88,10 @@ static void root(uint32_t type, uint32_t id,
     StatusFlag flag = StatusFlag::Success;
 
     creat_task(serial, tasks_size, *root, OperationType::Broadcast);
-    creat_task(serial, tasks_size, *root, OperationType::Scatter);
-    creat_task(serial, tasks_size, *root, OperationType::Reduce);
-    creat_task(serial, tasks_size, *root, OperationType::AllReduce);
-    creat_task(serial, tasks_size, *root, OperationType::ReduceScatter);
+    // creat_task(serial, tasks_size, *root, OperationType::Scatter);
+    // creat_task(serial, tasks_size, *root, OperationType::Reduce);
+    // creat_task(serial, tasks_size, *root, OperationType::AllReduce);
+    // creat_task(serial, tasks_size, *root, OperationType::ReduceScatter);
 
     while (flag == StatusFlag::Success && tasks_size > 0) {
         flag = root->handle_a_loop();
@@ -111,10 +116,10 @@ static void node_root(uint32_t type, uint32_t id, uint32_t root_id,
     StatusFlag flag = StatusFlag::Success;
 
     creat_task(serial, tasks_size, *node_root, OperationType::Broadcast);
-    creat_task(serial, tasks_size, *node_root, OperationType::Scatter);
-    creat_task(serial, tasks_size, *node_root, OperationType::Reduce);
-    creat_task(serial, tasks_size, *node_root, OperationType::AllReduce);
-    creat_task(serial, tasks_size, *node_root, OperationType::ReduceScatter);
+    // creat_task(serial, tasks_size, *node_root, OperationType::Scatter);
+    // creat_task(serial, tasks_size, *node_root, OperationType::Reduce);
+    // creat_task(serial, tasks_size, *node_root, OperationType::AllReduce);
+    // creat_task(serial, tasks_size, *node_root, OperationType::ReduceScatter);
 
     bool root_end = false;
     while (flag == StatusFlag::Success && (tasks_size > 0 || !root_end)) {
@@ -168,7 +173,7 @@ void test::correctness_test() {
     cluster2.insert(std::make_shared<Identity1>(node12_id));
 
     Base::Thread root_t([root_id, &share, &cluster1] {
-        root(ClusterType::ring, root_id, share, cluster1);
+        root(ClusterType::star, root_id, share, cluster1);
     });
 
     Base::Thread node1_t([node1_id, &share, root_id] {
@@ -176,7 +181,7 @@ void test::correctness_test() {
     });
 
     Base::Thread root1_t([root1_id, root_id, &share, &cluster2] {
-        node_root(ClusterType::star, root1_id, root_id, share, cluster2);
+        node_root(ClusterType::dbt, root1_id, root_id, share, cluster2);
     });
 
     Base::Thread node11_t([node11_id, &share, root1_id] {

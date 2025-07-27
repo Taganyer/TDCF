@@ -7,6 +7,10 @@
 
 namespace tdcf {
 
+    namespace dbt {
+        struct DBTInfo;
+    }
+
     class DBTCluster : public Cluster {
     public:
         DBTCluster(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp) :
@@ -54,6 +58,25 @@ namespace tdcf {
             StatusFlag send_data(DataSet& dataset, Handle& handle) const;
 
             uint32_t _finish_count = 0;
+        };
+
+        class BroadcastAgent : public Broadcast, public EventProgressAgent {
+        public:
+            BroadcastAgent(uint32_t version, ProcessingRulesPtr rp, ProgressEventsMI iter);
+
+            static StatusFlag create(ProcessingRulesPtr rp, ProgressEventsMI other,
+                                     Handle& handle, EventProgressAgent **agent_ptr);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
+
+
+            StatusFlag proxy_event(const MetaData& meta, Variant& data, Handle& handle) override;
+
+        private:
+            StatusFlag close(Handle& handle) const;
+
+            ProgressEventsMI _other;
+
         };
 
     };

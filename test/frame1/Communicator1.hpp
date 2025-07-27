@@ -19,7 +19,9 @@ namespace test {
 
         std::map<Key, Value> message;
 
-        std::set<Key> connect, disconnect;
+        std::set<Key> connect;
+
+        std::map<Key, bool> disconnect;
 
         Base::Mutex mutex;
 

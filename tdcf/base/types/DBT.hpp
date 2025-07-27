@@ -12,9 +12,11 @@ namespace tdcf::dbt {
 
         static constexpr StageNum send_rule = 2;
 
-        static constexpr StageNum send_data = 3;
+        static constexpr StageNum init_ack = 3;
 
-        static constexpr StageNum finish_ack = 4;
+        static constexpr StageNum send_data = 4;
+
+        static constexpr StageNum finish_ack = 5;
 
         static constexpr StageNum finish = finish_ack;
 
@@ -25,6 +27,8 @@ namespace tdcf::dbt {
 
         static constexpr StageNum send_rule = C_Broadcast::send_rule;
 
+        static constexpr StageNum init_ack = C_Broadcast::init_ack;
+
         static constexpr StageNum get_data = C_Broadcast::send_data;
 
         static constexpr StageNum send_data = C_Broadcast::send_data;
@@ -32,6 +36,15 @@ namespace tdcf::dbt {
         static constexpr StageNum finish_ack = C_Broadcast::finish_ack;
 
         static constexpr StageNum finish = C_Broadcast::finish_ack;
+
+    };
+
+    struct A_Broadcast {
+        static constexpr StageNum send_rule = C_Broadcast::send_rule;
+
+        static constexpr StageNum init_ack = C_Broadcast::init_ack;
+
+        static constexpr StageNum finish_ack = C_Broadcast::finish_ack;
 
     };
 

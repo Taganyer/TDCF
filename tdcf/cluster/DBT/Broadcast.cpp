@@ -53,21 +53,69 @@ StatusFlag DBTCluster::Broadcast::send_data(DataSet& dataset, Handle& handle) co
     if (dataset.size() & 1) dataset.emplace_back(DataPtr());
 
     uint32_t t1_rest_data = dataset.size() / 2, t2_rest_data = t1_rest_data;
-    for (uint32_t i = 0; i < t1_rest_data; ++i) {
+    for (uint32_t i = 0; i < dataset.size(); ++i) {
         auto& data = dataset[i];
         meta.serial = i & 1;
         if (i & 1) {
             meta.rest_data = --t2_rest_data;
-            meta.data1[0] = 1;
+            meta.data1[0] = 0;
             StatusFlag flag = handle.send_progress_message(version, t2, meta, data);
             TDCF_CHECK_SUCCESS(flag)
         } else {
-            meta.data1[0] = 0;
             meta.rest_data = --t1_rest_data;
+            meta.data1[0] = 1;
             StatusFlag flag = handle.send_progress_message(version, t1, meta, data);
             TDCF_CHECK_SUCCESS(flag)
         }
     }
 
     return StatusFlag::Success;
+}
+
+DBTCluster::BroadcastAgent::BroadcastAgent(uint32_t version, ProcessingRulesPtr rp,
+                                           ProgressEventsMI iter) :
+    Broadcast(ProgressType::NodeRoot, version, std::move(rp)), _other(iter) {}
+
+StatusFlag DBTCluster::BroadcastAgent::create(ProcessingRulesPtr rp, ProgressEventsMI other,
+                                              Handle& handle, EventProgressAgent **agent_ptr) {
+    uint32_t version = handle.create_progress_version();
+    auto iter = handle.create_progress(
+        std::make_unique<BroadcastAgent>(version, std::move(rp), other));
+
+    auto& [t1, t2] = handle.cluster_data<DBTClusterData>();
+    auto& self = static_cast<BroadcastAgent&>(*iter->second);
+    *agent_ptr = &self;
+
+    MetaData meta = self.create_meta();
+    meta.stage = A_Broadcast::send_rule;
+
+    StatusFlag flag = handle.send_progress_message(version, t1, meta, self.rule);
+    TDCF_CHECK_SUCCESS(flag)
+
+    return StatusFlag::Success;
+}
+
+StatusFlag DBTCluster::BroadcastAgent::handle_event(const MetaData& meta,
+                                                    Variant& data, Handle& handle) {
+    assert(meta.operation_type == OperationType::Broadcast);
+    if (meta.stage == Public_Broadcast::agent_receive) {
+        return send_data(std::get<DataSet>(data), handle);
+    }
+    if (meta.stage == A_Broadcast::finish_ack) {
+        if (++_finish_count == 1) return StatusFlag::Success;
+        return close(handle);
+    }
+    TDCF_RAISE_ERROR(meta.stage error type)
+}
+
+StatusFlag DBTCluster::BroadcastAgent::proxy_event(const MetaData& meta,
+                                                   Variant& data, Handle& handle) {
+    return Broadcast::handle_event(meta, data, handle);
+}
+
+StatusFlag DBTCluster::BroadcastAgent::close(Handle& handle) const {
+    MetaData meta = create_meta();
+    meta.stage = Public_Broadcast::agent_finish;
+    handle.create_processor_event(_other, meta, nullptr);
+    return StatusFlag::EventEnd;
 }

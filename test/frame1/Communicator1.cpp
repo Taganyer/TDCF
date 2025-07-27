@@ -22,6 +22,9 @@ bool Communicator1::connect(const IdentityPtr& target) {
     Lock l(_share->mutex);
     uint32_t id = static_cast<Identity1&>(*target).guid();
     Key k1 { id, _id }, k2 { _id, id };
+    _share->conditions[_id].wait(l, [this, k1] {
+        return _share->disconnect.find(k1) == _share->disconnect.end();
+    });
     _share->connect.emplace(k1);
     auto [iter, success] = _share->message.emplace(k2, Value(receive_size));
     assert(success);
@@ -47,13 +50,16 @@ IdentityPtr Communicator1::accept() {
 bool Communicator1::disconnect(const IdentityPtr& target) {
     Lock l(_share->mutex);
     uint32_t id = static_cast<Identity1&>(*target).guid();
+    // std::cerr << "Communicator:: " << _id << " disconnect " << id << std::endl;
     Key k { _id, id };
     auto size = _share->message.erase(k);
     assert(size == 1);
     size = _share->disconnect.erase(k);
     if (!size) {
-        auto [iter, success] = _share->disconnect.emplace(id, _id);
+        auto [iter, success] = _share->disconnect.emplace(Key(id, _id), true);
         assert(success);
+    } else {
+        _share->conditions[id].notify_one();
     }
     return true;
 }
@@ -238,15 +244,17 @@ uint32_t Communicator1::check_disconnect(EventQueue& queue) {
     uint32_t get = 0;
     Key key(_id, 0);
     auto iter = _share->disconnect.lower_bound(key);
-    while (iter != _share->disconnect.end() && iter->first == _id) {
+    while (iter != _share->disconnect.end() && iter->first.first == _id && iter->second == true) {
+        iter->second = false;
         CommunicatorEvent event {
-            CommunicatorEvent::DisconnectRequest, std::make_shared<Identity1>(iter->second),
+            CommunicatorEvent::DisconnectRequest, std::make_shared<Identity1>(iter->first.second),
             MetaData(), nullptr
         };
         queue.emplace(std::move(event));
         ++get;
         ++iter;
     }
-    // T_INFO << "Communicator1 " << _id << " check_disconnect: " << get;
+    // if (get)
+    // std::cerr << "Communicator1 " << _id << " check_disconnect: " << get << std::endl;
     return get;
 }
