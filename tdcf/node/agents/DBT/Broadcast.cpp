@@ -28,14 +28,14 @@ StatusFlag DBTAgent::Broadcast::create(uint32_t version, const MetaData& meta,
 
     MetaData new_meta = self.create_meta();
     new_meta.stage = N_Broadcast::send_rule;
-    if (info.internal1() && info.red()) {
+    if (info.red()) {
         StatusFlag flag = handle.send_progress_message(version, info.red(), new_meta, self.rule);
         if (flag != StatusFlag::Success) {
             handle.destroy_progress(iter);
             return flag;
         }
     }
-    if (info.internal1() && info.black()) {
+    if (info.black()) {
         StatusFlag flag = handle.send_progress_message(version, info.black(), new_meta, self.rule);
         if (flag != StatusFlag::Success) {
             handle.destroy_progress(iter);
@@ -68,7 +68,7 @@ StatusFlag DBTAgent::Broadcast::handle_event(const MetaData& meta, Variant& data
             StatusFlag flag = agent_store(std::get<DataPtr>(data), meta.rest_data, handle);
             TDCF_CHECK_SUCCESS(flag)
         }
-        return send_data(std::get<DataPtr>(data), meta.rest_data, meta.data1[0], meta.serial, handle);
+        return send_data(std::get<DataPtr>(data), meta.rest_data, meta.data1[0], meta.data1[1], handle);
     }
     if (meta.stage == N_Broadcast::finish_ack) {
         return close(handle);
@@ -77,6 +77,9 @@ StatusFlag DBTAgent::Broadcast::handle_event(const MetaData& meta, Variant& data
         _data_stored = true;
         if (_t1_finished && _t2_finished)
             return StatusFlag::EventEnd;
+        return StatusFlag::Success;
+    }
+    if (meta.stage == N_Broadcast::get_rule) {
         return StatusFlag::Success;
     }
     TDCF_RAISE_ERROR(meta.stage error type)
@@ -116,22 +119,22 @@ StatusFlag DBTAgent::Broadcast::send_data(DataPtr& data, uint32_t rest_size,
     meta.data1[0] = info.internal1();
     if (from_serial == 0) {
         if (info.black()) {
-            meta.serial = 1;
+            meta.data1[1] = 1;
             flag = handle.send_progress_message(version, info.black(), meta, data);
             TDCF_CHECK_SUCCESS(flag)
         }
         if (info.red()) {
-            meta.serial = 0;
+            meta.data1[1] = 0;
             flag = handle.send_progress_message(version, info.red(), meta, data);
         }
     } else {
         if (info.red()) {
-            meta.serial = 0;
+            meta.data1[1] = 0;
             flag = handle.send_progress_message(version, info.red(), meta, data);
             TDCF_CHECK_SUCCESS(flag)
         }
         if (info.black()) {
-            meta.serial = 1;
+            meta.data1[1] = 1;
             flag = handle.send_progress_message(version, info.black(), meta, data);
         }
     }

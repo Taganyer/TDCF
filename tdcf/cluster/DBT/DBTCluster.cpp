@@ -90,7 +90,7 @@ void DBTCluster::cluster_start() {
         _handle.connect(t2_root);
     }
 
-    _handle.create_cluster_data<DBTClusterData>(std::move(t1_root), std::move(t2_root));
+    _handle.create_cluster_data<DBTClusterData>(std::move(t1_root), std::move(t2_root), array.size());
 
 }
 
@@ -109,6 +109,7 @@ void DBTCluster::send_message_to_child(const std::vector<IdentityPtr>& node_list
         meta.data1[0] = t1_left == -1 && t1_right == -1;
         /// is_leaf_node_in_t2
         meta.data1[1] = t2_left == -1 && t2_right == -1;
+        meta.serial = array.size();
         _handle.send_message(node_list[i], meta,
                              t1_parent != -1 ? node_list[t1_parent] : _handle.self_identity());
 
@@ -117,19 +118,23 @@ void DBTCluster::send_message_to_child(const std::vector<IdentityPtr>& node_list
 
         if (t1_left != -1 || t1_right != -1) {
             if (t1_left != -1) {
+                meta.serial = t1_left;
                 meta.data1[2] = array[t1_left].t1_color;
                 _handle.send_message(node_list[i], meta, node_list[t1_left]);
             }
             if (t1_right != -1) {
+                meta.serial = t1_right;
                 meta.data1[2] = array[t1_right].t1_color;
                 _handle.send_message(node_list[i], meta, node_list[t1_right]);
             }
         } else {
             if (t2_left != -1) {
+                meta.serial = t2_left;
                 meta.data1[2] = array[t2_left].t1_color;
                 _handle.send_message(node_list[i], meta, node_list[t2_left]);
             }
             if (t2_right != -1) {
+                meta.serial = t2_right;
                 meta.data1[2] = array[t2_right].t1_color;
                 _handle.send_message(node_list[i], meta, node_list[t2_right]);
             }
@@ -142,13 +147,13 @@ void DBTCluster::send_message_to_child(const std::vector<IdentityPtr>& node_list
 }
 
 void DBTCluster::cluster_end() {
-    auto& [t1, t2] = _handle.cluster_data<DBTClusterData>();
+    auto& [t1, t2, size] = _handle.cluster_data<DBTClusterData>();
     _handle.disconnect(t1);
     if (!t2->equal_to(*t1)) _handle.disconnect(t2);
 }
 
 bool DBTCluster::from_sub_cluster(const IdentityPtr& from_id) {
-    auto& [t1, t2] = _handle.cluster_data<DBTClusterData>();
+    auto& [t1, t2, size] = _handle.cluster_data<DBTClusterData>();
     return t1->equal_to(*from_id) || t2->equal_to(*from_id);
 }
 

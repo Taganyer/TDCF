@@ -24,8 +24,10 @@ namespace tdcf {
 
             IdentityPtr t2_root;
 
-            DBTClusterData(IdentityPtr t1_root, IdentityPtr t2_root) :
-                t1_root(std::move(t1_root)), t2_root(std::move(t2_root)) {};
+            uint32_t cluster_size;
+
+            DBTClusterData(IdentityPtr t1_root, IdentityPtr t2_root, uint32_t cluster_size) :
+                t1_root(std::move(t1_root)), t2_root(std::move(t2_root)), cluster_size(cluster_size) {};
 
         };
 
@@ -76,6 +78,46 @@ namespace tdcf {
             StatusFlag close(Handle& handle) const;
 
             ProgressEventsMI _other;
+
+        };
+
+        class Scatter : public EventProgress {
+        public:
+            explicit Scatter(ProgressType type, uint32_t version, ProcessingRulesPtr rp);
+
+            static StatusFlag create(ProcessingRulesPtr rp, Handle& handle);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
+
+        protected:
+            StatusFlag scatter_data(DataSet& dataset, Handle& handle) const;
+
+            StatusFlag send_data(DataSet& set, Handle& handle) const;
+
+            ProgressEventsMI _self;
+
+            uint32_t _finish_count = 0;
+
+        };
+
+        class ScatterAgent : public Scatter, public EventProgressAgent {
+        public:
+            ScatterAgent(uint32_t version, ProcessingRulesPtr rp, ProgressEventsMI iter);
+
+            static StatusFlag create(ProcessingRulesPtr rp, ProgressEventsMI other,
+                                     Handle& handle, EventProgressAgent **agent_ptr);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
+
+
+            StatusFlag proxy_event(const MetaData& meta, Variant& data, Handle& handle) override;
+
+        private:
+            StatusFlag close(Handle& handle) const;
+
+            ProgressEventsMI _other;
+
+            DataSet _set;
 
         };
 

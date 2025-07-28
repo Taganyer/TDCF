@@ -18,7 +18,7 @@ StatusFlag DBTCluster::Broadcast::create(ProcessingRulesPtr rp, Handle& handle) 
     auto iter = handle.create_progress(
         std::make_unique<Broadcast>(ProgressType::Root, version, std::move(rp)));
 
-    auto& [t1, t2] = handle.cluster_data<DBTClusterData>();
+    auto& [t1, t2, size] = handle.cluster_data<DBTClusterData>();
     auto& self = static_cast<Broadcast&>(*iter->second);
 
     MetaData meta = self.create_meta();
@@ -27,6 +27,9 @@ StatusFlag DBTCluster::Broadcast::create(ProcessingRulesPtr rp, Handle& handle) 
 
     meta.stage = C_Broadcast::send_rule;
     StatusFlag flag = handle.send_progress_message(version, t1, meta, self.rule);
+    TDCF_CHECK_SUCCESS(flag)
+
+    flag = handle.send_progress_message(version, t2, meta, self.rule);
     TDCF_CHECK_SUCCESS(flag)
 
     return StatusFlag::Success;
@@ -47,15 +50,15 @@ StatusFlag DBTCluster::Broadcast::handle_event(const MetaData& meta,
 }
 
 StatusFlag DBTCluster::Broadcast::send_data(DataSet& dataset, Handle& handle) const {
-    auto& [t1, t2] = handle.cluster_data<DBTClusterData>();
+    auto& [t1, t2, size] = handle.cluster_data<DBTClusterData>();
     MetaData meta = create_meta();
     meta.stage = C_Broadcast::send_data;
-    if (dataset.size() & 1) dataset.emplace_back(DataPtr());
+    if (dataset.size() == 1) dataset.emplace_back(DataPtr());
 
-    uint32_t t1_rest_data = dataset.size() / 2, t2_rest_data = t1_rest_data;
+    uint32_t t1_rest_data = (dataset.size() + 1) / 2, t2_rest_data = dataset.size() / 2;
     for (uint32_t i = 0; i < dataset.size(); ++i) {
         auto& data = dataset[i];
-        meta.serial = i & 1;
+        meta.data1[1] = i & 1;
         if (i & 1) {
             meta.rest_data = --t2_rest_data;
             meta.data1[0] = 0;
@@ -82,7 +85,7 @@ StatusFlag DBTCluster::BroadcastAgent::create(ProcessingRulesPtr rp, ProgressEve
     auto iter = handle.create_progress(
         std::make_unique<BroadcastAgent>(version, std::move(rp), other));
 
-    auto& [t1, t2] = handle.cluster_data<DBTClusterData>();
+    auto& [t1, t2, size] = handle.cluster_data<DBTClusterData>();
     auto& self = static_cast<BroadcastAgent&>(*iter->second);
     *agent_ptr = &self;
 
@@ -90,6 +93,9 @@ StatusFlag DBTCluster::BroadcastAgent::create(ProcessingRulesPtr rp, ProgressEve
     meta.stage = A_Broadcast::send_rule;
 
     StatusFlag flag = handle.send_progress_message(version, t1, meta, self.rule);
+    TDCF_CHECK_SUCCESS(flag)
+
+    flag = handle.send_progress_message(version, t2, meta, self.rule);
     TDCF_CHECK_SUCCESS(flag)
 
     return StatusFlag::Success;

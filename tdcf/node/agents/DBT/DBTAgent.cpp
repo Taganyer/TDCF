@@ -9,6 +9,7 @@ using namespace tdcf;
 void DBTAgent::init(const IdentityPtr& from_id, const MetaData& meta, Handle& handle) {
     create_agent_data(from_id, handle);
     auto& info = handle.agent_data<DBTAgentData>();
+    info.self_serial = meta.serial;
 
     if (info.internal1()) {
         connect(true, info.red(), handle);
@@ -43,6 +44,28 @@ DBTAgent::DBTAgentData::DBTAgentData(IdentityPtr t1_parent, IdentityPtr t2_paren
     red_child(std::move(red_child)), black_child(std::move(black_child)),
     is_leaf_node_in_t1(is_leaf_node_in_t1), is_leaf_node_in_t2(is_leaf_node_in_t2) {}
 
+bool DBTAgent::DBTAgentData::in_t1_red(uint32_t serial) const {
+    if (red_serial == static_cast<uint32_t>(-1))return false;
+    if (black_serial == static_cast<uint32_t>(-1))return true;
+    if (serial < self_serial && red_serial < self_serial
+    || serial > self_serial && red_serial > self_serial) {
+        return true;
+    }
+    return false;
+}
+
+bool DBTAgent::DBTAgentData::in_t2_red(uint32_t serial) const {
+    if (red_serial == static_cast<uint32_t>(-1))return false;
+    if (black_serial == static_cast<uint32_t>(-1))return true;
+    uint32_t other = (serial + cluster_size - 1) % cluster_size;
+    uint32_t self = (self_serial + cluster_size - 1) % cluster_size;
+    uint32_t red = (red_serial + cluster_size - 1) % cluster_size;
+    if (other < self && red < self || other > self && red > self) {
+        return true;
+    }
+    return false;
+}
+
 void DBTAgent::connect(bool connect, const IdentityPtr& id, Handle& handle) {
     if (!id) return;
     auto& info = handle.agent_data<DBTAgentData>();
@@ -74,6 +97,7 @@ void DBTAgent::create_agent_data(const IdentityPtr& from_id, Handle& handle) {
     bool is_leaf_node_in_t1 = false, is_leaf_node_in_t2 = false;
     std::vector<IdentityPtr> ids;
     std::vector<int> colors;
+    std::vector<uint32_t> serials;
     while (!end) {
         StatusFlag flag = handle.get_communicator_events();
         if (flag == StatusFlag::CommunicatorGetEventsFurtherWaiting)
@@ -92,11 +116,13 @@ void DBTAgent::create_agent_data(const IdentityPtr& from_id, Handle& handle) {
             is_leaf_node_in_t2 = event.meta.data1[1];
             ids.emplace_back(std::dynamic_pointer_cast<Identity>(std::get<SerializablePtr>(event.variant)));
             colors.push_back(event.meta.data1[2]);
+            serials.push_back(event.meta.serial);
         }
     }
     while (ids.size() < 4) {
         ids.emplace_back(nullptr);
         colors.emplace_back(3);
+        serials.emplace_back(static_cast<uint32_t>(-1));
     }
 
     int red_index, black_index;
@@ -113,6 +139,10 @@ void DBTAgent::create_agent_data(const IdentityPtr& from_id, Handle& handle) {
     handle.create_agent_data<DBTAgentData>(std::move(ids[0]), std::move(ids[1]),
                                            std::move(ids[red_index]), std::move(ids[black_index]),
                                            is_leaf_node_in_t1, is_leaf_node_in_t2);
+    auto& info = handle.agent_data<DBTAgentData>();
+    info.cluster_size = serials[0];
+    info.red_serial = serials[red_index];
+    info.black_serial = serials[black_index];
 }
 
 void DBTAgent::disconnect(const IdentityPtr& id, Handle& handle) {

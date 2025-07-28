@@ -12,11 +12,9 @@ namespace tdcf::dbt {
 
         static constexpr StageNum send_rule = 2;
 
-        static constexpr StageNum init_ack = 3;
+        static constexpr StageNum send_data = 3;
 
-        static constexpr StageNum send_data = 4;
-
-        static constexpr StageNum finish_ack = 5;
+        static constexpr StageNum finish_ack = 4;
 
         static constexpr StageNum finish = finish_ack;
 
@@ -26,8 +24,6 @@ namespace tdcf::dbt {
         static constexpr StageNum get_rule = C_Broadcast::send_rule;
 
         static constexpr StageNum send_rule = C_Broadcast::send_rule;
-
-        static constexpr StageNum init_ack = C_Broadcast::init_ack;
 
         static constexpr StageNum get_data = C_Broadcast::send_data;
 
@@ -42,9 +38,46 @@ namespace tdcf::dbt {
     struct A_Broadcast {
         static constexpr StageNum send_rule = C_Broadcast::send_rule;
 
-        static constexpr StageNum init_ack = C_Broadcast::init_ack;
-
         static constexpr StageNum finish_ack = C_Broadcast::finish_ack;
+
+    };
+
+    struct C_Scatter {
+        static constexpr StageNum acquire_data = 1;
+
+        static constexpr StageNum send_rule = 2;
+
+        static constexpr StageNum scatter_data = 3;
+
+        static constexpr StageNum send_data = 4;
+
+        static constexpr StageNum finish_ack = 5;
+
+        static constexpr StageNum finish = finish_ack;
+
+    };
+
+    struct N_Scatter {
+        static constexpr StageNum get_rule = C_Scatter::send_rule;
+
+        static constexpr StageNum send_rule = C_Scatter::send_rule;
+
+        static constexpr StageNum get_data = C_Scatter::send_data;
+
+        static constexpr StageNum send_data = C_Scatter::send_data;
+
+        static constexpr StageNum finish_ack = C_Scatter::finish_ack;
+
+        static constexpr StageNum finish = C_Scatter::finish_ack;
+
+    };
+
+    struct A_Scatter {
+        static constexpr StageNum send_rule = C_Scatter::send_rule;
+
+        static constexpr StageNum scatter_data = C_Scatter::scatter_data;
+
+        static constexpr StageNum finish_ack = C_Scatter::finish_ack;
 
     };
 

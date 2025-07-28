@@ -28,6 +28,14 @@ namespace tdcf {
 
             bool is_leaf_node_in_t1, is_leaf_node_in_t2;
 
+            uint32_t cluster_size = 0;
+
+            uint32_t self_serial = static_cast<uint32_t>(-1);
+
+            uint32_t red_serial = static_cast<uint32_t>(-1);
+
+            uint32_t black_serial = static_cast<uint32_t>(-1);
+
             DBTAgentData(IdentityPtr t1_parent, IdentityPtr t2_parent,
                          IdentityPtr red_child, IdentityPtr black_child,
                          bool is_leaf_node_in_t1, bool is_leaf_node_in_t2);
@@ -47,6 +55,10 @@ namespace tdcf {
             bool internal1() const { return !is_leaf_node_in_t1; };
 
             bool internal2() const { return !is_leaf_node_in_t2; };
+
+            bool in_t1_red(uint32_t serial) const;
+
+            bool in_t2_red(uint32_t serial) const;
 
         };
 
@@ -89,6 +101,31 @@ namespace tdcf {
             bool _data_stored = false;
 
             DataSet _set;
+
+        };
+
+        class Scatter : public EventProgress {
+        public:
+            explicit Scatter(uint32_t version, ProcessingRulesPtr rp);
+
+            static StatusFlag create(uint32_t version, const MetaData& meta, ProcessingRulesPtr rp, Handle& handle);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
+
+        private:
+            StatusFlag agent_store(DataPtr& data, const MetaData& meta, Handle& handle);
+
+            StatusFlag close(Handle& handle) const;
+
+            EventProgressAgent *_agent = nullptr;
+
+            ProgressEventsMI _self;
+
+            DataSet _set;
+
+            uint32_t last = -1;
+
+            bool _finish_ack = false, _finish = false;
 
         };
 
