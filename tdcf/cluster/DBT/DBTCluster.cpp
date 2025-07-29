@@ -38,7 +38,7 @@ StatusFlag DBTCluster::DBTAgentFactory::fun(const ProcessingRulesPtr& rule, Prog
 
 DBTFunAll(broadcast, Broadcast, BroadcastAgent)
 
-DBTEmpty(scatter, Scatter, ScatterAgent)
+DBTFunAll(scatter, Scatter, ScatterAgent)
 
 DBTEmpty(reduce, Reduce, ReduceAgent)
 

@@ -79,14 +79,12 @@ StatusFlag DBTCluster::Scatter::send_data(DataSet& set, Handle& handle) const {
 
     MetaData meta = create_meta();
     meta.stage = C_Scatter::send_data;
-    meta.rest_data = patch;
 
-    uint32_t t1_rest_data = (set.size() + 1) / 2, t2_rest_data = set.size() / 2;
+    uint32_t t1_rest_data = (patch + 1) / 2, t2_rest_data = patch / 2;
     for (uint32_t i = 0; i < patch; ++i) {
         if (set[i]->derived_type() != 0) {
             handle.store_data(rule, set[i]);
         }
-        meta.data1[1] = i & 1;
         if (i & 1) meta.rest_data = --t2_rest_data;
         else meta.rest_data = --t1_rest_data;
         for (uint32_t j = i + patch; j < set.size(); j += patch) {
@@ -104,4 +102,55 @@ StatusFlag DBTCluster::Scatter::send_data(DataSet& set, Handle& handle) const {
     }
 
     return StatusFlag::Success;
+}
+
+DBTCluster::ScatterAgent::ScatterAgent(uint32_t version, ProcessingRulesPtr rp, ProgressEventsMI iter) :
+    Scatter(ProgressType::NodeRoot, version, std::move(rp)), _other(iter) {}
+
+StatusFlag DBTCluster::ScatterAgent::create(ProcessingRulesPtr rp, ProgressEventsMI other,
+                                            Handle& handle, EventProgressAgent **agent_ptr) {
+    uint32_t version = handle.create_progress_version();
+    auto iter = handle.create_progress(
+        std::make_unique<ScatterAgent>(version, std::move(rp), other));
+
+    auto& [t1, t2, size] = handle.cluster_data<DBTClusterData>();
+    auto& self = static_cast<ScatterAgent&>(*iter->second);
+    *agent_ptr = &self;
+    self._self = iter;
+
+    MetaData meta = self.create_meta();
+    meta.stage = A_Scatter::send_rule;
+    StatusFlag flag = handle.send_progress_message(version, t1, meta, self.rule);
+    TDCF_CHECK_SUCCESS(flag)
+    flag = handle.send_progress_message(version, t2, meta, self.rule);
+    TDCF_CHECK_SUCCESS(flag)
+
+    return StatusFlag::Success;
+}
+
+StatusFlag DBTCluster::ScatterAgent::handle_event(const MetaData& meta,
+                                                  Variant& data, Handle& handle) {
+    assert(meta.operation_type == OperationType::Scatter);
+    if (meta.stage == Public_Scatter::agent_receive) {
+        return scatter_data(std::get<DataSet>(data), handle);
+    }
+    if (meta.stage == A_Scatter::scatter_data) {
+        return send_data(std::get<DataSet>(data), handle);
+    }
+    if (meta.stage == A_Scatter::finish_ack) {
+        if (++_finish_count == 1) return StatusFlag::Success;
+        return close(handle);
+    }
+    TDCF_RAISE_ERROR(meta.stage error type)
+}
+
+StatusFlag DBTCluster::ScatterAgent::proxy_event(const MetaData& meta, Variant& data, Handle& handle) {
+    return handle_event(meta, data, handle);
+}
+
+StatusFlag DBTCluster::ScatterAgent::close(Handle& handle) const {
+    MetaData meta = create_meta();
+    meta.stage = Public_Scatter::agent_finish;
+    handle.create_processor_event(_other, meta, nullptr);
+    return StatusFlag::EventEnd;
 }

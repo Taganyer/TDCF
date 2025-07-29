@@ -170,8 +170,8 @@ StatusFlag DBTAgent::Broadcast::close(Handle& handle) {
         _t2_finished = true;
         flag = handle.send_progress_message(version, info.t2(), meta, nullptr);
     }
-
     TDCF_CHECK_SUCCESS(flag)
+
     if (_t1_finished && _t2_finished && _data_stored)
         return StatusFlag::EventEnd;
     return StatusFlag::Success;

@@ -113,9 +113,11 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         private:
-            StatusFlag agent_store(DataPtr& data, const MetaData& meta, Handle& handle);
+            StatusFlag send_data(DataPtr& data, const MetaData& meta, Handle& handle);
 
-            StatusFlag close(Handle& handle) const;
+            StatusFlag after_store(bool receive_message_from_t1, Handle& handle);
+
+            StatusFlag close(Handle& handle);
 
             EventProgressAgent *_agent = nullptr;
 
@@ -123,9 +125,11 @@ namespace tdcf {
 
             DataSet _set;
 
-            uint32_t last = -1;
+            uint8_t _message_count = 0, _finish_count = 0;
 
-            bool _finish_ack = false, _finish = false;
+            bool _t1_finished = false, _t2_finished = false;
+
+            bool _data_stored = false;
 
         };
 

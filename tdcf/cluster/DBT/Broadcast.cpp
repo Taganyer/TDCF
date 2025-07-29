@@ -116,7 +116,7 @@ StatusFlag DBTCluster::BroadcastAgent::handle_event(const MetaData& meta,
 
 StatusFlag DBTCluster::BroadcastAgent::proxy_event(const MetaData& meta,
                                                    Variant& data, Handle& handle) {
-    return Broadcast::handle_event(meta, data, handle);
+    return handle_event(meta, data, handle);
 }
 
 StatusFlag DBTCluster::BroadcastAgent::close(Handle& handle) const {

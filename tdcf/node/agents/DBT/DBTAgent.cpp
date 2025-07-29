@@ -45,8 +45,8 @@ DBTAgent::DBTAgentData::DBTAgentData(IdentityPtr t1_parent, IdentityPtr t2_paren
     is_leaf_node_in_t1(is_leaf_node_in_t1), is_leaf_node_in_t2(is_leaf_node_in_t2) {}
 
 bool DBTAgent::DBTAgentData::in_t1_red(uint32_t serial) const {
-    if (red_serial == static_cast<uint32_t>(-1))return false;
-    if (black_serial == static_cast<uint32_t>(-1))return true;
+    if (red_serial == static_cast<uint32_t>(-1)) return false;
+    if (black_serial == static_cast<uint32_t>(-1)) return true;
     if (serial < self_serial && red_serial < self_serial
     || serial > self_serial && red_serial > self_serial) {
         return true;
@@ -55,8 +55,8 @@ bool DBTAgent::DBTAgentData::in_t1_red(uint32_t serial) const {
 }
 
 bool DBTAgent::DBTAgentData::in_t2_red(uint32_t serial) const {
-    if (red_serial == static_cast<uint32_t>(-1))return false;
-    if (black_serial == static_cast<uint32_t>(-1))return true;
+    if (red_serial == static_cast<uint32_t>(-1)) return false;
+    if (black_serial == static_cast<uint32_t>(-1)) return true;
     uint32_t other = (serial + cluster_size - 1) % cluster_size;
     uint32_t self = (self_serial + cluster_size - 1) % cluster_size;
     uint32_t red = (red_serial + cluster_size - 1) % cluster_size;
@@ -201,8 +201,8 @@ StatusFlag DBTAgent::create_progress(uint32_t version, const MetaData& meta,
     switch (meta.operation_type) {
         case OperationType::Broadcast:
             return Broadcast::create(version, meta, rule, handle);
-        // case OperationType::Scatter:
-        //     return Scatter::create(version, meta, rule, handle);
+        case OperationType::Scatter:
+            return Scatter::create(version, meta, rule, handle);
         // case OperationType::Reduce:
         //     return Reduce::create(version, meta, rule, handle);
         // case OperationType::AllReduce:
