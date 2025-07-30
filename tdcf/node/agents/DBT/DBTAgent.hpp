@@ -133,6 +133,31 @@ namespace tdcf {
 
         };
 
+        class Reduce : public EventProgress {
+        public:
+            explicit Reduce(uint32_t version, ProcessingRulesPtr rp);
+
+            static StatusFlag create(uint32_t version, const MetaData& meta, ProcessingRulesPtr rp, Handle& handle);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
+
+        private:
+            StatusFlag acquire_self_data(DataSet& dataset, Handle& handle) const;
+
+            StatusFlag acquire_data(DataPtr& data, uint32_t rest_size, Handle& handle);
+
+            StatusFlag close(DataSet& dataset, Handle& handle) const;
+
+            EventProgressAgent *_agent = nullptr;
+
+            ProgressEventsMI _self;
+
+            DataSet _set;
+
+            uint8_t _message_count = 0;
+
+        };
+
     };
 
 } // tdcf

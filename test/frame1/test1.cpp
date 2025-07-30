@@ -88,8 +88,8 @@ static void root(uint32_t type, uint32_t id,
     StatusFlag flag = StatusFlag::Success;
 
     // creat_task(serial, tasks_size, *root, OperationType::Broadcast);
-    creat_task(serial, tasks_size, *root, OperationType::Scatter);
-    // creat_task(serial, tasks_size, *root, OperationType::Reduce);
+    // creat_task(serial, tasks_size, *root, OperationType::Scatter);
+    creat_task(serial, tasks_size, *root, OperationType::Reduce);
     // creat_task(serial, tasks_size, *root, OperationType::AllReduce);
     // creat_task(serial, tasks_size, *root, OperationType::ReduceScatter);
 
@@ -116,8 +116,8 @@ static void node_root(uint32_t type, uint32_t id, uint32_t root_id,
     StatusFlag flag = StatusFlag::Success;
 
     // creat_task(serial, tasks_size, *node_root, OperationType::Broadcast);
-    creat_task(serial, tasks_size, *node_root, OperationType::Scatter);
-    // creat_task(serial, tasks_size, *node_root, OperationType::Reduce);
+    // creat_task(serial, tasks_size, *node_root, OperationType::Scatter);
+    creat_task(serial, tasks_size, *node_root, OperationType::Reduce);
     // creat_task(serial, tasks_size, *node_root, OperationType::AllReduce);
     // creat_task(serial, tasks_size, *node_root, OperationType::ReduceScatter);
 

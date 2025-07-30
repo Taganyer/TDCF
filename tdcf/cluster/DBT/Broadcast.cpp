@@ -59,17 +59,17 @@ StatusFlag DBTCluster::Broadcast::send_data(DataSet& dataset, Handle& handle) co
     for (uint32_t i = 0; i < dataset.size(); ++i) {
         auto& data = dataset[i];
         meta.data1[1] = i & 1;
+        StatusFlag flag;
         if (i & 1) {
             meta.rest_data = --t2_rest_data;
             meta.data1[0] = 0;
-            StatusFlag flag = handle.send_progress_message(version, t2, meta, data);
-            TDCF_CHECK_SUCCESS(flag)
+            flag = handle.send_progress_message(version, t2, meta, data);
         } else {
             meta.rest_data = --t1_rest_data;
             meta.data1[0] = 1;
-            StatusFlag flag = handle.send_progress_message(version, t1, meta, data);
-            TDCF_CHECK_SUCCESS(flag)
+            flag = handle.send_progress_message(version, t1, meta, data);
         }
+        TDCF_CHECK_SUCCESS(flag)
     }
 
     return StatusFlag::Success;

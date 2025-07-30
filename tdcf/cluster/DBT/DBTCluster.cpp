@@ -40,7 +40,7 @@ DBTFunAll(broadcast, Broadcast, BroadcastAgent)
 
 DBTFunAll(scatter, Scatter, ScatterAgent)
 
-DBTEmpty(reduce, Reduce, ReduceAgent)
+DBTFunAll(reduce, Reduce, ReduceAgent)
 
 DBTEmpty(all_reduce, AllReduce, AllReduceAgent)
 

@@ -81,4 +81,39 @@ namespace tdcf::dbt {
 
     };
 
+    struct C_Reduce {
+        static constexpr StageNum self_acquire_data = 1;
+
+        static constexpr StageNum acquire_data = 2;
+
+        static constexpr StageNum send_rule = 3;
+
+        static constexpr StageNum reduce_data = 4;
+
+    };
+
+    struct N_Reduce {
+        static constexpr StageNum get_rule = C_Reduce::send_rule;
+
+        static constexpr StageNum send_rule = C_Reduce::send_rule;
+
+        static constexpr StageNum acquire_data = C_Reduce::acquire_data;
+
+        static constexpr StageNum reduce_data = C_Reduce::reduce_data;
+
+        static constexpr StageNum send_data = C_Reduce::acquire_data;
+
+    };
+
+    struct A_Reduce {
+        static constexpr StageNum self_acquire_data = C_Reduce::self_acquire_data;
+
+        static constexpr StageNum send_rule = C_Reduce::send_rule;
+
+        static constexpr StageNum acquire_data = C_Reduce::acquire_data;
+
+        static constexpr StageNum reduce_data = C_Reduce::reduce_data;
+
+    };
+
 }
