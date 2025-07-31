@@ -62,9 +62,10 @@ StatusFlag DBTCluster::Reduce::handle_event(const MetaData& meta,
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag DBTCluster::Reduce::acquire_data(DataPtr& data, uint32_t rest_size, Handle& handle) {
+StatusFlag DBTCluster::Reduce::acquire_data(DataPtr& data,
+                                            uint32_t rest_size, Handle& handle) {
     if (data->derived_type() != 0) _set.emplace_back(std::move(data));
-    if (rest_size == 0 && ++_finish_size == 3) {
+    if (rest_size == 0 && ++_receive == 3) {
         MetaData meta = create_meta();
         meta.stage = C_Reduce::reduce_data;
         handle.reduce_data(_self, meta, rule, std::move(_set));

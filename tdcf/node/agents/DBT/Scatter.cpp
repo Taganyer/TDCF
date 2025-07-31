@@ -64,7 +64,7 @@ StatusFlag DBTAgent::Scatter::handle_event(const MetaData& meta,
     if (meta.stage == N_Scatter::finish_ack) {
         return close(handle);
     }
-    if (meta.stage == Public_Broadcast::node_finish_ack) {
+    if (meta.stage == Public_Scatter::node_finish_ack) {
         _data_stored = true;
         if (_t1_finished && _t2_finished)
             return StatusFlag::EventEnd;
@@ -76,7 +76,8 @@ StatusFlag DBTAgent::Scatter::handle_event(const MetaData& meta,
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag DBTAgent::Scatter::send_data(DataPtr& data, const MetaData& meta, Handle& handle) {
+StatusFlag DBTAgent::Scatter::send_data(DataPtr& data,
+                                        const MetaData& meta, Handle& handle) {
     auto& info = handle.agent_data<DBTAgentData>();
 
     if (meta.serial == info.self_serial) {
@@ -84,12 +85,12 @@ StatusFlag DBTAgent::Scatter::send_data(DataPtr& data, const MetaData& meta, Han
             if (data->derived_type() != 0) {
                 handle.store_data(rule, data);
             }
-            if (meta.rest_data == 0 && ++_message_count == 2) {
+            if (meta.rest_data == 0 && ++_receive == 2) {
                 _data_stored = true;
             }
         } else {
             _set.emplace_back(std::move(data));
-            if (meta.rest_data == 0 && ++_message_count == 2) {
+            if (meta.rest_data == 0 && ++_receive == 2) {
                 MetaData new_meta = create_meta();
                 new_meta.stage = Public_Scatter::node_store;
                 Variant variant(std::move(_set));

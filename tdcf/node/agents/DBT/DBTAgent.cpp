@@ -205,10 +205,10 @@ StatusFlag DBTAgent::create_progress(uint32_t version, const MetaData& meta,
             return Scatter::create(version, meta, rule, handle);
         case OperationType::Reduce:
             return Reduce::create(version, meta, rule, handle);
-        // case OperationType::AllReduce:
-        //     return AllReduce::create(version, meta, rule, handle);
-        // case OperationType::ReduceScatter:
-        //     return ReduceScatter::create(version, meta, rule, handle);
+        case OperationType::AllReduce:
+            return AllReduce::create(version, meta, rule, handle);
+        case OperationType::ReduceScatter:
+            return ReduceScatter::create(version, meta, rule, handle);
         default:
             TDCF_RAISE_ERROR(error OperationType)
     }

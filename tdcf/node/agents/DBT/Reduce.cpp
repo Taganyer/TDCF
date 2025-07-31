@@ -24,8 +24,8 @@ StatusFlag DBTAgent::Reduce::create(uint32_t version, const MetaData& meta,
 
     auto& self = static_cast<Reduce&>(*iter->second);
     self._self = iter;
-    if (!info.red()) ++self._message_count;
-    if (!info.black()) ++self._message_count;
+    if (!info.red()) ++self._receive;
+    if (!info.black()) ++self._receive;
 
     MetaData new_meta = self.create_meta();
     new_meta.stage = N_Reduce::send_rule;
@@ -121,9 +121,10 @@ StatusFlag DBTAgent::Reduce::acquire_self_data(DataSet& dataset, Handle& handle)
     return StatusFlag::Success;
 }
 
-StatusFlag DBTAgent::Reduce::acquire_data(DataPtr& data, uint32_t rest_size, Handle& handle) {
+StatusFlag DBTAgent::Reduce::acquire_data(DataPtr& data,
+                                          uint32_t rest_size, Handle& handle) {
     _set.emplace_back(std::move(data));
-    if (rest_size == 0 && ++_message_count == 2) {
+    if (rest_size == 0 && ++_receive == 2) {
         MetaData meta = create_meta();
         meta.stage = N_Reduce::reduce_data;
         handle.reduce_data(_self, meta, rule, std::move(_set));

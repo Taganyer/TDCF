@@ -94,7 +94,7 @@ namespace tdcf {
 
             EventProgressAgent *_agent = nullptr;
 
-            uint8_t _message_count = 0, _finish_count = 0;
+            uint8_t _receive = 0, _finish_count = 0;
 
             bool _t1_finished = false, _t2_finished = false;
 
@@ -125,7 +125,7 @@ namespace tdcf {
 
             DataSet _set;
 
-            uint8_t _message_count = 0, _finish_count = 0;
+            uint8_t _receive = 0, _finish_count = 0;
 
             bool _t1_finished = false, _t2_finished = false;
 
@@ -154,7 +154,80 @@ namespace tdcf {
 
             DataSet _set;
 
-            uint8_t _message_count = 0;
+            uint8_t _receive = 0;
+
+        };
+
+        class AllReduce : public EventProgress {
+        public:
+            explicit AllReduce(uint32_t version, ProcessingRulesPtr rp);
+
+            static StatusFlag create(uint32_t version, const MetaData& meta, ProcessingRulesPtr rp, Handle& handle);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
+
+        private:
+            StatusFlag acquire_self_data(DataSet& dataset, Handle& handle) const;
+
+            StatusFlag acquire_data1(DataPtr& data, uint32_t rest_size, Handle& handle);
+
+            StatusFlag send_data1(DataSet& dataset, Handle& handle) const;
+
+            StatusFlag acquire_data2(DataPtr& data, const MetaData& meta, Handle& handle);
+
+            StatusFlag agent_store(DataPtr& data, uint32_t rest_size, Handle& handle);
+
+            StatusFlag send_data2(DataPtr& data, uint32_t rest_size, bool receive_message_from_t1,
+                                  uint32_t from_serial, Handle& handle);
+
+            StatusFlag close(Handle& handle);
+
+            EventProgressAgent *_agent = nullptr;
+
+            ProgressEventsMI _self;
+
+            DataSet _set;
+
+            uint8_t _receive1 = 0,  _receive2 = 0, _finish_count = 0;
+
+            bool _t1_finished = false, _t2_finished = false;
+
+            bool _data_stored = false;
+
+        };
+
+        class ReduceScatter : public EventProgress {
+        public:
+            explicit ReduceScatter(uint32_t version, ProcessingRulesPtr rp);
+
+            static StatusFlag create(uint32_t version, const MetaData& meta, ProcessingRulesPtr rp, Handle& handle);
+
+            StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
+
+        private:
+            StatusFlag acquire_self_data(DataSet& dataset, Handle& handle) const;
+
+            StatusFlag acquire_data1(DataPtr& data, uint32_t rest_size, Handle& handle);
+
+            StatusFlag send_data1(DataSet& dataset, Handle& handle) const;
+
+            StatusFlag send_data2(DataPtr& data, const MetaData& meta, Handle& handle);
+
+            StatusFlag after_store(bool receive_message_from_t1, Handle& handle);
+
+            StatusFlag close(Handle& handle);
+
+            EventProgressAgent *_agent = nullptr;
+
+            ProgressEventsMI _self;
+
+            uint8_t _receive1 = 0, _receive2 = 0, _finish_count = 0;
+
+            bool _t1_finished = false, _t2_finished = false;
+
+            bool _data_stored = false;
+
+            DataSet _set;
 
         };
 

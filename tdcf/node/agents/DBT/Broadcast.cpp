@@ -54,14 +54,15 @@ StatusFlag DBTAgent::Broadcast::create(uint32_t version, const MetaData& meta,
     return StatusFlag::Success;
 }
 
-StatusFlag DBTAgent::Broadcast::handle_event(const MetaData& meta, Variant& data, Handle& handle) {
+StatusFlag DBTAgent::Broadcast::handle_event(const MetaData& meta,
+                                             Variant& data, Handle& handle) {
     assert(meta.operation_type == OperationType::Broadcast);
     if (meta.stage == N_Broadcast::get_data) {
         if (!_agent) {
             if (std::get<DataPtr>(data)->derived_type() != 0) {
                 handle.store_data(rule, std::get<DataPtr>(data));
             }
-            if (meta.rest_data == 0 && ++_message_count == 2) {
+            if (meta.rest_data == 0 && ++_receive == 2) {
                 _data_stored = true;
             }
         } else {
@@ -143,17 +144,21 @@ StatusFlag DBTAgent::Broadcast::send_data(DataPtr& data, uint32_t rest_size,
     return StatusFlag::Success;
 }
 
-StatusFlag DBTAgent::Broadcast::agent_store(DataPtr& data, uint32_t rest_size, Handle& handle) {
+StatusFlag DBTAgent::Broadcast::agent_store(DataPtr& data,
+                                            uint32_t rest_size, Handle& handle) {
     _set.emplace_back(data);
-    if (rest_size == 0) ++_message_count;
-    if (_message_count != 2) return StatusFlag::Success;
+    if (rest_size == 0 && ++_receive != 2)
+        return StatusFlag::Success;
 
     MetaData meta = create_meta();
     meta.stage = Public_Broadcast::node_store;
     meta.rest_data = rest_size;
 
     Variant variant(std::move(_set));
-    return _agent->proxy_event(meta, variant, handle);
+    StatusFlag flag = _agent->proxy_event(meta, variant, handle);
+    TDCF_CHECK_SUCCESS(flag)
+
+    return StatusFlag::Success;
 }
 
 StatusFlag DBTAgent::Broadcast::close(Handle& handle) {

@@ -27,24 +27,16 @@ StatusFlag DBTCluster::DBTAgentFactory::type(const ProcessingRulesPtr& rule, Pro
     DBTAgentFactoryFun(fun, agent_class)
 
 
-#define DBTEmpty(fun, cluster_class, agent_class) \
-StatusFlag DBTCluster::fun(ProcessingRulesPtr rule_ptr) { \
-    return StatusFlag::Success; \
-} \
-StatusFlag DBTCluster::DBTAgentFactory::fun(const ProcessingRulesPtr& rule, ProgressEventsMI iter, \
-    Handle& handle, EventProgressAgent **agent_ptr) { \
-    return StatusFlag::Success; \
-}
-
 DBTFunAll(broadcast, Broadcast, BroadcastAgent)
 
 DBTFunAll(scatter, Scatter, ScatterAgent)
 
 DBTFunAll(reduce, Reduce, ReduceAgent)
 
-DBTEmpty(all_reduce, AllReduce, AllReduceAgent)
+DBTFunAll(all_reduce, AllReduce, AllReduceAgent)
 
-DBTEmpty(reduce_scatter, ReduceScatter, ReduceScatterAgent)
+DBTFunAll(reduce_scatter, ReduceScatter, ReduceScatterAgent)
+
 
 void DBTCluster::cluster_connect_children(const IdentitySet& child_nodes) {
     TDCF_CHECK_EXPR(!child_nodes.empty())

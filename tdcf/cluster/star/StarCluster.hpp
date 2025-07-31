@@ -205,7 +205,7 @@ namespace tdcf {
 
             DataSet _set;
 
-            unsigned _received = 0, _respond = 0;
+            uint32_t _received = 0, _respond = 0;
 
         };
 

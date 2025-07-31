@@ -116,4 +116,108 @@ namespace tdcf::dbt {
 
     };
 
+    struct C_AllReduce {
+        static constexpr StageNum self_acquire_data = 1;
+
+        static constexpr StageNum acquire_data = 2;
+
+        static constexpr StageNum send_rule = 3;
+
+        static constexpr StageNum reduce_data = 4;
+
+        static constexpr StageNum send_data = 5;
+
+        static constexpr StageNum finish_ack = 6;
+
+    };
+
+    struct N_AllReduce {
+        static constexpr StageNum get_rule = C_AllReduce::send_rule;
+
+        static constexpr StageNum send_rule = C_AllReduce::send_rule;
+
+        static constexpr StageNum acquire_data1 = C_AllReduce::acquire_data;
+
+        static constexpr StageNum reduce_data = C_AllReduce::reduce_data;
+
+        static constexpr StageNum send_data1 = C_AllReduce::acquire_data;
+
+        static constexpr StageNum acquire_data2 = C_AllReduce::send_data;
+
+        static constexpr StageNum send_data2 = C_AllReduce::send_data;
+
+        static constexpr StageNum finish_ack = C_AllReduce::finish_ack;
+
+        static constexpr StageNum finish = C_AllReduce::finish_ack;
+
+    };
+
+    struct A_AllReduce {
+        static constexpr StageNum self_acquire_data = C_AllReduce::self_acquire_data;
+
+        static constexpr StageNum acquire_data1 = C_AllReduce::acquire_data;
+
+        static constexpr StageNum send_rule = C_AllReduce::send_rule;
+
+        static constexpr StageNum reduce_data = C_AllReduce::reduce_data;
+
+        static constexpr StageNum finish_ack = C_AllReduce::finish_ack;
+
+    };
+
+    struct C_ReduceScatter {
+        static constexpr StageNum self_acquire_data = 1;
+
+        static constexpr StageNum acquire_data = 2;
+
+        static constexpr StageNum send_rule = 3;
+
+        static constexpr StageNum reduce_data = 4;
+
+        static constexpr StageNum scatter_data = 5;
+
+        static constexpr StageNum send_data = 6;
+
+        static constexpr StageNum finish_ack = 7;
+
+    };
+
+    struct N_ReduceScatter {
+        static constexpr StageNum self_acquire_data = C_ReduceScatter::self_acquire_data;
+
+        static constexpr StageNum get_rule = C_ReduceScatter::send_rule;
+
+        static constexpr StageNum send_rule = C_ReduceScatter::send_rule;
+
+        static constexpr StageNum acquire_data1 = C_ReduceScatter::acquire_data;
+
+        static constexpr StageNum reduce_data = C_ReduceScatter::reduce_data;
+
+        static constexpr StageNum send_data1 = C_ReduceScatter::acquire_data;
+
+        static constexpr StageNum acquire_data2 = C_ReduceScatter::send_data;
+
+        static constexpr StageNum send_data2 = C_ReduceScatter::send_data;
+
+        static constexpr StageNum finish_ack = C_ReduceScatter::finish_ack;
+
+        static constexpr StageNum finish = C_ReduceScatter::finish_ack;
+
+    };
+
+    struct A_ReduceScatter {
+        static constexpr StageNum self_acquire_data = C_ReduceScatter::self_acquire_data;
+
+        static constexpr StageNum acquire_data1 = C_ReduceScatter::acquire_data;
+
+        static constexpr StageNum send_rule = C_ReduceScatter::send_rule;
+
+        static constexpr StageNum reduce_data = C_ReduceScatter::reduce_data;
+
+        static constexpr StageNum scatter_data = C_ReduceScatter::scatter_data;
+
+        static constexpr StageNum finish_ack = C_ReduceScatter::finish_ack;
+
+    };
+
 }
