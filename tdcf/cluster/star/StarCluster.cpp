@@ -55,7 +55,7 @@ void StarCluster::cluster_start() {
     meta.stage = Star::start;
     meta.data1[0] = ClusterType::star;
     for (auto& id : _handle.cluster_data<IdentityList>()) {
-        StatusFlag flag = _handle.send_message(id, meta, create_node_data());
+        StatusFlag flag = _handle.send_message(id, meta, nullptr);
         TDCF_CHECK_SUCCESS(flag)
     }
     _handle.agent_factory = std::make_unique<StarAgentFactory>();
@@ -72,10 +72,6 @@ bool StarCluster::from_sub_cluster(const IdentityPtr& from_id) {
     auto find = std::binary_search(id_list.begin(), id_list.end(), from_id,
                                    IdentityPtrLess());
     return find;
-}
-
-SerializablePtr StarCluster::create_node_data() {
-    return std::make_shared<StarAgent>();
 }
 
 StatusFlag StarCluster::handle_disconnect_request(const IdentityPtr& from_id) {

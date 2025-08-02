@@ -23,7 +23,7 @@ namespace tdcf {
         [[nodiscard]] bool node_agent_started() const { return _node_agent_started; };
 
     private:
-        MetaData get_agent();
+        MetaData get_agent(const IdentityPtr& from_id);
 
     protected:
         void end_agent();

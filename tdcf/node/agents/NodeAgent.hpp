@@ -14,26 +14,14 @@ namespace tdcf {
 
     class Handle;
 
-    class NodeAgent : public Serializable {
+    class NodeAgent {
     public:
-        /// INFO: 用户通过此函数反序列化 NodeAgent。
-        static StatusFlag deserialize_NodeAgent(const MetaData& meta, SerializablePtr& buffer_ptr,
-                                                const void *buffer, unsigned buffer_size);
-
-        [[nodiscard]] SerializableType base_type() const final {
-            return static_cast<SerializableType>(SerializableBaseType::NodeAgent);
-        };
+        virtual ~NodeAgent() = default;
 
         virtual void init(const IdentityPtr& from_id, const MetaData& meta,
                           Handle& handle) = 0;
 
-        bool serialize(void *buffer, uint32_t buffer_size) const override;
-
-        bool deserialize(const void *buffer, uint32_t buffer_size) override;
-
-        [[nodiscard]] uint32_t serialize_size() const override;
-
-        StatusFlag handle_received_message(const IdentityPtr& from_id, const MetaData& meta,
+        StatusFlag handle_received_message(const MetaData& meta,
                                            Variant& variant, Handle& handle);
 
         virtual StatusFlag handle_disconnect(const IdentityPtr& id, Handle& handle) = 0;
@@ -45,5 +33,7 @@ namespace tdcf {
     };
 
     using NodeAgentPtr = std::shared_ptr<NodeAgent>;
+
+    NodeAgentPtr get_NodeAgent(const MetaData& meta);
 
 }

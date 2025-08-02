@@ -184,12 +184,6 @@ SerializablePtr Communicator1::get_data(SerializableBaseType type, uint32_t size
             assert(success);
             return identity;
         }
-        case SerializableBaseType::NodeAgent: {
-            SerializablePtr ptr;
-            auto s = NodeAgent::deserialize_NodeAgent(meta.meta_data, ptr, str.data(), str.size());
-            assert(s == StatusFlag::Success);
-            return ptr;
-        }
         case SerializableBaseType::Data: {
             auto data = std::make_shared<Data1>();
             success = data->deserialize(str.data(), str.size());

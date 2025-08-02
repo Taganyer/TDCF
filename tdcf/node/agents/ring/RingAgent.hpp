@@ -14,8 +14,6 @@ namespace tdcf {
         void init(const IdentityPtr& from_id, const MetaData& meta,
                   Handle& handle) override;
 
-        [[nodiscard]] SerializableType derived_type() const override;
-
     private:
         struct RingAgentData {
             IdentityPtr send;

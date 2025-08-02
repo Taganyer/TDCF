@@ -34,8 +34,6 @@ namespace tdcf {
 
         bool from_sub_cluster(const IdentityPtr& from_id) override;
 
-        static SerializablePtr create_node_data();
-
         StatusFlag handle_disconnect_request(const IdentityPtr& from_id) override;
 
         class Broadcast : public EventProgress {

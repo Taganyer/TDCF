@@ -32,10 +32,6 @@ void DBTAgent::init(const IdentityPtr& from_id, const MetaData& meta, Handle& ha
     }
 }
 
-SerializableType DBTAgent::derived_type() const {
-    return ClusterType::dbt;
-}
-
 DBTAgent::DBTAgentData::DBTAgentData(IdentityPtr t1_parent, IdentityPtr t2_parent,
                                      IdentityPtr red_child, IdentityPtr black_child,
                                      bool is_leaf_node_in_t1,

@@ -14,16 +14,16 @@ Node::Node(IdentityPtr ip, CommunicatorPtr cp, ProcessorPtr pp) :
 Node::~Node()  { assert(!_node_agent_started); }
 
 void Node::start_node() {
-    TDCF_CHECK_EXPR(!dynamic_cast<Cluster*>(this) || _cluster_staring);
+    TDCF_CHECK_EXPR(!dynamic_cast<Cluster*>(this) || _cluster_staring)
     TDCF_CHECK_EXPR(!_node_agent_started)
     auto id = _handle.accept();
-    MetaData meta = get_agent();
+    MetaData meta = get_agent(id);
     if (!_cluster_started) _handle.agent_factory = nullptr;
     _agent->init(id, meta, _handle);
     _node_agent_started = true;
 }
 
-MetaData Node::get_agent() {
+MetaData Node::get_agent(const IdentityPtr& from_id) {
     StatusFlag flag;
     do {
         flag = _handle.get_communicator_events();
@@ -34,11 +34,11 @@ MetaData Node::get_agent() {
     bool success = _handle.get_message(message);
     TDCF_CHECK_EXPR(success)
 
-    auto& [type, from, meta, agent] = message;
-    assert(from->equal_to(*from_id));
+    auto& [type, from, meta, variant] = message;
     assert(meta.operation_type == OperationType::AgentCreate);
-    _agent = std::dynamic_pointer_cast<NodeAgent>(std::get<SerializablePtr>(agent));
-    TDCF_CHECK_EXPR(_agent);
+    TDCF_CHECK_EXPR(from->equal_to(*from_id));
+    _agent = get_NodeAgent(meta);
+    TDCF_CHECK_EXPR(_agent)
     return meta;
 }
 
@@ -54,7 +54,7 @@ StatusFlag Node::handle_message(Handle::MessageEvent& event) {
     StatusFlag flag;
     switch (type) {
         case CommunicatorEvent::ReceivedMessage:
-            flag = _agent->handle_received_message(from_id, meta, variant, _handle);
+            flag = _agent->handle_received_message(meta, variant, _handle);
             break;
         case CommunicatorEvent::MessageSendable:
             flag = _handle.send_delay_message(from_id);
@@ -63,7 +63,7 @@ StatusFlag Node::handle_message(Handle::MessageEvent& event) {
             flag = _agent->handle_disconnect(from_id, _handle);
             break;
         default:
-            TDCF_RAISE_ERROR("Recieved wrong event type");
+            TDCF_RAISE_ERROR("Recieved wrong event type")
     }
     return flag;
 }

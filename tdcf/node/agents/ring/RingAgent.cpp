@@ -28,10 +28,6 @@ void RingAgent::init(const IdentityPtr& from_id, const MetaData& meta, Handle& h
     }
 }
 
-SerializableType RingAgent::derived_type() const {
-    return ClusterType::ring;
-}
-
 StatusFlag RingAgent::handle_disconnect(const IdentityPtr& id, Handle& handle) {
     auto& [send, receive, serial] = handle.agent_data<RingAgentData>();
     assert(receive->equal_to(*id));
@@ -58,7 +54,7 @@ void RingAgent::connect_handle(Handle::MessageEvent& event, Handle& handle) {
             meta.data1[0] = ClusterType::ring;
             meta.stage = Ring::start;
             --meta.serial;
-            handle.send_message(send, meta, std::make_shared<RingAgent>());
+            handle.send_message(send, meta, nullptr);
             meta.operation_type = OperationType::Init;
         }
     } else {

@@ -36,7 +36,6 @@ namespace tdcf {
     MOD(Null), \
     MOD(Message), \
     MOD(Identity), \
-    MOD(NodeAgent), \
     MOD(Data), \
     MOD(ProcessingRules),
 

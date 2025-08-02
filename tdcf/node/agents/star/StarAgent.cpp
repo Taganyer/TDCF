@@ -13,10 +13,6 @@ void StarAgent::init(const IdentityPtr& from_id, const MetaData& meta, Handle& h
     handle.create_agent_data<IdentityPtr>(from_id);
 }
 
-SerializableType StarAgent::derived_type() const {
-    return ClusterType::star;
-}
-
 StatusFlag StarAgent::handle_disconnect(const IdentityPtr& id, Handle& handle) {
     auto& root = handle.agent_data<IdentityPtr>();
     assert(root->equal_to(*id));

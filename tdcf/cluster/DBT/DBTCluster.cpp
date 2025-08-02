@@ -66,7 +66,7 @@ void DBTCluster::cluster_start() {
     for (auto& node : nodes) {
         meta.serial = serial;
         node_list[serial] = node;
-        _handle.send_message(node, meta, create_node_data());
+        _handle.send_message(node, meta, nullptr);
         ++serial;
     }
 
@@ -147,10 +147,6 @@ void DBTCluster::cluster_end() {
 bool DBTCluster::from_sub_cluster(const IdentityPtr& from_id) {
     auto& [t1, t2, size] = _handle.cluster_data<DBTClusterData>();
     return t1->equal_to(*from_id) || t2->equal_to(*from_id);
-}
-
-SerializablePtr DBTCluster::create_node_data() {
-    return std::make_shared<DBTAgent>();
 }
 
 StatusFlag DBTCluster::handle_disconnect_request(const IdentityPtr& from_id) {

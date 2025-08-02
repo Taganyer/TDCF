@@ -54,7 +54,7 @@ void RingCluster::cluster_start() {
     meta.data1[0] = ClusterType::ring;
     meta.stage = Ring::start;
     meta.serial = list.size();
-    StatusFlag flag = _handle.send_message(*list.begin(), meta, create_node_data());
+    StatusFlag flag = _handle.send_message(*list.begin(), meta, nullptr);
     TDCF_CHECK_SUCCESS(flag)
 
     meta.operation_type = OperationType::Init;
@@ -88,10 +88,6 @@ void RingCluster::cluster_end() {
 bool RingCluster::from_sub_cluster(const IdentityPtr& from_id) {
     auto& [send, receive, cluster_size] = _handle.cluster_data<RingClusterData>();
     return send->equal_to(*from_id) || receive->equal_to(*from_id);
-}
-
-SerializablePtr RingCluster::create_node_data() {
-    return std::make_shared<RingAgent>();
 }
 
 StatusFlag RingCluster::handle_disconnect_request(const IdentityPtr& from_id) {
