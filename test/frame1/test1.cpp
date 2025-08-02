@@ -103,7 +103,7 @@ static void root(uint32_t type, uint32_t id,
     flag = root->end_cluster();
     T_FATAL << __FUNCTION__ << " [" << id << "] end: " << status_flag_name(flag);
     cerr << __FUNCTION__ << " [" << id << "] end: " << status_flag_name(flag) << endl;
-    sleep(2);
+    // sleep(2);
 }
 
 static void node_root(uint32_t type, uint32_t id, uint32_t root_id,
@@ -132,7 +132,7 @@ static void node_root(uint32_t type, uint32_t id, uint32_t root_id,
     }
 
     T_DEBUG << __FUNCTION__ << " " << root_id << "+" << id << " start end: " << status_flag_name(flag);
-    cerr << __FUNCTION__ << " " << root_id << "+" << id << " start end: " << status_flag_name(flag);
+    cerr << __FUNCTION__ << " " << root_id << "+" << id << " start end: " << status_flag_name(flag) << endl;
     global_logger.flush();
     flag = node_root->end_cluster();
     T_FATAL << __FUNCTION__ << " " << root_id << "+" << id << " end: " << status_flag_name(flag);
@@ -163,8 +163,11 @@ void test::correctness_test() {
     Cluster::IdentitySet cluster1, cluster2;
 
     uint32_t root_id = ++serial;
-    uint32_t node1_id = ++serial;
-    cluster1.insert(std::make_shared<Identity1>(node1_id));
+    // uint32_t node1_id = ++serial;
+    // cluster1.insert(std::make_shared<Identity1>(node1_id));
+    // uint32_t node2_id = ++serial;
+    // cluster1.insert(std::make_shared<Identity1>(node2_id));
+
     uint32_t root1_id = ++serial;
     cluster1.insert(std::make_shared<Identity1>(root1_id));
 
@@ -177,12 +180,16 @@ void test::correctness_test() {
         root(ClusterType::dbt, root_id, share, cluster1);
     });
 
-    Base::Thread node1_t([node1_id, &share, root_id] {
-        pure_node(node1_id, share, root_id);
-    });
+    // Base::Thread node1_t([node1_id, &share, root_id] {
+    //     pure_node(node1_id, share, root_id);
+    // });
+    //
+    // Base::Thread node2_t([node2_id, &share, root_id] {
+    //     pure_node(node2_id, share, root_id);
+    // });
 
     Base::Thread root1_t([root1_id, root_id, &share, &cluster2] {
-        node_root(ClusterType::dbt, root1_id, root_id, share, cluster2);
+        node_root(ClusterType::ring, root1_id, root_id, share, cluster2);
     });
 
     Base::Thread node11_t([node11_id, &share, root1_id] {
@@ -194,13 +201,15 @@ void test::correctness_test() {
     });
 
     root_t.start();
-    node1_t.start();
+    // node1_t.start();
+    // node2_t.start();
     root1_t.start();
     node11_t.start();
     node12_t.start();
 
     root_t.join();
-    node1_t.join();
+    // node1_t.join();
+    // node2_t.join();
     root1_t.join();
     node11_t.join();
     node12_t.join();

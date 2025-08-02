@@ -83,7 +83,7 @@ void DBTCluster::cluster_start() {
     }
 
     _handle.create_cluster_data<DBTClusterData>(std::move(t1_root), std::move(t2_root), array.size());
-
+    _handle.agent_factory = std::make_unique<DBTAgentFactory>();
 }
 
 void DBTCluster::send_message_to_child(const std::vector<IdentityPtr>& node_list,
@@ -154,5 +154,5 @@ SerializablePtr DBTCluster::create_node_data() {
 }
 
 StatusFlag DBTCluster::handle_disconnect_request(const IdentityPtr& from_id) {
-    throw std::runtime_error(std::string("unexpect ") + __PRETTY_FUNCTION__);
+    TDCF_RAISE_ERROR(unreachable fun)
 }

@@ -17,13 +17,13 @@ void Node::start_node() {
     TDCF_CHECK_EXPR(!dynamic_cast<Cluster*>(this) || _cluster_staring);
     TDCF_CHECK_EXPR(!_node_agent_started)
     auto id = _handle.accept();
-    MetaData meta = get_agent(id);
+    MetaData meta = get_agent();
     if (!_cluster_started) _handle.agent_factory = nullptr;
     _agent->init(id, meta, _handle);
     _node_agent_started = true;
 }
 
-MetaData Node::get_agent(const IdentityPtr& from_id) {
+MetaData Node::get_agent() {
     StatusFlag flag;
     do {
         flag = _handle.get_communicator_events();

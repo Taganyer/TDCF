@@ -24,8 +24,9 @@ StatusFlag DBTAgent::Scatter::create(uint32_t version, const MetaData& meta,
 
     auto& self = static_cast<Scatter&>(*iter->second);
     self._self = iter;
-    if (!info.red()) ++self._finish_count;
-    if (!info.black()) ++self._finish_count;
+    if (info.leaf2()) {
+        self._finish_ack = true;
+    }
 
     MetaData new_meta = self.create_meta();
     new_meta.stage = N_Scatter::send_rule;
@@ -62,13 +63,12 @@ StatusFlag DBTAgent::Scatter::handle_event(const MetaData& meta,
         return send_data(std::get<DataPtr>(data), meta, handle);
     }
     if (meta.stage == N_Scatter::finish_ack) {
+        _finish_ack = true;
         return close(handle);
     }
     if (meta.stage == Public_Scatter::node_finish_ack) {
         _data_stored = true;
-        if (_t1_finished && _t2_finished)
-            return StatusFlag::EventEnd;
-        return StatusFlag::Success;
+        return close(handle);
     }
     if (meta.stage == N_Scatter::send_rule) {
         return StatusFlag::Success;
@@ -76,31 +76,32 @@ StatusFlag DBTAgent::Scatter::handle_event(const MetaData& meta,
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
+void DBTAgent::Scatter::acquire_data(DataPtr& data, const MetaData& meta, Handle& handle) {
+    if (!_agent) {
+        if (data->derived_type() != 0) {
+            handle.store_data(rule, data);
+        }
+        if (meta.rest_data == 0 && ++_receive == 2) {
+            _data_stored = true;
+        }
+    } else {
+        _set.emplace_back(std::move(data));
+        if (meta.rest_data == 0 && ++_receive == 2) {
+            MetaData new_meta = create_meta();
+            new_meta.stage = Public_Scatter::node_store;
+            Variant variant(std::move(_set));
+            StatusFlag flag = _agent->proxy_event(new_meta, variant, handle);
+            TDCF_CHECK_SUCCESS(flag)
+        }
+    }
+}
+
 StatusFlag DBTAgent::Scatter::send_data(DataPtr& data,
                                         const MetaData& meta, Handle& handle) {
     auto& info = handle.agent_data<DBTAgentData>();
 
     if (meta.serial == info.self_serial) {
-        if (!_agent) {
-            if (data->derived_type() != 0) {
-                handle.store_data(rule, data);
-            }
-            if (meta.rest_data == 0 && ++_receive == 2) {
-                _data_stored = true;
-            }
-        } else {
-            _set.emplace_back(std::move(data));
-            if (meta.rest_data == 0 && ++_receive == 2) {
-                MetaData new_meta = create_meta();
-                new_meta.stage = Public_Scatter::node_store;
-                Variant variant(std::move(_set));
-                StatusFlag flag = _agent->proxy_event(new_meta, variant, handle);
-                TDCF_CHECK_SUCCESS(flag)
-            }
-        }
-        if (meta.rest_data == 0) {
-            return after_store(meta.data1[0], handle);
-        }
+        acquire_data(data, meta, handle);
     } else {
         assert(info.internal1() || info.internal2());
         MetaData new_meta = create_meta();
@@ -122,48 +123,19 @@ StatusFlag DBTAgent::Scatter::send_data(DataPtr& data,
         TDCF_CHECK_SUCCESS(flag)
     }
 
-    return StatusFlag::Success;
+    return close(handle);
 }
 
-StatusFlag DBTAgent::Scatter::after_store(bool receive_message_from_t1, Handle& handle) {
-    auto& info = handle.agent_data<DBTAgentData>();
+StatusFlag DBTAgent::Scatter::close(Handle& handle) const {
+    if (!_data_stored || !_finish_ack)
+        return StatusFlag::Success;
 
-    MetaData meta = create_meta();
-    meta.stage = N_Scatter::finish;
-
-    StatusFlag flag = StatusFlag::Success;
-    if (receive_message_from_t1 && info.leaf1()) {
-        flag = handle.send_progress_message(version, info.t1(), meta, nullptr);
-        _t1_finished = true;
-    }
-    if (!receive_message_from_t1 && info.leaf2()) {
-        flag = handle.send_progress_message(version, info.t2(), meta, nullptr);
-        _t2_finished = true;
-    }
-    TDCF_CHECK_SUCCESS(flag)
-
-    if (_t1_finished && _t2_finished && _data_stored)
-        return StatusFlag::EventEnd;
-    return StatusFlag::Success;
-}
-
-StatusFlag DBTAgent::Scatter::close(Handle& handle) {
     auto& info = handle.agent_data<DBTAgentData>();
     MetaData meta = create_meta();
     meta.stage = N_Scatter::finish;
 
-    StatusFlag flag = StatusFlag::Success;
-    if (info.internal1() && ++_finish_count == 2) {
-        _t1_finished = true;
-        flag = handle.send_progress_message(version, info.t1(), meta, nullptr);
-    }
-    if (info.internal2() && ++_finish_count == 2) {
-        _t2_finished = true;
-        flag = handle.send_progress_message(version, info.t2(), meta, nullptr);
-    }
+    StatusFlag flag = handle.send_progress_message(version, info.t2(), meta, nullptr);
     TDCF_CHECK_SUCCESS(flag)
 
-    if (_t1_finished && _t2_finished && _data_stored)
-        return StatusFlag::EventEnd;
-    return StatusFlag::Success;
+    return StatusFlag::EventEnd;
 }

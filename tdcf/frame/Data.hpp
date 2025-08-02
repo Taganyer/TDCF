@@ -18,6 +18,18 @@ namespace tdcf {
         [[nodiscard]] SerializableType derived_type() const override {
             return 0;
         };
+        //
+        // [[nodiscard]] uint32_t serialize_size() const override {
+        //     return 0;
+        // };
+        //
+        // bool serialize(void *buffer, uint32_t buffer_size) const override {
+        //     return true;
+        // };
+        //
+        // bool deserialize(const void *buffer, uint32_t buffer_size) override {
+        //     return true;
+        // };
 
     };
 

@@ -56,11 +56,8 @@ StatusFlag DBTCluster::AllReduce::handle_event(const MetaData& meta,
         return send_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == C_AllReduce::finish_ack) {
-        if (++_respond == 2) {
-            rule->finish_callback();
-            return StatusFlag::EventEnd;
-        }
-        return StatusFlag::Success;
+        rule->finish_callback();
+        return StatusFlag::EventEnd;
     }
     TDCF_RAISE_ERROR(meta.stage error type)
 }
@@ -153,10 +150,7 @@ StatusFlag DBTCluster::AllReduceAgent::handle_event(const MetaData& meta,
         return send_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == A_AllReduce::finish_ack) {
-        if (++_respond == 2) {
-            return close(handle);
-        }
-        return StatusFlag::Success;
+        return close(handle);
     }
     TDCF_RAISE_ERROR(meta.stage error type)
 }

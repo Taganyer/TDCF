@@ -85,20 +85,20 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         private:
+            StatusFlag acquire_data(DataPtr& data, const MetaData& meta, Handle& handle);
+
             StatusFlag send_data(DataPtr& data, uint32_t rest_size, bool receive_message_from_t1,
-                                 uint32_t from_serial, Handle& handle);
+                                 uint32_t from_serial, Handle& handle) const;
 
-            StatusFlag agent_store(DataPtr& data, uint32_t rest_size, Handle& handle);
+            void agent_store(DataPtr& data, uint32_t rest_size, Handle& handle);
 
-            StatusFlag close(Handle& handle);
+            StatusFlag close(Handle& handle) const;
 
             EventProgressAgent *_agent = nullptr;
 
-            uint8_t _receive = 0, _finish_count = 0;
+            uint8_t _receive = 0;
 
-            bool _t1_finished = false, _t2_finished = false;
-
-            bool _data_stored = false;
+            bool _data_stored = false, _finish_ack = false;
 
             DataSet _set;
 
@@ -113,11 +113,11 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         private:
+            void acquire_data(DataPtr& data, const MetaData& meta, Handle& handle);
+
             StatusFlag send_data(DataPtr& data, const MetaData& meta, Handle& handle);
 
-            StatusFlag after_store(bool receive_message_from_t1, Handle& handle);
-
-            StatusFlag close(Handle& handle);
+            StatusFlag close(Handle& handle) const;
 
             EventProgressAgent *_agent = nullptr;
 
@@ -125,11 +125,9 @@ namespace tdcf {
 
             DataSet _set;
 
-            uint8_t _receive = 0, _finish_count = 0;
+            uint8_t _receive = 0;
 
-            bool _t1_finished = false, _t2_finished = false;
-
-            bool _data_stored = false;
+            bool _data_stored = false, _finish_ack = false;
 
         };
 
@@ -175,12 +173,12 @@ namespace tdcf {
 
             StatusFlag acquire_data2(DataPtr& data, const MetaData& meta, Handle& handle);
 
-            StatusFlag agent_store(DataPtr& data, uint32_t rest_size, Handle& handle);
+            void agent_store(DataPtr& data, uint32_t rest_size, Handle& handle);
 
             StatusFlag send_data2(DataPtr& data, uint32_t rest_size, bool receive_message_from_t1,
-                                  uint32_t from_serial, Handle& handle);
+                                  uint32_t from_serial, Handle& handle) const;
 
-            StatusFlag close(Handle& handle);
+            StatusFlag close(Handle& handle) const;
 
             EventProgressAgent *_agent = nullptr;
 
@@ -188,11 +186,9 @@ namespace tdcf {
 
             DataSet _set;
 
-            uint8_t _receive1 = 0,  _receive2 = 0, _finish_count = 0;
+            uint8_t _receive1 = 0,  _receive2 = 0;
 
-            bool _t1_finished = false, _t2_finished = false;
-
-            bool _data_stored = false;
+            bool _data_stored = false, _finish_ack = false;
 
         };
 
@@ -211,21 +207,19 @@ namespace tdcf {
 
             StatusFlag send_data1(DataSet& dataset, Handle& handle) const;
 
+            void acquire_data2(DataPtr& data, const MetaData& meta, Handle& handle);
+
             StatusFlag send_data2(DataPtr& data, const MetaData& meta, Handle& handle);
 
-            StatusFlag after_store(bool receive_message_from_t1, Handle& handle);
-
-            StatusFlag close(Handle& handle);
+            StatusFlag close(Handle& handle) const;
 
             EventProgressAgent *_agent = nullptr;
 
             ProgressEventsMI _self;
 
-            uint8_t _receive1 = 0, _receive2 = 0, _finish_count = 0;
+            uint8_t _receive1 = 0,  _receive2 = 0;
 
-            bool _t1_finished = false, _t2_finished = false;
-
-            bool _data_stored = false;
+            bool _data_stored = false, _finish_ack = false;
 
             DataSet _set;
 

@@ -59,7 +59,6 @@ namespace tdcf {
         protected:
             StatusFlag send_data(DataSet& dataset, Handle& handle) const;
 
-            uint32_t _respond = 0;
         };
 
         class BroadcastAgent : public Broadcast, public EventProgressAgent {
@@ -95,8 +94,6 @@ namespace tdcf {
             StatusFlag send_data(DataSet& set, Handle& handle) const;
 
             ProgressEventsMI _self;
-
-            uint32_t _respond = 0;
 
         };
 
@@ -176,7 +173,7 @@ namespace tdcf {
 
             DataSet _set;
 
-            uint32_t _received = 0, _respond = 0;
+            uint32_t _received = 0;
 
         };
 
