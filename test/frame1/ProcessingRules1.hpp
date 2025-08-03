@@ -3,10 +3,10 @@
 //
 #pragma once
 
+#include <utility>
 #include <tdcf/detail/MetaData.hpp>
 #include <tdcf/frame/ProcessingRules.hpp>
 #include <test/Log.hpp>
-#include <utility>
 
 namespace test {
 

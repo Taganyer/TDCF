@@ -5,6 +5,6 @@
 
 namespace test {
 
-    void correctness_test();
+    void example();
 
 }

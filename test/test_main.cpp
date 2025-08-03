@@ -3,6 +3,7 @@
 
 int main() {
     // test::DBT_correctness_test();
-    test::correctness_test();
+    // test::correctness_test();
+    test::example();
     return 0;
 }

@@ -3,7 +3,6 @@
 //
 #pragma once
 
-#include <cassert>
 #include <tdcf/frame/Identity.hpp>
 
 namespace test {
