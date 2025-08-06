@@ -14,6 +14,8 @@ namespace tdcf {
         void init(const IdentityPtr& from_id, const MetaData& meta,
                   Handle& handle) override;
 
+        void agent_start(Handle& handle) override;
+
     private:
         struct RingAgentData {
             IdentityPtr send;
@@ -27,6 +29,8 @@ namespace tdcf {
         StatusFlag handle_disconnect(const IdentityPtr& id, Handle& handle) override;
 
         static void connect_handle(Handle::MessageEvent& event, Handle& handle);
+
+        static void waiting_respond(Handle& handle);
 
         StatusFlag create_progress(uint32_t version, const MetaData& meta,
                                    ProcessingRulesPtr& rule, Handle& handle) override;

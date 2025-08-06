@@ -75,6 +75,16 @@ bool CommunicatorHandle::get_message(MessageEvent& message) {
     return false;
 }
 
+void CommunicatorHandle::waiting_for_message(MessageEvent& event) {
+    if (get_message(event)) return;
+    StatusFlag flag = get_communicator_events();
+    while (flag == StatusFlag::CommunicatorGetEventsFurtherWaiting) {
+        flag = get_communicator_events();
+    }
+    TDCF_CHECK_SUCCESS(flag)
+    TDCF_CHECK_EXPR(get_message(event))
+}
+
 StatusFlag CommunicatorHandle::send_message(const IdentityPtr& target,
                                             MetaData meta, SerializablePtr message) {
     meta.link_mark = LinkMark::Null;

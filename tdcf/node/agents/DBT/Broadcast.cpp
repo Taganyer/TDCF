@@ -23,7 +23,12 @@ StatusFlag DBTAgent::Broadcast::create(uint32_t version, const MetaData& meta,
     auto iter = handle.create_progress(std::make_unique<Broadcast>(version, std::move(rp)));
 
     auto& self = static_cast<Broadcast&>(*iter->second);
-    if (info.leaf2()) self._finish_ack = true;
+    if (info.leaf2()) {
+        self._finish_ack = 2;
+    } else {
+        if (!info.red()) ++self._finish_ack;
+        if (!info.black()) ++self._finish_ack;
+    }
 
     MetaData new_meta = self.create_meta();
     new_meta.stage = N_Broadcast::send_rule;
@@ -60,7 +65,7 @@ StatusFlag DBTAgent::Broadcast::handle_event(const MetaData& meta,
         return acquire_data(std::get<DataPtr>(data), meta, handle);
     }
     if (meta.stage == N_Broadcast::finish_ack) {
-        _finish_ack = true;
+        ++_finish_ack;
         return close(handle);
     }
     if (meta.stage == Public_Broadcast::node_finish_ack) {
@@ -68,7 +73,8 @@ StatusFlag DBTAgent::Broadcast::handle_event(const MetaData& meta,
         return close(handle);
     }
     if (meta.stage == N_Broadcast::get_rule) {
-        return StatusFlag::Success;
+        _get_rule = true;
+        return close(handle);
     }
     TDCF_RAISE_ERROR(meta.stage error type)
 }
@@ -144,7 +150,7 @@ void DBTAgent::Broadcast::agent_store(DataPtr& data,
 }
 
 StatusFlag DBTAgent::Broadcast::close(Handle& handle) const {
-    if (!_data_stored || !_finish_ack)
+    if (!_data_stored || _finish_ack != 2 || !_get_rule)
         return StatusFlag::Success;
 
     auto& info = handle.agent_data<DBTAgentData>();

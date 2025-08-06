@@ -28,6 +28,8 @@ namespace tdcf {
 
         void cluster_connect_children(const IdentitySet& child_nodes) override;
 
+        void waiting_respond();
+
         void cluster_start() override;
 
         void cluster_end() override;

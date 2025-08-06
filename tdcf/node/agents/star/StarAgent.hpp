@@ -13,6 +13,8 @@ namespace tdcf {
         void init(const IdentityPtr& from_id, const MetaData& meta,
                   Handle& handle) override;
 
+        void agent_start(Handle& handle) override;
+
     private:
         using IdentityList = std::vector<IdentityPtr>;
 

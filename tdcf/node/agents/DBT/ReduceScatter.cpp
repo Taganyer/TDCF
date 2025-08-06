@@ -24,9 +24,22 @@ StatusFlag DBTAgent::ReduceScatter::create(uint32_t version, const MetaData& met
 
     auto& self = static_cast<ReduceScatter&>(*iter->second);
     self._self = iter;
-    if (!info.red()) ++self._receive1;
-    if (!info.black()) ++self._receive1;
-    if (info.leaf2()) self._finish_ack = true;
+    if (!info.red()) {
+        ++self._receive1;
+        ++self._get_rule;
+        self._red_sent = true;
+    }
+    if (!info.black()) {
+        ++self._receive1;
+        ++self._get_rule;
+        self._black_sent = true;
+    }
+    if (info.leaf2()) {
+        self._finish_ack = 2;
+    } else {
+        if (!info.red()) ++self._finish_ack;
+        if (!info.black()) ++self._finish_ack;
+    }
 
     MetaData new_meta = self.create_meta();
     new_meta.stage = N_ReduceScatter::send_rule;
@@ -76,7 +89,7 @@ StatusFlag DBTAgent::ReduceScatter::handle_event(const MetaData& meta,
         return send_data2(std::get<DataPtr>(data), meta, handle);
     }
     if (meta.stage == N_ReduceScatter::finish_ack) {
-        _finish_ack = true;
+        ++_finish_ack;
         return close(handle);
     }
     if (meta.stage == Public_ReduceScatter::node_finish_ack) {
@@ -84,7 +97,8 @@ StatusFlag DBTAgent::ReduceScatter::handle_event(const MetaData& meta,
         return close(handle);
     }
     if (meta.stage == N_ReduceScatter::get_rule) {
-        return StatusFlag::Success;
+        ++_get_rule;
+        return close(handle);
     }
     TDCF_RAISE_ERROR(meta.stage error type)
 }
@@ -92,16 +106,22 @@ StatusFlag DBTAgent::ReduceScatter::handle_event(const MetaData& meta,
 StatusFlag DBTAgent::ReduceScatter::acquire_self_data(DataSet& dataset, Handle& handle) const {
     auto& info = handle.agent_data<DBTAgentData>();
 
-    MetaData meta = create_meta();
-    meta.stage = N_ReduceScatter::send_data1;
+    StatusFlag flag;
 
+    MetaData meta = create_meta();
+    meta.stage = N_Reduce::send_rule;
+    flag = handle.send_progress_message(version, info.t1(), meta, rule);
+    TDCF_CHECK_SUCCESS(flag)
+    flag = handle.send_progress_message(version, info.t2(), meta, rule);
+    TDCF_CHECK_SUCCESS(flag)
+
+    meta.stage = N_ReduceScatter::send_data1;
     if (dataset.size() == 1) dataset.emplace_back(DataPtr());
     if (info.leaf1() && info.leaf2()) {
         uint32_t t1_rest_data = (dataset.size() + 1) / 2,
                  t2_rest_data = dataset.size() / 2;
         for (uint32_t i = 0; i < dataset.size(); ++i) {
             auto& data = dataset[i];
-            StatusFlag flag;
             if (i & 1) {
                 meta.rest_data = --t2_rest_data;
                 flag = handle.send_progress_message(version, info.t2(), meta, data);
@@ -111,25 +131,25 @@ StatusFlag DBTAgent::ReduceScatter::acquire_self_data(DataSet& dataset, Handle& 
             }
             TDCF_CHECK_SUCCESS(flag)
         }
-        return StatusFlag::Success;
+        return close(handle);
     }
     if (info.leaf1()) {
         uint32_t rest_data = dataset.size();
         for (auto& data : dataset) {
             meta.rest_data = --rest_data;
-            StatusFlag flag = handle.send_progress_message(version, info.t1(), meta, data);
+            flag = handle.send_progress_message(version, info.t1(), meta, data);
             TDCF_CHECK_SUCCESS(flag)
         }
     } else {
         uint32_t rest_data = dataset.size();
         for (auto& data : dataset) {
             meta.rest_data = --rest_data;
-            StatusFlag flag = handle.send_progress_message(version, info.t2(), meta, data);
+            flag = handle.send_progress_message(version, info.t2(), meta, data);
             TDCF_CHECK_SUCCESS(flag)
         }
     }
 
-    return StatusFlag::Success;
+    return close(handle);
 }
 
 StatusFlag DBTAgent::ReduceScatter::acquire_data1(DataPtr& data,
@@ -169,7 +189,7 @@ StatusFlag DBTAgent::ReduceScatter::send_data1(DataSet& dataset, Handle& handle)
 }
 
 void DBTAgent::ReduceScatter::acquire_data2(DataPtr& data,
-                                                  const MetaData& meta, Handle& handle) {
+                                            const MetaData& meta, Handle& handle) {
     if (!_agent) {
         if (data->derived_type() != 0) {
             handle.store_data(rule, data);
@@ -210,6 +230,12 @@ StatusFlag DBTAgent::ReduceScatter::send_data2(DataPtr& data,
             in_red = info.in_t2_red(meta.serial);
             new_meta.data1[0] = 0;
         }
+
+        if (meta.rest_data == 0) {
+            if (in_red) _red_sent = true;
+            else _black_sent = true;
+        }
+
         StatusFlag flag = handle.send_progress_message(version,
                                                        in_red ? info.red() : info.black(),
                                                        new_meta, data);
@@ -220,7 +246,7 @@ StatusFlag DBTAgent::ReduceScatter::send_data2(DataPtr& data,
 }
 
 StatusFlag DBTAgent::ReduceScatter::close(Handle& handle) const {
-    if (!_data_stored || !_finish_ack)
+    if (!_data_stored || !_red_sent || !_black_sent || _finish_ack != 2 || _get_rule != 3)
         return StatusFlag::Success;
 
     auto& info = handle.agent_data<DBTAgentData>();

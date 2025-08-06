@@ -2,6 +2,7 @@
 // Created by taganyer on 25-7-30.
 //
 
+#include <iostream>
 #include <tdcf/base/Errors.hpp>
 #include <tdcf/base/types/DBT.hpp>
 #include <tdcf/cluster/DBT/DBTCluster.hpp>
@@ -58,6 +59,9 @@ StatusFlag DBTCluster::Reduce::handle_event(const MetaData& meta,
         }
         rule->finish_callback();
         return StatusFlag::EventEnd;
+    }
+    if (meta.stage == C_Reduce::send_rule) {
+        return StatusFlag::Success;
     }
     TDCF_RAISE_ERROR(meta.stage error type)
 }
@@ -120,6 +124,9 @@ StatusFlag DBTCluster::ReduceAgent::handle_event(const MetaData& meta,
     if (meta.stage == A_Reduce::reduce_data) {
         return close(std::get<DataSet>(data), handle);
     }
+    if (meta.stage == C_Reduce::send_rule) {
+        return StatusFlag::Success;
+    }
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
@@ -132,5 +139,6 @@ StatusFlag DBTCluster::ReduceAgent::close(DataSet& dataset, Handle& handle) cons
     MetaData meta = create_meta();
     meta.stage = Public_Reduce::agent_send;
     handle.create_processor_event(_other, meta, std::move(dataset));
+    std::cerr << "reduce agent end" << std::endl;
     return StatusFlag::EventEnd;
 }

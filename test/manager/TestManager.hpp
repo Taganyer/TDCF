@@ -38,7 +38,7 @@ namespace test {
 
         uint32_t _pure_nodes = 0;
 
-        uint32_t _operation[5] {};
+        std::array<uint32_t, 5> _operation;
 
         std::vector<ClusterInfoPtr> _sub_clusters;
 
@@ -61,13 +61,15 @@ namespace test {
 
         tdcf::Node create_node(uint32_t id) const;
 
-        tdcf::StatusFlag creat_task(uint32_t& serial, uint32_t& tasks_size,
-                                    tdcf::Cluster& root, tdcf::OperationType type) const;
+        void creat_task(uint32_t& serial, uint32_t& tasks_size,
+                                    tdcf::Cluster& root, std::array<uint32_t, 5>& ops) const;
 
-        void root(uint32_t type, uint32_t id, std::vector<uint32_t>& cluster) const;
+        void root(uint32_t type, uint32_t id, std::vector<uint32_t>& cluster,
+                  std::array<uint32_t, 5>& ops) const;
 
         void node_root(uint32_t type, uint32_t id, uint32_t root_id,
-                       std::vector<uint32_t>& cluster) const;
+                       std::vector<uint32_t>& cluster,
+                       std::array<uint32_t, 5>& ops) const;
 
         void pure_node(uint32_t id, uint32_t root_id) const;
 

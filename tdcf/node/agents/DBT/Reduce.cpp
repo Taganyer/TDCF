@@ -24,8 +24,14 @@ StatusFlag DBTAgent::Reduce::create(uint32_t version, const MetaData& meta,
 
     auto& self = static_cast<Reduce&>(*iter->second);
     self._self = iter;
-    if (!info.red()) ++self._receive;
-    if (!info.black()) ++self._receive;
+    if (!info.red()) {
+        ++self._receive;
+        ++self._get_rule;
+    }
+    if (!info.black()) {
+        ++self._receive;
+        ++self._get_rule;
+    }
 
     MetaData new_meta = self.create_meta();
     new_meta.stage = N_Reduce::send_rule;
@@ -64,33 +70,41 @@ StatusFlag DBTAgent::Reduce::handle_event(const MetaData& meta,
     assert(meta.operation_type == OperationType::Reduce);
 
     if (meta.stage == Public_Reduce::node_acquire) {
+        _get_self_data = true;
         return acquire_self_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == N_Reduce::acquire_data) {
         return acquire_data(std::get<DataPtr>(data), meta.rest_data, handle);
     }
     if (meta.stage == N_Reduce::reduce_data) {
-        return close(std::get<DataSet>(data), handle);
+        return send_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == N_Reduce::get_rule) {
-        return StatusFlag::Success;
+        ++_get_rule;
+        return close();
     }
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
-StatusFlag DBTAgent::Reduce::acquire_self_data(DataSet& dataset, Handle& handle) const {
+StatusFlag DBTAgent::Reduce::acquire_self_data(DataSet& dataset, Handle& handle) {
     auto& info = handle.agent_data<DBTAgentData>();
 
-    MetaData meta = create_meta();
-    meta.stage = N_Reduce::send_data;
+    StatusFlag flag;
 
+    MetaData meta = create_meta();
+    meta.stage = N_Reduce::send_rule;
+    flag = handle.send_progress_message(version, info.t1(), meta, rule);
+    TDCF_CHECK_SUCCESS(flag)
+    flag = handle.send_progress_message(version, info.t2(), meta, rule);
+    TDCF_CHECK_SUCCESS(flag)
+
+    meta.stage = N_Reduce::send_data;
     if (dataset.size() == 1) dataset.emplace_back(DataPtr());
     if (info.leaf1() && info.leaf2()) {
         uint32_t t1_rest_data = (dataset.size() + 1) / 2,
                  t2_rest_data = dataset.size() / 2;
         for (uint32_t i = 0; i < dataset.size(); ++i) {
             auto& data = dataset[i];
-            StatusFlag flag;
             if (i & 1) {
                 meta.rest_data = --t2_rest_data;
                 flag = handle.send_progress_message(version, info.t2(), meta, data);
@@ -100,25 +114,26 @@ StatusFlag DBTAgent::Reduce::acquire_self_data(DataSet& dataset, Handle& handle)
             }
             TDCF_CHECK_SUCCESS(flag)
         }
-        return StatusFlag::EventEnd;
+        _receive = 2;
+        return close();
     }
     if (info.leaf1()) {
         uint32_t rest_data = dataset.size();
         for (auto& data : dataset) {
             meta.rest_data = --rest_data;
-            StatusFlag flag = handle.send_progress_message(version, info.t1(), meta, data);
+            flag = handle.send_progress_message(version, info.t1(), meta, data);
             TDCF_CHECK_SUCCESS(flag)
         }
     } else {
         uint32_t rest_data = dataset.size();
         for (auto& data : dataset) {
             meta.rest_data = --rest_data;
-            StatusFlag flag = handle.send_progress_message(version, info.t2(), meta, data);
+            flag = handle.send_progress_message(version, info.t2(), meta, data);
             TDCF_CHECK_SUCCESS(flag)
         }
     }
 
-    return StatusFlag::Success;
+    return close();
 }
 
 StatusFlag DBTAgent::Reduce::acquire_data(DataPtr& data,
@@ -132,7 +147,7 @@ StatusFlag DBTAgent::Reduce::acquire_data(DataPtr& data,
     return StatusFlag::Success;
 }
 
-StatusFlag DBTAgent::Reduce::close(DataSet& dataset, Handle& handle) const {
+StatusFlag DBTAgent::Reduce::send_data(DataSet& dataset, Handle& handle) const {
     auto& info = handle.agent_data<DBTAgentData>();
     MetaData meta = create_meta();
     meta.stage = N_Reduce::send_data;
@@ -154,5 +169,11 @@ StatusFlag DBTAgent::Reduce::close(DataSet& dataset, Handle& handle) const {
         }
     }
 
+    return close();
+}
+
+StatusFlag DBTAgent::Reduce::close() const {
+    if (!_get_self_data || _receive != 2 || _get_rule != 3)
+        return StatusFlag::Success;
     return StatusFlag::EventEnd;
 }

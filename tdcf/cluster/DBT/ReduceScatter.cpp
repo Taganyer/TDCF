@@ -61,6 +61,9 @@ StatusFlag DBTCluster::ReduceScatter::handle_event(const MetaData& meta,
         rule->finish_callback();
         return StatusFlag::EventEnd;
     }
+    if (meta.stage == C_ReduceScatter::send_rule) {
+        return StatusFlag::Success;
+    }
     TDCF_RAISE_ERROR(meta.stage error type)
 }
 
@@ -180,6 +183,9 @@ StatusFlag DBTCluster::ReduceScatterAgent::handle_event(const MetaData& meta,
     }
     if (meta.stage == A_ReduceScatter::finish_ack) {
         return close(handle);
+    }
+    if (meta.stage == C_ReduceScatter::send_rule) {
+        return StatusFlag::Success;
     }
     TDCF_RAISE_ERROR(meta.stage error type)
 }

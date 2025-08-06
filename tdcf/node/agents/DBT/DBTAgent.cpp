@@ -17,9 +17,11 @@ void DBTAgent::init(const IdentityPtr& from_id, const MetaData& meta, Handle& ha
     }
     if (!_t1_connected) {
         auto id = handle.accept();
-        TDCF_CHECK_EXPR(id->equal_to(*info.t1()))
+        TDCF_CHECK_EXPR(equal_to(id, info.t1()))
         connect(false, info.t1(), handle);
     }
+
+    waiting_t1_respond(handle);
 
     if (info.internal2()) {
         connect(true, info.red(), handle);
@@ -27,9 +29,19 @@ void DBTAgent::init(const IdentityPtr& from_id, const MetaData& meta, Handle& ha
     }
     if (!_t2_connected) {
         auto id = handle.accept();
-        TDCF_CHECK_EXPR(id->equal_to(*info.t2()))
+        TDCF_CHECK_EXPR(equal_to(id, info.t2()))
         connect(false, info.t2(), handle);
     }
+
+    waiting_t2_respond(handle);
+}
+
+void DBTAgent::agent_start(Handle& handle) {
+    auto& info = handle.agent_data<DBTAgentData>();
+    MetaData meta;
+    meta.stage = DBT::respond2;
+    StatusFlag flag = handle.send_message(info.t2(), meta, nullptr);
+    TDCF_CHECK_SUCCESS(flag)
 }
 
 DBTAgent::DBTAgentData::DBTAgentData(IdentityPtr t1_parent, IdentityPtr t2_parent,
@@ -89,32 +101,27 @@ void DBTAgent::connect(bool connect, const IdentityPtr& id, Handle& handle) {
 }
 
 void DBTAgent::create_agent_data(const IdentityPtr& from_id, Handle& handle) {
-    bool end = false;
     bool is_leaf_node_in_t1 = false, is_leaf_node_in_t2 = false;
     std::vector<IdentityPtr> ids;
     std::vector<int> colors;
     std::vector<uint32_t> serials;
-    while (!end) {
-        StatusFlag flag = handle.get_communicator_events();
-        if (flag == StatusFlag::CommunicatorGetEventsFurtherWaiting)
-            flag = StatusFlag::Success;
-        TDCF_CHECK_SUCCESS(flag)
+
+    while (true) {
         Handle::MessageEvent event;
-        while (handle.get_message(event)) {
-            TDCF_CHECK_EXPR(event.id->equal_to(*from_id))
-            if (event.type == CommunicatorEvent::DisconnectRequest) {
-                end = true;
-                handle.disconnect(event.id);
-                break;
-            }
-            assert(event.meta.operation_type == OperationType::Init);
-            is_leaf_node_in_t1 = event.meta.data1[0];
-            is_leaf_node_in_t2 = event.meta.data1[1];
-            ids.emplace_back(std::dynamic_pointer_cast<Identity>(std::get<SerializablePtr>(event.variant)));
-            colors.push_back(event.meta.data1[2]);
-            serials.push_back(event.meta.serial);
+        handle.waiting_for_message(event);
+        TDCF_CHECK_EXPR(equal_to(event.id, from_id))
+        if (event.type == CommunicatorEvent::DisconnectRequest) {
+            handle.disconnect(event.id);
+            break;
         }
+        assert(event.meta.operation_type == OperationType::Init);
+        is_leaf_node_in_t1 = event.meta.data1[0];
+        is_leaf_node_in_t2 = event.meta.data1[1];
+        ids.emplace_back(std::dynamic_pointer_cast<Identity>(std::get<SerializablePtr>(event.variant)));
+        colors.push_back(event.meta.data1[2]);
+        serials.push_back(event.meta.serial);
     }
+
     while (ids.size() < 4) {
         ids.emplace_back(nullptr);
         colors.emplace_back(3);
@@ -139,6 +146,65 @@ void DBTAgent::create_agent_data(const IdentityPtr& from_id, Handle& handle) {
     info.cluster_size = serials[0];
     info.red_serial = serials[red_index];
     info.black_serial = serials[black_index];
+}
+
+void DBTAgent::waiting_t1_respond(Handle& handle) {
+    auto& info = handle.agent_data<DBTAgentData>();
+
+    Handle::MessageEvent message;
+    if (info.internal1()) {
+        uint32_t size = 0;
+        if (info.red()) ++size;
+        if (info.black()) ++size;
+
+        while (size) {
+            handle.waiting_for_message(message);
+            --size;
+            assert(equal_to(message.id, info.red()) || equal_to(message.id, info.black()));
+            assert(message.type == CommunicatorEvent::ReceivedMessage);
+            assert(message.meta.stage == DBT::respond1);
+        }
+    }
+
+    MetaData meta;
+    meta.stage = DBT::respond1;
+    StatusFlag flag = handle.send_message(info.t1(), meta, nullptr);
+    TDCF_CHECK_SUCCESS(flag)
+
+    handle.waiting_for_message(message);
+    assert(message.type == CommunicatorEvent::ReceivedMessage);
+    assert(equal_to(message.id, info.t1()));
+    assert(message.meta.stage == DBT::respond1);
+
+    if (info.internal1()) {
+        if (info.red()) {
+            flag = handle.send_message(info.red(), meta, nullptr);
+            TDCF_CHECK_SUCCESS(flag)
+        }
+        if (info.black()) {
+            flag = handle.send_message(info.black(), meta, nullptr);
+            TDCF_CHECK_SUCCESS(flag)
+        }
+    }
+}
+
+void DBTAgent::waiting_t2_respond(Handle& handle) {
+    auto& info = handle.agent_data<DBTAgentData>();
+
+    if (info.internal2()) {
+        uint32_t size = 0;
+        if (info.red()) ++size;
+        if (info.black()) ++size;
+
+        Handle::MessageEvent message;
+        while (size) {
+            handle.waiting_for_message(message);
+            --size;
+            assert(equal_to(message.id, info.red()) || equal_to(message.id, info.black()));
+            assert(message.type == CommunicatorEvent::ReceivedMessage);
+            assert(message.meta.stage == DBT::respond2);
+        }
+    }
 }
 
 void DBTAgent::disconnect(const IdentityPtr& id, Handle& handle) {

@@ -59,6 +59,19 @@ void StarCluster::cluster_start() {
         TDCF_CHECK_SUCCESS(flag)
     }
     _handle.agent_factory = std::make_unique<StarAgentFactory>();
+
+    waiting_respond();
+}
+
+void StarCluster::waiting_respond() {
+    uint32_t size = _handle.cluster_data<IdentityList>().size();
+    while (size > 0) {
+        Handle::MessageEvent message;
+        _handle.waiting_for_message(message);
+        assert(message.type == CommunicatorEvent::ReceivedMessage);
+        assert(message.meta.stage == Star::respond);
+        --size;
+    }
 }
 
 void StarCluster::cluster_end() {

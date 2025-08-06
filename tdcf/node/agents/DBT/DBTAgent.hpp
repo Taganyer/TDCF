@@ -14,6 +14,8 @@ namespace tdcf {
         void init(const IdentityPtr& from_id, const MetaData& meta,
                   Handle& handle) override;
 
+        void agent_start(Handle& handle) override;
+
     private:
         struct DBTAgentData {
             IdentityPtr t1_parent;
@@ -67,6 +69,10 @@ namespace tdcf {
 
         static void create_agent_data(const IdentityPtr& from_id, Handle& handle);
 
+        static void waiting_t1_respond(Handle& handle);
+
+        static void waiting_t2_respond(Handle& handle);
+
         static void disconnect(const IdentityPtr& id, Handle& handle);
 
         StatusFlag handle_disconnect(const IdentityPtr& id, Handle& handle) override;
@@ -94,11 +100,11 @@ namespace tdcf {
 
             EventProgressAgent *_agent = nullptr;
 
-            uint8_t _receive = 0;
-
-            bool _data_stored = false, _finish_ack = false;
-
             DataSet _set;
+
+            uint8_t _receive = 0, _finish_ack = 0;
+
+            bool _data_stored = false, _get_rule = false;
 
         };
 
@@ -123,9 +129,9 @@ namespace tdcf {
 
             DataSet _set;
 
-            uint8_t _receive = 0;
+            uint8_t _receive = 0, _finish_ack = 0;
 
-            bool _data_stored = false, _finish_ack = false;
+            bool _data_stored = false, _red_sent = false, _black_sent = false, _get_rule = false;
 
         };
 
@@ -138,11 +144,13 @@ namespace tdcf {
             StatusFlag handle_event(const MetaData& meta, Variant& data, Handle& handle) override;
 
         private:
-            StatusFlag acquire_self_data(DataSet& dataset, Handle& handle) const;
+            StatusFlag acquire_self_data(DataSet& dataset, Handle& handle);
 
             StatusFlag acquire_data(DataPtr& data, uint32_t rest_size, Handle& handle);
 
-            StatusFlag close(DataSet& dataset, Handle& handle) const;
+            StatusFlag send_data(DataSet& dataset, Handle& handle) const;
+
+            StatusFlag close() const;
 
             EventProgressAgent *_agent = nullptr;
 
@@ -150,8 +158,9 @@ namespace tdcf {
 
             DataSet _set;
 
-            uint8_t _receive = 0;
+            uint8_t _receive = 0, _get_rule = 0;
 
+            bool _get_self_data = false;
         };
 
         class AllReduce : public EventProgress {
@@ -184,9 +193,9 @@ namespace tdcf {
 
             DataSet _set;
 
-            uint8_t _receive1 = 0,  _receive2 = 0;
+            uint8_t _receive1 = 0, _receive2 = 0, _get_rule = 0, _finish_ack = 0;
 
-            bool _data_stored = false, _finish_ack = false;
+            bool _data_stored = false;
 
         };
 
@@ -215,11 +224,11 @@ namespace tdcf {
 
             ProgressEventsMI _self;
 
-            uint8_t _receive1 = 0,  _receive2 = 0;
-
-            bool _data_stored = false, _finish_ack = false;
-
             DataSet _set;
+
+            uint8_t _receive1 = 0, _receive2 = 0, _get_rule = 0, _finish_ack = 0;
+
+            bool _data_stored = false, _red_sent = false, _black_sent = false;
 
         };
 

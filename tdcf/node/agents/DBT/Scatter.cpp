@@ -25,8 +25,13 @@ StatusFlag DBTAgent::Scatter::create(uint32_t version, const MetaData& meta,
     auto& self = static_cast<Scatter&>(*iter->second);
     self._self = iter;
     if (info.leaf2()) {
-        self._finish_ack = true;
+        self._finish_ack = 2;
+    } else {
+        if (!info.red()) ++self._finish_ack;
+        if (!info.black()) ++self._finish_ack;
     }
+    if (!info.red()) self._red_sent = true;
+    if (!info.black()) self._black_sent = true;
 
     MetaData new_meta = self.create_meta();
     new_meta.stage = N_Scatter::send_rule;
@@ -63,7 +68,7 @@ StatusFlag DBTAgent::Scatter::handle_event(const MetaData& meta,
         return send_data(std::get<DataPtr>(data), meta, handle);
     }
     if (meta.stage == N_Scatter::finish_ack) {
-        _finish_ack = true;
+        ++_finish_ack;
         return close(handle);
     }
     if (meta.stage == Public_Scatter::node_finish_ack) {
@@ -71,7 +76,8 @@ StatusFlag DBTAgent::Scatter::handle_event(const MetaData& meta,
         return close(handle);
     }
     if (meta.stage == N_Scatter::send_rule) {
-        return StatusFlag::Success;
+        _get_rule = true;
+        return close(handle);
     }
     TDCF_RAISE_ERROR(meta.stage error type)
 }
@@ -117,6 +123,12 @@ StatusFlag DBTAgent::Scatter::send_data(DataPtr& data,
             in_red = info.in_t2_red(meta.serial);
             new_meta.data1[0] = 0;
         }
+
+        if (meta.rest_data == 0) {
+            if (in_red) _red_sent = true;
+            else _black_sent = true;
+        }
+
         StatusFlag flag = handle.send_progress_message(version,
                                                        in_red ? info.red() : info.black(),
                                                        new_meta, data);
@@ -127,7 +139,7 @@ StatusFlag DBTAgent::Scatter::send_data(DataPtr& data,
 }
 
 StatusFlag DBTAgent::Scatter::close(Handle& handle) const {
-    if (!_data_stored || !_finish_ack)
+    if (!_data_stored || !_red_sent || !_black_sent || _finish_ack != 2 || !_get_rule)
         return StatusFlag::Success;
 
     auto& info = handle.agent_data<DBTAgentData>();

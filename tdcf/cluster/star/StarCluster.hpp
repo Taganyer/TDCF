@@ -23,6 +23,8 @@ namespace tdcf {
 
         void cluster_start() override;
 
+        void waiting_respond();
+
         void cluster_end() override;
 
         bool from_sub_cluster(const IdentityPtr& from_id) override;

@@ -63,9 +63,10 @@ void TestManager::run(ClusterInfo& info) {
         create_sub_cluster(0, serial, *sub);
     }
 
-    _threads.emplace_back([this, type = info._type, &ids] {
-        this->root(type, 0, ids);
-    });
+    _threads.emplace_back([this, type = info._type, &ids, ops = info._operation]
+    () mutable {
+            this->root(type, 0, ids, ops);
+        });
 
     for (auto& thread : _threads) {
         thread.start();
@@ -77,7 +78,11 @@ void TestManager::run(ClusterInfo& info) {
 
 void TestManager::create_sub_cluster(uint32_t root_id, uint32_t& serial, ClusterInfo& info) {
     uint32_t id = serial++;
+
+    auto type = info._type;
     auto ids = new std::vector<uint32_t>();
+    auto ops = new std::array<uint32_t, 5>(info._operation);
+
     for (uint32_t i = 0; i < info._pure_nodes; ++i) {
         ids->push_back(serial);
         _threads.emplace_back([this, serial, id] {
@@ -90,9 +95,10 @@ void TestManager::create_sub_cluster(uint32_t root_id, uint32_t& serial, Cluster
         create_sub_cluster(id, serial, *sub);
     }
 
-    _threads.emplace_back([this, type = info._type, id, root_id, ids] {
-        this->node_root(type, id, root_id, *ids);
+    _threads.emplace_back([this, type, id, root_id, ids, ops] {
+        this->node_root(type, id, root_id, *ids, *ops);
         delete ids;
+        delete ops;
     });
 }
 
@@ -119,36 +125,49 @@ Node TestManager::create_node(uint32_t id) const {
     return { std::move(self), std::move(comm), std::move(proc) };
 }
 
-StatusFlag TestManager::creat_task(uint32_t& serial, uint32_t& tasks_size,
-                                   Cluster& root, OperationType type) const {
-    auto rule = _creator->getProcessingRulesPtr(++serial, type,
-                                                [&tasks_size] { --tasks_size; });
-    ++tasks_size;
-    StatusFlag flag = StatusFlag::EventEnd;
-    switch (type) {
-        case OperationType::Broadcast:
-            flag = root.broadcast(rule);
-            break;
-        case OperationType::Scatter:
-            flag = root.scatter(rule);
-            break;
-        case OperationType::Reduce:
-            flag = root.reduce(rule);
-            break;
-        case OperationType::AllReduce:
-            flag = root.all_reduce(rule);
-            break;
-        case OperationType::ReduceScatter:
-            flag = root.reduce_scatter(rule);
-            break;
-        default:
-            assert(false);
+void TestManager::creat_task(uint32_t& serial, uint32_t& tasks_size,
+                             Cluster& root, std::array<uint32_t, 5>& ops) const {
+    while (true) {
+        bool con = false;
+        for (int i = 0; i < 5; ++i) {
+            if (ops[i] != 0) {
+                --ops[i];
+                con = true;
+
+                OperationType type = static_cast<OperationType>(i + (int) OperationType::Broadcast);
+                auto rule = _creator->getProcessingRulesPtr(++serial, type,
+                                                            [&tasks_size] { --tasks_size; });
+                ++tasks_size;
+                StatusFlag flag = StatusFlag::EventEnd;
+                switch (type) {
+                    case OperationType::Broadcast:
+                        flag = root.broadcast(rule);
+                        break;
+                    case OperationType::Scatter:
+                        flag = root.scatter(rule);
+                        break;
+                    case OperationType::Reduce:
+                        flag = root.reduce(rule);
+                        break;
+                    case OperationType::AllReduce:
+                        flag = root.all_reduce(rule);
+                        break;
+                    case OperationType::ReduceScatter:
+                        flag = root.reduce_scatter(rule);
+                        break;
+                    default:
+                        break;
+                }
+                TDCF_CHECK_SUCCESS(flag)
+                T_DEBUG << "create operation " << operation_type_name(type) << ": " << status_flag_name(flag);
+            }
+        }
+        if (!con) break;
     }
-    T_DEBUG << "create operation " << operation_type_name(type) << ": " << status_flag_name(flag);
-    return flag;
 }
 
-void TestManager::root(uint32_t type, uint32_t id, std::vector<uint32_t>& cluster) const {
+void TestManager::root(uint32_t type, uint32_t id, std::vector<uint32_t>& cluster,
+                       std::array<uint32_t, 5>& ops) const {
     ClusterPtr root = create_cluster(type, id);
 
     Cluster::IdentitySet set;
@@ -164,11 +183,7 @@ void TestManager::root(uint32_t type, uint32_t id, std::vector<uint32_t>& cluste
     uint32_t serial = 0;
     StatusFlag flag = StatusFlag::Success;
 
-    creat_task(serial, tasks_size, *root, OperationType::Broadcast);
-    creat_task(serial, tasks_size, *root, OperationType::Scatter);
-    creat_task(serial, tasks_size, *root, OperationType::Reduce);
-    creat_task(serial, tasks_size, *root, OperationType::AllReduce);
-    creat_task(serial, tasks_size, *root, OperationType::ReduceScatter);
+    creat_task(serial, tasks_size, *root, ops);
 
     while (flag == StatusFlag::Success && tasks_size > 0) {
         flag = root->handle_a_loop();
@@ -182,7 +197,8 @@ void TestManager::root(uint32_t type, uint32_t id, std::vector<uint32_t>& cluste
 }
 
 void TestManager::node_root(uint32_t type, uint32_t id, uint32_t root_id,
-                            std::vector<uint32_t>& cluster) const {
+                            std::vector<uint32_t>& cluster,
+                            std::array<uint32_t, 5>& ops) const {
     auto node_root = create_cluster(type, id);
 
     Cluster::IdentitySet set;
@@ -197,11 +213,7 @@ void TestManager::node_root(uint32_t type, uint32_t id, uint32_t root_id,
     uint32_t serial = 0;
     StatusFlag flag = StatusFlag::Success;
 
-    creat_task(serial, tasks_size, *node_root, OperationType::Broadcast);
-    creat_task(serial, tasks_size, *node_root, OperationType::Scatter);
-    creat_task(serial, tasks_size, *node_root, OperationType::Reduce);
-    creat_task(serial, tasks_size, *node_root, OperationType::AllReduce);
-    creat_task(serial, tasks_size, *node_root, OperationType::ReduceScatter);
+    creat_task(serial, tasks_size, *node_root, ops);
 
     bool root_end = false;
     while (flag == StatusFlag::Success && (tasks_size > 0 || !root_end)) {

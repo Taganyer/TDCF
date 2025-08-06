@@ -21,22 +21,18 @@ void Node::start_node() {
     if (!_cluster_started) _handle.agent_factory = nullptr;
     _agent->init(id, meta, _handle);
     _node_agent_started = true;
+    if (!_cluster_staring) {
+        _agent->agent_start(_handle);
+    }
 }
 
 MetaData Node::get_agent(const IdentityPtr& from_id) {
-    StatusFlag flag;
-    do {
-        flag = _handle.get_communicator_events();
-    } while (flag == StatusFlag::CommunicatorGetEventsFurtherWaiting);
-    TDCF_CHECK_SUCCESS(flag)
-
     Handle::MessageEvent message;
-    bool success = _handle.get_message(message);
-    TDCF_CHECK_EXPR(success)
+    _handle.waiting_for_message(message);
 
     auto& [type, from, meta, variant] = message;
     assert(meta.operation_type == OperationType::AgentCreate);
-    TDCF_CHECK_EXPR(from->equal_to(*from_id));
+    TDCF_CHECK_EXPR(equal_to(from, from_id));
     _agent = get_NodeAgent(meta);
     TDCF_CHECK_EXPR(_agent)
     return meta;

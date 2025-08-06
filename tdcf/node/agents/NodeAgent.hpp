@@ -21,6 +21,8 @@ namespace tdcf {
         virtual void init(const IdentityPtr& from_id, const MetaData& meta,
                           Handle& handle) = 0;
 
+        virtual void agent_start(Handle& handle) = 0;
+
         StatusFlag handle_received_message(const MetaData& meta,
                                            Variant& variant, Handle& handle);
 

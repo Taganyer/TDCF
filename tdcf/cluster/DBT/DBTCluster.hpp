@@ -40,6 +40,12 @@ namespace tdcf {
         void send_message_to_child(const std::vector<IdentityPtr>& node_list,
                                    const dbt::DBTInfo& dbt_info);
 
+        void connect();
+
+        void waiting_t1_respond();
+
+        void waiting_t2_respond();
+
         void cluster_end() override;
 
         bool from_sub_cluster(const IdentityPtr& from_id) override;

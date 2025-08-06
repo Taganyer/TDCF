@@ -21,6 +21,7 @@ void Cluster::start_cluster(const IdentitySet& child_nodes, bool as_child_node) 
         start_node();
     }
     cluster_start();
+    if (_agent) _agent->agent_start(_handle);
     _cluster_staring = false;
     _cluster_started = true;
 }

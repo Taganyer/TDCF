@@ -77,13 +77,10 @@ void DBTCluster::cluster_start() {
 
     _handle.destroy_cluster_data();
 
-    _handle.connect(t1_root);
-    if (!equal_to(t1_root, t2_root)) {
-        _handle.connect(t2_root);
-    }
-
     _handle.create_cluster_data<DBTClusterData>(std::move(t1_root), std::move(t2_root), array.size());
     _handle.agent_factory = std::make_unique<DBTAgentFactory>();
+
+    connect();
 }
 
 void DBTCluster::send_message_to_child(const std::vector<IdentityPtr>& node_list,
@@ -138,15 +135,49 @@ void DBTCluster::send_message_to_child(const std::vector<IdentityPtr>& node_list
     }
 }
 
+void DBTCluster::connect() {
+    auto& [t1, t2, size] = _handle.cluster_data<DBTClusterData>();
+    _handle.connect(t1);
+    waiting_t1_respond();
+
+    if (!equal_to(t1, t2)) {
+        _handle.connect(t2);
+    }
+    waiting_t2_respond();
+}
+
+void DBTCluster::waiting_t1_respond() {
+    auto& [t1, t2, size] = _handle.cluster_data<DBTClusterData>();
+    Handle::MessageEvent message;
+    _handle.waiting_for_message(message);
+    assert(equal_to(t1, message.id));
+    assert(message.type == CommunicatorEvent::ReceivedMessage);
+    assert(message.meta.stage == DBT::respond1);
+
+    MetaData meta;
+    meta.stage = DBT::respond1;
+    StatusFlag flag = _handle.send_message(t1, meta, nullptr);
+    TDCF_CHECK_SUCCESS(flag)
+}
+
+void DBTCluster::waiting_t2_respond() {
+    auto& [t1, t2, size] = _handle.cluster_data<DBTClusterData>();
+    Handle::MessageEvent message;
+    _handle.waiting_for_message(message);
+    assert(equal_to(t2, message.id));
+    assert(message.type == CommunicatorEvent::ReceivedMessage);
+    assert(message.meta.stage == DBT::respond2);
+}
+
 void DBTCluster::cluster_end() {
     auto& [t1, t2, size] = _handle.cluster_data<DBTClusterData>();
     _handle.disconnect(t1);
-    if (!t2->equal_to(*t1)) _handle.disconnect(t2);
+    if (!equal_to(t1, t2)) _handle.disconnect(t2);
 }
 
 bool DBTCluster::from_sub_cluster(const IdentityPtr& from_id) {
     auto& [t1, t2, size] = _handle.cluster_data<DBTClusterData>();
-    return t1->equal_to(*from_id) || t2->equal_to(*from_id);
+    return equal_to(t1, from_id) || equal_to(t2, from_id);
 }
 
 StatusFlag DBTCluster::handle_disconnect_request(const IdentityPtr& from_id) {

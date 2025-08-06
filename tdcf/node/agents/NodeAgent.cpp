@@ -35,7 +35,7 @@ NodeAgentPtr tdcf::get_NodeAgent(const MetaData& meta) {
         return std::make_shared<StarAgent>();
     }
     if (meta.data1[0] == ClusterType::ring) {
-        return  std::make_shared<RingAgent>();
+        return std::make_shared<RingAgent>();
     }
     if (meta.data1[0] == ClusterType::dbt) {
         return std::make_shared<DBTAgent>();

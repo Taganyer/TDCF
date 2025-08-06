@@ -34,6 +34,8 @@ namespace tdcf {
 
         bool get_message(MessageEvent& message);
 
+        void waiting_for_message(MessageEvent& event);
+
         StatusFlag send_message(const IdentityPtr& target, MetaData meta, SerializablePtr message);
 
         StatusFlag send_progress_message(uint32_t version, const IdentityPtr& target,

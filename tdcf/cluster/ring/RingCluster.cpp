@@ -4,7 +4,6 @@
 
 #include <tdcf/base/Errors.hpp>
 #include <tdcf/cluster/ring/RingCluster.hpp>
-#include <tdcf/node/agents/ring/RingAgent.hpp>
 
 using namespace tdcf;
 
@@ -47,6 +46,21 @@ void RingCluster::cluster_connect_children(const IdentitySet& child_nodes) {
     _handle.create_cluster_data<IdentityList>(child_nodes.begin(), child_nodes.end());
 }
 
+void RingCluster::waiting_respond() {
+    auto& [send, receive, cluster_size] = _handle.cluster_data<RingClusterData>();
+
+    MetaData meta;
+    meta.stage = Ring::respond;
+    StatusFlag flag = _handle.send_message(send, meta, nullptr);
+    TDCF_CHECK_SUCCESS(flag)
+
+    Handle::MessageEvent message;
+    _handle.waiting_for_message(message);
+    assert(message.type == CommunicatorEvent::ReceivedMessage);
+    assert(equal_to(message.id, receive));
+    assert(message.meta.stage == Ring::respond);
+}
+
 void RingCluster::cluster_start() {
     auto& list = _handle.cluster_data<IdentityList>();
     MetaData meta;
@@ -73,6 +87,8 @@ void RingCluster::cluster_start() {
     }
     _handle.agent_factory = std::make_unique<RingAgentFactory>();
     assert(_handle.agent_factory);
+
+    waiting_respond();
 }
 
 void RingCluster::cluster_end() {
@@ -87,12 +103,12 @@ void RingCluster::cluster_end() {
 
 bool RingCluster::from_sub_cluster(const IdentityPtr& from_id) {
     auto& [send, receive, cluster_size] = _handle.cluster_data<RingClusterData>();
-    return send->equal_to(*from_id) || receive->equal_to(*from_id);
+    return equal_to(send, from_id) || equal_to(receive, from_id);
 }
 
 StatusFlag RingCluster::handle_disconnect_request(const IdentityPtr& from_id) {
     auto& [send, receive, cluster_size] = _handle.cluster_data<RingClusterData>();
-    assert(receive->equal_to(*from_id));
+    assert(equal_to(receive, from_id));
     _handle.disconnect(from_id);
     receive = nullptr;
     return StatusFlag::Success;
