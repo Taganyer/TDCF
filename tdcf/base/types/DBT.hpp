@@ -51,9 +51,9 @@ namespace tdcf::dbt {
 
         static constexpr StageNum send_data = 4;
 
-        static constexpr StageNum finish_ack = 5;
+        static constexpr StageNum finish_notify = 5;
 
-        static constexpr StageNum finish = finish_ack;
+        static constexpr StageNum finish_ack = 6;
 
     };
 
@@ -65,6 +65,8 @@ namespace tdcf::dbt {
         static constexpr StageNum get_data = C_Scatter::send_data;
 
         static constexpr StageNum send_data = C_Scatter::send_data;
+
+        static constexpr StageNum finish_notify = C_Scatter::finish_notify;
 
         static constexpr StageNum finish_ack = C_Scatter::finish_ack;
 
@@ -178,7 +180,9 @@ namespace tdcf::dbt {
 
         static constexpr StageNum send_data = 6;
 
-        static constexpr StageNum finish_ack = 7;
+        static constexpr StageNum finish_notify = 7;
+
+        static constexpr StageNum finish_ack = 8;
 
     };
 
@@ -198,6 +202,8 @@ namespace tdcf::dbt {
         static constexpr StageNum acquire_data2 = C_ReduceScatter::send_data;
 
         static constexpr StageNum send_data2 = C_ReduceScatter::send_data;
+
+        static constexpr StageNum finish_notify = C_ReduceScatter::finish_notify;
 
         static constexpr StageNum finish_ack = C_ReduceScatter::finish_ack;
 

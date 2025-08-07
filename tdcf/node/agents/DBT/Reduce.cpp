@@ -77,6 +77,7 @@ StatusFlag DBTAgent::Reduce::handle_event(const MetaData& meta,
         return acquire_data(std::get<DataPtr>(data), meta.rest_data, handle);
     }
     if (meta.stage == N_Reduce::reduce_data) {
+        _reduce_data = true;
         return send_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == N_Reduce::get_rule) {
@@ -114,7 +115,7 @@ StatusFlag DBTAgent::Reduce::acquire_self_data(DataSet& dataset, Handle& handle)
             }
             TDCF_CHECK_SUCCESS(flag)
         }
-        _receive = 2;
+        _reduce_data = true;
         return close();
     }
     if (info.leaf1()) {
@@ -173,7 +174,7 @@ StatusFlag DBTAgent::Reduce::send_data(DataSet& dataset, Handle& handle) const {
 }
 
 StatusFlag DBTAgent::Reduce::close() const {
-    if (!_get_self_data || _receive != 2 || _get_rule != 3)
+    if (!_get_self_data || !_reduce_data || _get_rule != 3)
         return StatusFlag::Success;
     return StatusFlag::EventEnd;
 }

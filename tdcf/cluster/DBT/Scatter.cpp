@@ -79,6 +79,7 @@ StatusFlag DBTCluster::Scatter::send_data(DataSet& set, Handle& handle) const {
     MetaData meta = create_meta();
     meta.stage = C_Scatter::send_data;
 
+    StatusFlag flag;
     uint32_t t1_rest_data = (patch + 1) / 2, t2_rest_data = patch / 2;
     for (uint32_t i = 0; i < patch; ++i) {
         if (set[i]->derived_type() != 0) {
@@ -90,15 +91,24 @@ StatusFlag DBTCluster::Scatter::send_data(DataSet& set, Handle& handle) const {
             meta.serial = j / patch - 1;
             if (i & 1) {
                 meta.data1[0] = 0;
-                StatusFlag flag = handle.send_progress_message(version, t2, meta, set[j]);
+                flag = handle.send_progress_message(version, t2, meta, set[j]);
                 TDCF_CHECK_SUCCESS(flag)
             } else {
                 meta.data1[0] = 1;
-                StatusFlag flag = handle.send_progress_message(version, t1, meta, set[j]);
+                flag = handle.send_progress_message(version, t1, meta, set[j]);
                 TDCF_CHECK_SUCCESS(flag)
             }
         }
     }
+
+    meta.stage = C_Scatter::finish_notify;
+
+    meta.data1[0] = 1;
+    flag = handle.send_progress_message(version, t1, meta, nullptr);
+    TDCF_CHECK_SUCCESS(flag)
+    meta.data1[0] = 0;
+    flag = handle.send_progress_message(version, t2, meta, nullptr);
+    TDCF_CHECK_SUCCESS(flag)
 
     return StatusFlag::Success;
 }

@@ -14,14 +14,18 @@ void test::example() {
 
     ClusterInfoPtr star = ClusterInfo::get(ClusterInfo::Star, 1, 1, 1, 1, 1, 1);
 
-    ClusterInfoPtr ring = ClusterInfo::get(ClusterInfo::Ring, 5, 1, 1, 1, 1, 1);
+    ClusterInfoPtr ring = ClusterInfo::get(ClusterInfo::Ring, 1, 1, 1, 1, 1, 1);
 
-    ClusterInfoPtr dbt = ClusterInfo::get(ClusterInfo::DBT, 10, 1, 1, 1, 1, 1);
+    ClusterInfoPtr dbt = ClusterInfo::get(ClusterInfo::DBT, 1, 1, 1, 1, 1, 1);
 
     // star->add_sub_cluster(std::move(ring));
     // star->add_sub_cluster(std::move(dbt));
 
+    // ring->add_sub_cluster(std::move(star));
+    // ring->add_sub_cluster(std::move(dbt));
+
     dbt->add_sub_cluster(std::move(star));
+    dbt->add_sub_cluster(std::move(ring));
 
     manager.run(*dbt);
 

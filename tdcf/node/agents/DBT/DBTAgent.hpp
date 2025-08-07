@@ -121,6 +121,8 @@ namespace tdcf {
 
             StatusFlag send_data(DataPtr& data, const MetaData& meta, Handle& handle);
 
+            StatusFlag get_notify(bool receive_from_t1, Handle& handle);
+
             StatusFlag close(Handle& handle) const;
 
             EventProgressAgent *_agent = nullptr;
@@ -131,7 +133,7 @@ namespace tdcf {
 
             uint8_t _receive = 0, _finish_ack = 0;
 
-            bool _data_stored = false, _red_sent = false, _black_sent = false, _get_rule = false;
+            bool _data_stored = false, _t1_end = false, _t2_end = false, _get_rule = false;
 
         };
 
@@ -160,7 +162,8 @@ namespace tdcf {
 
             uint8_t _receive = 0, _get_rule = 0;
 
-            bool _get_self_data = false;
+            bool _get_self_data = false, _reduce_data = false;
+
         };
 
         class AllReduce : public EventProgress {
@@ -218,6 +221,8 @@ namespace tdcf {
 
             StatusFlag send_data2(DataPtr& data, const MetaData& meta, Handle& handle);
 
+            StatusFlag get_notify(bool receive_from_t1, Handle& handle);
+
             StatusFlag close(Handle& handle) const;
 
             EventProgressAgent *_agent = nullptr;
@@ -228,7 +233,7 @@ namespace tdcf {
 
             uint8_t _receive1 = 0, _receive2 = 0, _get_rule = 0, _finish_ack = 0;
 
-            bool _data_stored = false, _red_sent = false, _black_sent = false;
+            bool _data_stored = false, _t1_end = false, _t2_end = false;
 
         };
 

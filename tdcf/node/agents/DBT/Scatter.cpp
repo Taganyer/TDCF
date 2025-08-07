@@ -30,8 +30,6 @@ StatusFlag DBTAgent::Scatter::create(uint32_t version, const MetaData& meta,
         if (!info.red()) ++self._finish_ack;
         if (!info.black()) ++self._finish_ack;
     }
-    if (!info.red()) self._red_sent = true;
-    if (!info.black()) self._black_sent = true;
 
     MetaData new_meta = self.create_meta();
     new_meta.stage = N_Scatter::send_rule;
@@ -66,6 +64,9 @@ StatusFlag DBTAgent::Scatter::handle_event(const MetaData& meta,
     assert(meta.operation_type == OperationType::Scatter);
     if (meta.stage == N_Scatter::get_data) {
         return send_data(std::get<DataPtr>(data), meta, handle);
+    }
+    if (meta.stage == N_Scatter::finish_notify) {
+        return get_notify(meta.data1[0], handle);
     }
     if (meta.stage == N_Scatter::finish_ack) {
         ++_finish_ack;
@@ -124,11 +125,6 @@ StatusFlag DBTAgent::Scatter::send_data(DataPtr& data,
             new_meta.data1[0] = 0;
         }
 
-        if (meta.rest_data == 0) {
-            if (in_red) _red_sent = true;
-            else _black_sent = true;
-        }
-
         StatusFlag flag = handle.send_progress_message(version,
                                                        in_red ? info.red() : info.black(),
                                                        new_meta, data);
@@ -138,8 +134,45 @@ StatusFlag DBTAgent::Scatter::send_data(DataPtr& data,
     return close(handle);
 }
 
+StatusFlag DBTAgent::Scatter::get_notify(bool receive_from_t1, Handle& handle) {
+    auto& info = handle.agent_data<DBTAgentData>();
+    StatusFlag flag;
+    if (receive_from_t1) {
+        _t1_end = true;
+        if (info.internal1()) {
+            MetaData meta = create_meta();
+            meta.stage = N_Scatter::finish_notify;
+            meta.data1[0] = 1;
+            if (info.red()) {
+                flag = handle.send_progress_message(version, info.red(), meta, nullptr);
+                TDCF_CHECK_SUCCESS(flag)
+            }
+            if (info.black()) {
+                flag = handle.send_progress_message(version, info.black(), meta, nullptr);
+                TDCF_CHECK_SUCCESS(flag)
+            }
+        }
+    } else {
+        _t2_end = true;
+        if (info.internal2()) {
+            MetaData meta = create_meta();
+            meta.stage = N_Scatter::finish_notify;
+            meta.data1[0] = 0;
+            if (info.red()) {
+                flag = handle.send_progress_message(version, info.red(), meta, nullptr);
+                TDCF_CHECK_SUCCESS(flag)
+            }
+            if (info.black()) {
+                flag = handle.send_progress_message(version, info.black(), meta, nullptr);
+                TDCF_CHECK_SUCCESS(flag)
+            }
+        }
+    }
+    return close(handle);
+}
+
 StatusFlag DBTAgent::Scatter::close(Handle& handle) const {
-    if (!_data_stored || !_red_sent || !_black_sent || _finish_ack != 2 || !_get_rule)
+    if (!_data_stored || !_t1_end || !_t2_end || _finish_ack != 2 || !_get_rule)
         return StatusFlag::Success;
 
     auto& info = handle.agent_data<DBTAgentData>();
