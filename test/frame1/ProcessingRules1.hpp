@@ -44,10 +44,6 @@ namespace test {
             _finish_callback = std::move(fun);
         };
 
-        [[nodiscard]] tdcf::SerializableType derived_type() const override {
-            return 1;
-        };
-
         [[nodiscard]] uint32_t id() const { return _id; };
 
         [[nodiscard]] tdcf::OperationType operation() const { return _operation; };

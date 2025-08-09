@@ -60,7 +60,6 @@ StatusFlag StarCluster::ReduceScatter::handle_event(const MetaData& meta,
     if (meta.stage == C_ReduceScatter::finish_ack) {
         ++_respond;
         if (_respond == handle.cluster_data<IdentityList>().size()) {
-            rule->finish_callback();
             return StatusFlag::EventEnd;
         }
         return StatusFlag::Success;

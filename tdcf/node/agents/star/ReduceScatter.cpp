@@ -12,7 +12,7 @@ using namespace tdcf;
 using namespace tdcf::star;
 
 StarAgent::ReduceScatter::ReduceScatter(uint32_t version, ProcessingRulesPtr rp) :
-    EventProgress(OperationType::ReduceScatter, ProgressType::NodeRoot, version, std::move(rp)) {}
+    EventProgress(OperationType::ReduceScatter, ProgressType::Node, version, std::move(rp)) {}
 
 StatusFlag StarAgent::ReduceScatter::create(uint32_t version, const MetaData& meta,
                                             ProcessingRulesPtr rp, Handle& handle) {

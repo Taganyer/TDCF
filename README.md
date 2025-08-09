@@ -1,6 +1,7 @@
 # TDCF
 
-**TDCF (Tiny Distribute Communication Framework)，是一个分布式通信算法框架，为分布式主从节点集群提供轻量级、高性能的并行通信管理。**
+**TDCF (Tiny Distribute Communication Framework)
+是一个分布式通信算法框架，为分布式主从节点集群提供轻量级、高性能的并行通信管理。**
 
 ## 简要概述
 
@@ -44,21 +45,23 @@ make uninstall
 
 ### Ring
 
-Ring 将所有处理单元按环形排列（每个节点仅与左右相邻节点直接连接），数据通过环形路径依次传递，每个节点在接收数据后，仅需转发给下一个节点，无需全局连接。
+    Ring 将所有处理单元按环形排列（每个节点仅与左右相邻节点直接连接），数据通过环形路径依次传递，
+    每个节点在接收数据后，仅需转发给下一个节点，无需全局连接。
 
 ### Star
 
-Star 以一个 “中心节点”为核心，所有其他节点仅与中心节点直接连接，不与其他叶节点通信。
+    Star 以一个 “中心节点”为核心，所有其他节点仅与中心节点直接连接，不与其他叶节点通信。
 
 ### DBT
 
-DBT（Double Binary Tree，双二叉树）算法是并行计算中一种高效的集体通信算法，基于两棵并行的二叉树拓扑结构实现数据传输，旨在解决单树结构的带宽瓶颈问题，充分利用双向通信带宽。
+    DBT（Double Binary Tree，双二叉树）算法是并行计算中一种高效的集体通信算法，基于两棵并行的二叉树拓扑结构实现数据传输，
+    旨在解决单树结构的带宽瓶颈问题，充分利用双向通信带宽。
 
 ## 通信原语
 
 ### broadcast
 
-将 root节点 的数据广播到其他节点。
+    将 root节点 的数据广播到其他节点。
 
 <div style="background-color: #F5F5F5; text-align: center;">
     <img src="/resource/broadcast.png" alt="broadcast">
@@ -66,7 +69,7 @@ DBT（Double Binary Tree，双二叉树）算法是并行计算中一种高效�
 
 ### scatter
 
-将 root节点 的数据均分并散布至其他节点。
+    将 root节点 的数据均分并散布至其他节点。
 
 <div style="background-color: #F5F5F5; text-align: center;">
     <img src="/resource/scatter.png" alt="scatter">
@@ -74,7 +77,7 @@ DBT（Double Binary Tree，双二叉树）算法是并行计算中一种高效�
 
 ### reduce
 
-将所有节点的输入数据进行归约操作后，再把结果发送到 root节点。
+    将所有节点的输入数据进行归约操作后，再把结果发送到 root节点。
 
 <div style="background-color: #F5F5F5; text-align: center;">
     <img src="/resource/reduce.png" alt="reduce">
@@ -82,7 +85,7 @@ DBT（Double Binary Tree，双二叉树）算法是并行计算中一种高效�
 
 ### all_reduce
 
-将所有节点的输入数据进行归约操作后，再把结果发送到所有节点。
+    将所有节点的输入数据进行归约操作后，再把结果发送到所有节点。
 
 <div style="background-color: #F5F5F5; text-align: center;">
     <img src="/resource/all_reduce.png" alt="all reduce">
@@ -90,7 +93,7 @@ DBT（Double Binary Tree，双二叉树）算法是并行计算中一种高效�
 
 ### reduce_scatter
 
-将所有节点各个部分的输入进行归约操作后，再把结果按照节点编号分散到各个节点。
+    将所有节点各个部分的输入进行归约操作后，再把结果按照节点编号分散到各个节点。
 
 <div style="background-color: #F5F5F5; text-align: center;">
     <img src="/resource/reduce_scatter.png" alt="reduce scatter">
@@ -104,4 +107,14 @@ DBT（Double Binary Tree，双二叉树）算法是并行计算中一种高效�
   <img src="resource/使用流程.png" width="400" alt="使用流程">
 </div>
 
+## 框架组件实现及功能说明
+
+[框架组件](doc/frame)
+
 ## 使用示例
+
+[使用流程说明](doc/使用流程说明.md)
+
+## 测试说明
+
+[测试说明](doc/测试说明.md)

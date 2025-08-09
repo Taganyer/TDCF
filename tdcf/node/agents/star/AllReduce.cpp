@@ -12,7 +12,7 @@ using namespace tdcf;
 using namespace tdcf::star;
 
 StarAgent::AllReduce::AllReduce(uint32_t version, ProcessingRulesPtr rp) :
-    EventProgress(OperationType::AllReduce, ProgressType::NodeRoot, version, std::move(rp)) {}
+    EventProgress(OperationType::AllReduce, ProgressType::Node, version, std::move(rp)) {}
 
 StatusFlag StarAgent::AllReduce::create(uint32_t version, const MetaData& meta,
                                         ProcessingRulesPtr rp, Handle& handle) {

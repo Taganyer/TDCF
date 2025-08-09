@@ -46,7 +46,6 @@ StatusFlag DBTCluster::Scatter::handle_event(const MetaData& meta,
         return send_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == C_Scatter::finish_ack) {
-        rule->finish_callback();
         return StatusFlag::EventEnd;
     }
     TDCF_RAISE_ERROR(meta.stage error type)
@@ -70,7 +69,7 @@ StatusFlag DBTCluster::Scatter::send_data(DataSet& set, Handle& handle) const {
         tmp.reserve(set.size() * 2);
         for (auto& data : set) {
             tmp.emplace_back(std::move(data));
-            tmp.emplace_back(DataPtr());
+            tmp.emplace_back(std::make_shared<Data>());
         }
         set = std::move(tmp);
         ++patch;

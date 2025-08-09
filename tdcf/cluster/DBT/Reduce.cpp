@@ -56,7 +56,6 @@ StatusFlag DBTCluster::Reduce::handle_event(const MetaData& meta,
         for (auto& data_ptr : std::get<DataSet>(data)) {
             handle.store_data(rule, data_ptr);
         }
-        rule->finish_callback();
         return StatusFlag::EventEnd;
     }
     if (meta.stage == C_Reduce::send_rule) {

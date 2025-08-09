@@ -26,8 +26,6 @@ namespace tdcf {
 
         [[nodiscard]] virtual SerializableType base_type() const = 0;
 
-        [[nodiscard]] virtual SerializableType derived_type() const = 0;
-
     };
 
     using SerializablePtr = std::shared_ptr<Serializable>;

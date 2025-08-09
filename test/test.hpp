@@ -7,4 +7,6 @@ namespace test {
 
     void example();
 
+    void tmp();
+
 }

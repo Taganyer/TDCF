@@ -85,7 +85,7 @@ StatusFlag Node::handle_communicator_events() {
         flag = handle_message(event);
         if (flag == StatusFlag::EventEnd) {
             auto iter = _handle.find_progress(event.meta.version);
-            _handle.destroy_progress(iter);
+            close_progress(iter);
             flag = StatusFlag::Success;
         } else if (unlikely(flag == StatusFlag::ClusterOffline)) {
             end_agent();
@@ -100,11 +100,19 @@ StatusFlag Node::handle_processor_events() {
     while (flag == StatusFlag::Success && _handle.get_progress_task(task)) {
         flag = handle_progress_task(task);
         if (flag == StatusFlag::EventEnd) {
-            _handle.destroy_progress(task.iter);
+            close_progress(task.iter);
             flag = StatusFlag::Success;
         }
     }
     return flag;
+}
+
+void Node::close_progress(ProgressEventsMI iter) {
+    if (iter->second->progress_type != ProgressType::NodeRoot) {
+        assert(iter->second->progress_type != ProgressType::Null);
+        iter->second->rule->finish_callback();
+    }
+    _handle.destroy_progress(iter);
 }
 
 StatusFlag Node::handle_a_loop() {

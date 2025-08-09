@@ -57,7 +57,6 @@ StatusFlag StarCluster::AllReduce::handle_event(const MetaData& meta,
     if (meta.stage == C_AllReduce::finish_ack) {
         ++_respond;
         if (_respond == handle.cluster_data<IdentityList>().size()) {
-            rule->finish_callback();
             return StatusFlag::EventEnd;
         }
         return StatusFlag::Success;

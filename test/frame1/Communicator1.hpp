@@ -31,7 +31,7 @@ namespace test {
 
     class Communicator1 : public tdcf::Communicator {
     public:
-        static constexpr uint32_t receive_size = 1 << 10;
+        static constexpr uint32_t receive_size = 1 << 12;
 
         Communicator1(uint32_t id, CommShare& share) : _id(id), _share(&share) {};
 
@@ -62,7 +62,7 @@ namespace test {
         static uint32_t get_message(EventQueue& queue, Base::RingBuffer& buf, tdcf::IdentityPtr& from);
 
         static tdcf::SerializablePtr get_data(tdcf::SerializableBaseType type, uint32_t size,
-                                              tdcf::Message& meta, Base::RingBuffer& buf);
+                                              Base::RingBuffer& buf);
 
         uint32_t check_delay(EventQueue& queue);
 

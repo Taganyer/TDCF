@@ -42,7 +42,6 @@ StatusFlag RingCluster::Reduce::handle_event(const MetaData& meta,
     if (meta.stage == C_Reduce::get_data) {
         handle.store_data(rule, std::get<DataPtr>(data));
         if (meta.rest_data != 0) return StatusFlag::Success;
-        rule->finish_callback();
         return StatusFlag::EventEnd;
     }
     TDCF_RAISE_ERROR(meta.stage error type)

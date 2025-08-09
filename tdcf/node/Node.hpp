@@ -40,6 +40,8 @@ namespace tdcf {
 
         StatusFlag handle_processor_events();
 
+        void close_progress(ProgressEventsMI iter);
+
         bool _node_agent_started = false;
 
         bool _cluster_staring = false;

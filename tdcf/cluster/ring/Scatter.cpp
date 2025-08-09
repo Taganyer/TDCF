@@ -43,7 +43,6 @@ StatusFlag RingCluster::Scatter::handle_event(const MetaData& meta, Variant& dat
         return send_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == C_Scatter::finish_ack) {
-        rule->finish_callback();
         return StatusFlag::EventEnd;
     }
     TDCF_RAISE_ERROR(meta.stage error type)

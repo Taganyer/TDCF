@@ -34,10 +34,6 @@ namespace tdcf {
             return static_cast<SerializableType>(SerializableBaseType::Message);
         };
 
-        [[nodiscard]] SerializableType derived_type() const final {
-            return 0;
-        };
-
         MetaData meta_data;
 
     };

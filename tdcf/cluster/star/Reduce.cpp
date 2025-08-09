@@ -54,7 +54,6 @@ StatusFlag StarCluster::Reduce::handle_event(const MetaData& meta,
         for (auto& data_ptr : std::get<DataSet>(data)) {
             handle.store_data(rule, data_ptr);
         }
-        rule->finish_callback();
         return StatusFlag::EventEnd;
     }
     TDCF_RAISE_ERROR(meta.stage error type)

@@ -11,7 +11,7 @@ using namespace tdcf;
 using namespace tdcf::dbt;
 
 DBTAgent::Reduce::Reduce(uint32_t version, ProcessingRulesPtr rp) :
-    EventProgress(OperationType::Reduce, ProgressType::NodeRoot, version, std::move(rp)) {}
+    EventProgress(OperationType::Reduce, ProgressType::Node, version, std::move(rp)) {}
 
 StatusFlag DBTAgent::Reduce::create(uint32_t version, const MetaData& meta,
                                     ProcessingRulesPtr rp, Handle& handle) {
@@ -100,7 +100,7 @@ StatusFlag DBTAgent::Reduce::acquire_self_data(DataSet& dataset, Handle& handle)
     TDCF_CHECK_SUCCESS(flag)
 
     meta.stage = N_Reduce::send_data;
-    if (dataset.size() == 1) dataset.emplace_back(DataPtr());
+    if (dataset.size() == 1) dataset.emplace_back(std::make_shared<Data>());
     if (info.leaf1() && info.leaf2()) {
         uint32_t t1_rest_data = (dataset.size() + 1) / 2,
                  t2_rest_data = dataset.size() / 2;
@@ -153,7 +153,7 @@ StatusFlag DBTAgent::Reduce::send_data(DataSet& dataset, Handle& handle) const {
     MetaData meta = create_meta();
     meta.stage = N_Reduce::send_data;
 
-    if (dataset.size() == 1) dataset.emplace_back(DataPtr());
+    if (dataset.size() == 1) dataset.emplace_back(std::make_shared<Data>());
     uint32_t rest_data = dataset.size();
     if (info.internal1()) {
         for (auto& data : dataset) {

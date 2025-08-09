@@ -12,7 +12,7 @@ using namespace tdcf;
 using namespace tdcf::ring;
 
 RingAgent::AllReduce::AllReduce(uint32_t version, ProcessingRulesPtr rp) :
-    EventProgress(OperationType::AllReduce, ProgressType::NodeRoot, version, std::move(rp)) {}
+    EventProgress(OperationType::AllReduce, ProgressType::Node, version, std::move(rp)) {}
 
 StatusFlag RingAgent::AllReduce::create(uint32_t version, const MetaData& meta,
                                         ProcessingRulesPtr rp, Handle& handle) {

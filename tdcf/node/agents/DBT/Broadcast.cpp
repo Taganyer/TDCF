@@ -11,7 +11,7 @@ using namespace tdcf;
 using namespace tdcf::dbt;
 
 DBTAgent::Broadcast::Broadcast(uint32_t version, ProcessingRulesPtr rp) :
-    EventProgress(OperationType::Broadcast, ProgressType::NodeRoot, version, std::move(rp)) {}
+    EventProgress(OperationType::Broadcast, ProgressType::Node, version, std::move(rp)) {}
 
 StatusFlag DBTAgent::Broadcast::create(uint32_t version, const MetaData& meta,
                                        ProcessingRulesPtr rp, Handle& handle) {

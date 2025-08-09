@@ -44,7 +44,6 @@ StatusFlag RingCluster::AllReduce::handle_event(const MetaData& meta,
         return send_data(std::get<DataPtr>(data), meta.rest_data, handle);
     }
     if (meta.stage == C_AllReduce::finish_ack) {
-        rule->finish_callback();
         return StatusFlag::EventEnd;
     }
     TDCF_RAISE_ERROR(meta.stage error type)

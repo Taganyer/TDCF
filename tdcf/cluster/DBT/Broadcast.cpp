@@ -42,7 +42,6 @@ StatusFlag DBTCluster::Broadcast::handle_event(const MetaData& meta,
         return send_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == C_Broadcast::finish_ack) {
-        rule->finish_callback();
         return StatusFlag::EventEnd;
     }
     TDCF_RAISE_ERROR(meta.stage error type)
@@ -52,7 +51,7 @@ StatusFlag DBTCluster::Broadcast::send_data(DataSet& dataset, Handle& handle) co
     auto& [t1, t2, size] = handle.cluster_data<DBTClusterData>();
     MetaData meta = create_meta();
     meta.stage = C_Broadcast::send_data;
-    if (dataset.size() == 1) dataset.emplace_back(DataPtr());
+    if (dataset.size() == 1) dataset.emplace_back(std::make_shared<Data>());
 
     uint32_t t1_rest_data = (dataset.size() + 1) / 2, t2_rest_data = dataset.size() / 2;
     for (uint32_t i = 0; i < dataset.size(); ++i) {

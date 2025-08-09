@@ -58,7 +58,6 @@ StatusFlag DBTCluster::ReduceScatter::handle_event(const MetaData& meta,
         return send_data(std::get<DataSet>(data), handle);
     }
     if (meta.stage == C_ReduceScatter::finish_ack) {
-        rule->finish_callback();
         return StatusFlag::EventEnd;
     }
     if (meta.stage == C_ReduceScatter::send_rule) {
@@ -96,7 +95,7 @@ StatusFlag DBTCluster::ReduceScatter::send_data(DataSet& set, Handle& handle) co
         tmp.reserve(set.size() * 2);
         for (auto& data : set) {
             tmp.emplace_back(std::move(data));
-            tmp.emplace_back(DataPtr());
+            tmp.emplace_back(std::make_shared<Data>());
         }
         set = std::move(tmp);
         ++patch;

@@ -29,10 +29,6 @@ namespace test {
             return true;
         };
 
-        [[nodiscard]] tdcf::SerializableType derived_type() const override {
-            return 1;
-        };
-
         [[nodiscard]] Uid guid() const override {
             return _id;
         };

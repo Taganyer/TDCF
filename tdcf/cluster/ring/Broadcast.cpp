@@ -41,7 +41,6 @@ StatusFlag RingCluster::Broadcast::handle_event(const MetaData& meta,
     }
     if (meta.stage == C_Broadcast::finish_ack) {
         assert(meta.serial == 0);
-        rule->finish_callback();
         return StatusFlag::EventEnd;
     }
     TDCF_RAISE_ERROR(meta.stage error type)

@@ -11,7 +11,7 @@ using namespace tdcf;
 using namespace tdcf::dbt;
 
 DBTAgent::Scatter::Scatter(uint32_t version, ProcessingRulesPtr rp) :
-    EventProgress(OperationType::Scatter, ProgressType::NodeRoot, version, std::move(rp)) {}
+    EventProgress(OperationType::Scatter, ProgressType::Node, version, std::move(rp)) {}
 
 StatusFlag DBTAgent::Scatter::create(uint32_t version, const MetaData& meta,
                                      ProcessingRulesPtr rp, Handle& handle) {
